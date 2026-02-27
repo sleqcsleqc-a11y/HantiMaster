@@ -10,14 +10,36 @@ const __dirname = path.dirname(__filename);
 
 const db = new Database("proppulse.db");
 
+// Check if owner_id column exists in properties table, if not, add it
+try {
+  const tableInfo = db.prepare("PRAGMA table_info(properties)").all() as any[];
+  const hasOwnerId = tableInfo.some(col => col.name === 'owner_id');
+  if (!hasOwnerId) {
+    db.exec("ALTER TABLE properties ADD COLUMN owner_id INTEGER REFERENCES owners(id)");
+  }
+} catch (e) {
+  console.error("Error checking/adding owner_id column:", e);
+}
+
 // Initialize Database Schema
 db.exec(`
+  CREATE TABLE IF NOT EXISTS owners (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    phone TEXT
+  );
+
   CREATE TABLE IF NOT EXISTS properties (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     address TEXT NOT NULL,
     type TEXT NOT NULL,
-    image_url TEXT
+    image_url TEXT,
+    property_value REAL DEFAULT 0,
+    owner_id INTEGER,
+    FOREIGN KEY (owner_id) REFERENCES owners(id)
   );
 
   CREATE TABLE IF NOT EXISTS units (
@@ -49,6 +71,8 @@ db.exec(`
     description TEXT,
     priority TEXT DEFAULT 'Medium',
     status TEXT DEFAULT 'Open',
+    cost REAL DEFAULT 0,
+    time_spent REAL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (unit_id) REFERENCES units(id),
     FOREIGN KEY (tenant_id) REFERENCES tenants(id)
@@ -74,11 +98,19 @@ db.exec(`
 `);
 
 // Seed initial data if empty
+const ownerCount = db.prepare("SELECT COUNT(*) as count FROM owners").get() as { count: number };
+if (ownerCount.count === 0) {
+  const insertOwner = db.prepare("INSERT INTO owners (first_name, last_name, email, phone) VALUES (?, ?, ?, ?)");
+  insertOwner.run("Alice", "Johnson", "alice.j@example.com", "555-0201");
+  insertOwner.run("Bob", "Williams", "bob.w@example.com", "555-0202");
+}
+
 const propertyCount = db.prepare("SELECT COUNT(*) as count FROM properties").get() as { count: number };
 if (propertyCount.count === 0) {
-  const insertProperty = db.prepare("INSERT INTO properties (name, address, type, image_url) VALUES (?, ?, ?, ?)");
-  insertProperty.run("Oakwood Apartments", "123 Oak St, Springfield", "Residential", "https://picsum.photos/seed/oakwood/800/600");
-  insertProperty.run("Pine View Lofts", "456 Pine Ave, Metropolis", "Residential", "https://picsum.photos/seed/pineview/800/600");
+  const insertProperty = db.prepare("INSERT INTO properties (name, address, type, image_url, property_value, owner_id) VALUES (?, ?, ?, ?, ?, ?)");
+  insertProperty.run("Oakwood Apartments", "123 Oak St, Springfield", "Residential", "https://picsum.photos/seed/oakwood/800/600", 1250000, 1);
+  insertProperty.run("Pine View Lofts", "456 Pine Ave, Metropolis", "Residential", "https://picsum.photos/seed/pineview/800/600", 2100000, 2);
+  insertProperty.run("Maple Street Retail", "789 Maple St, Gotham", "Commercial", "https://picsum.photos/seed/maple/800/600", 3500000, 1);
   
   const insertUnit = db.prepare("INSERT INTO units (property_id, unit_number, rent_amount, status) VALUES (?, ?, ?, ?)");
   insertUnit.run(1, "101", 1200, "Occupied");
@@ -95,6 +127,15 @@ if (propertyCount.count === 0) {
   insertImage.run(2, "https://picsum.photos/seed/pineview1/800/600");
 }
 
+const transactionCount = db.prepare("SELECT COUNT(*) as count FROM transactions").get() as { count: number };
+if (transactionCount.count === 0) {
+  const insertTransaction = db.prepare("INSERT INTO transactions (unit_id, tenant_id, amount, type, status, date) VALUES (?, ?, ?, ?, ?, ?)");
+  insertTransaction.run(1, 1, 1200, "Rent", "Paid", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+  insertTransaction.run(1, 1, 1200, "Rent", "Paid", new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString());
+  insertTransaction.run(3, 2, 1500, "Rent", "Paid", new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString());
+  insertTransaction.run(3, 2, 1500, "Rent", "Pending", new Date().toISOString());
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -107,9 +148,11 @@ async function startServer() {
     const properties = db.prepare(`
       SELECT 
         p.*, 
+        o.first_name || ' ' || o.last_name as owner_name,
         COUNT(u.id) as unit_count,
         CAST(SUM(CASE WHEN u.status = 'Occupied' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(u.id) * 100 as occupancy_rate
       FROM properties p
+      LEFT JOIN owners o ON p.owner_id = o.id
       LEFT JOIN units u ON p.id = u.property_id
       GROUP BY p.id
     `).all();
@@ -120,9 +163,11 @@ async function startServer() {
     const property = db.prepare(`
       SELECT 
         p.*, 
+        o.first_name || ' ' || o.last_name as owner_name,
         COUNT(u.id) as unit_count,
         CAST(SUM(CASE WHEN u.status = 'Occupied' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(u.id) * 100 as occupancy_rate
       FROM properties p
+      LEFT JOIN owners o ON p.owner_id = o.id
       LEFT JOIN units u ON p.id = u.property_id
       WHERE p.id = ?
       GROUP BY p.id
@@ -132,13 +177,22 @@ async function startServer() {
     res.json(property);
   });
 
+  app.post("/api/properties", (req, res) => {
+    const { name, address, type, image_url, property_value, owner_id } = req.body;
+    const info = db.prepare(`
+      INSERT INTO properties (name, address, type, image_url, property_value, owner_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(name, address, type, image_url, property_value || 0, owner_id || null);
+    res.json({ id: info.lastInsertRowid });
+  });
+
   app.put("/api/properties/:id", (req, res) => {
-    const { name, address, type, image_url } = req.body;
+    const { name, address, type, image_url, property_value, owner_id } = req.body;
     db.prepare(`
       UPDATE properties 
-      SET name = ?, address = ?, type = ?, image_url = ?
+      SET name = ?, address = ?, type = ?, image_url = ?, property_value = ?, owner_id = ?
       WHERE id = ?
-    `).run(name, address, type, image_url, req.params.id);
+    `).run(name, address, type, image_url, property_value || 0, owner_id || null, req.params.id);
     res.json({ success: true });
   });
 
@@ -218,6 +272,66 @@ async function startServer() {
       FROM transactions
     `).get();
     res.json(stats);
+  });
+
+  // Owner Routes
+  app.get("/api/owners", (req, res) => {
+    const owners = db.prepare(`
+      SELECT 
+        o.*,
+        COUNT(DISTINCT p.id) as property_count,
+        SUM(p.property_value) as total_portfolio_value
+      FROM owners o
+      LEFT JOIN properties p ON o.id = p.owner_id
+      GROUP BY o.id
+    `).all();
+    res.json(owners);
+  });
+
+  app.post("/api/owners", (req, res) => {
+    const { first_name, last_name, email, phone } = req.body;
+    try {
+      const info = db.prepare(`
+        INSERT INTO owners (first_name, last_name, email, phone)
+        VALUES (?, ?, ?, ?)
+      `).run(first_name, last_name, email, phone);
+      res.json({ id: info.lastInsertRowid });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/owners/:id", (req, res) => {
+    const owner = db.prepare("SELECT * FROM owners WHERE id = ?").get(req.params.id);
+    if (!owner) return res.status(404).json({ error: "Owner not found" });
+    
+    const properties = db.prepare(`
+      SELECT 
+        p.*, 
+        COUNT(u.id) as unit_count,
+        CAST(SUM(CASE WHEN u.status = 'Occupied' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(u.id) * 100 as occupancy_rate,
+        (SELECT t.first_name || ' ' || t.last_name FROM tenants t JOIN units u2 ON t.unit_id = u2.id WHERE u2.property_id = p.id LIMIT 1) as tenant_name,
+        (SELECT t.lease_end FROM tenants t JOIN units u2 ON t.unit_id = u2.id WHERE u2.property_id = p.id LIMIT 1) as lease_end
+      FROM properties p
+      LEFT JOIN units u ON p.id = u.property_id
+      WHERE p.owner_id = ?
+      GROUP BY p.id
+    `).all(req.params.id);
+
+    const transactions = db.prepare(`
+      SELECT 
+        tr.*,
+        t.first_name || ' ' || t.last_name as tenant_name,
+        p.name as property_name
+      FROM transactions tr
+      JOIN tenants t ON tr.tenant_id = t.id
+      JOIN units u ON tr.unit_id = u.id
+      JOIN properties p ON u.property_id = p.id
+      WHERE p.owner_id = ? AND tr.type = 'Rent'
+      ORDER BY tr.date DESC
+    `).all(req.params.id);
+
+    res.json({ ...owner, properties, transactions });
   });
 
   // Vite middleware for development

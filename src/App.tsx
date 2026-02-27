@@ -6,10 +6,15 @@ import { Tenants } from './components/Tenants';
 import { Maintenance } from './components/Maintenance';
 import { Finance } from './components/Finance';
 import { PropertyDetails } from './components/PropertyDetails';
+import { Communication } from './components/Communication';
+import { Tasks } from './components/Tasks';
+import { Owners } from './components/Owners';
+import { OwnerDetails } from './components/OwnerDetails';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
+  const [selectedOwnerId, setSelectedOwnerId] = useState<number | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark';
@@ -30,6 +35,20 @@ export default function App() {
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
   const renderContent = () => {
+    if (activeTab === 'owners' && selectedOwnerId !== null) {
+      return (
+        <OwnerDetails 
+          ownerId={selectedOwnerId} 
+          onBack={() => setSelectedOwnerId(null)} 
+          onSelectProperty={(id) => {
+            setActiveTab('properties');
+            setSelectedPropertyId(id);
+            setSelectedOwnerId(null);
+          }}
+        />
+      );
+    }
+
     if (activeTab === 'properties' && selectedPropertyId !== null) {
       return (
         <PropertyDetails 
@@ -44,27 +63,39 @@ export default function App() {
         return <Dashboard />;
       case 'properties':
         return <Properties onSelectProperty={(id) => setSelectedPropertyId(id)} />;
+      case 'owners':
+        return <Owners onSelectOwner={(id) => setSelectedOwnerId(id)} />;
       case 'tenants':
         return <Tenants />;
       case 'maintenance':
         return <Maintenance />;
       case 'finance':
         return <Finance />;
+      case 'communication':
+        return <Communication />;
+      case 'tasks':
+        return <Tasks />;
       default:
         return <Dashboard />;
     }
   };
 
   const getTitle = () => {
+    if (activeTab === 'owners' && selectedOwnerId !== null) {
+      return 'Owner Details';
+    }
     if (activeTab === 'properties' && selectedPropertyId !== null) {
       return 'Property Details';
     }
     switch (activeTab) {
       case 'dashboard': return 'Overview';
       case 'properties': return 'Property Portfolio';
+      case 'owners': return 'Owner Directory';
       case 'tenants': return 'Tenant Directory';
       case 'maintenance': return 'Maintenance & Service';
       case 'finance': return 'Financial Management';
+      case 'communication': return 'Tenant Portal';
+      case 'tasks': return 'Task Management';
       default: return 'Dashboard';
     }
   };
@@ -72,6 +103,7 @@ export default function App() {
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     setSelectedPropertyId(null);
+    setSelectedOwnerId(null);
   };
 
   return (

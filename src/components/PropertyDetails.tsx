@@ -10,10 +10,13 @@ import {
   Image as ImageIcon, 
   Upload,
   CheckCircle2,
-  X
+  X,
+  Download
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { api } from '../services/api';
-import { Property, Unit, PropertyImage } from '../types';
+import { Property, Unit, PropertyImage, Owner } from '../types';
 
 interface PropertyDetailsProps {
   propertyId: number;
@@ -28,6 +31,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
   const [isEditing, setIsEditing] = useState(false);
   const [showAddUnit, setShowAddUnit] = useState(false);
   const [showAddImage, setShowAddImage] = useState(false);
+  const [owners, setOwners] = useState<Owner[]>([]);
 
   // Form states
   const [editForm, setEditForm] = useState<Partial<Property>>({});
@@ -36,6 +40,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
 
   useEffect(() => {
     loadData();
+    api.getOwners().then(setOwners);
   }, [propertyId]);
 
   const loadData = async () => {
@@ -54,7 +59,10 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
 
   const handleUpdateProperty = async (e: React.FormEvent) => {
     e.preventDefault();
-    await api.updateProperty(propertyId, editForm);
+    await api.updateProperty(propertyId, {
+      ...editForm,
+      owner_id: editForm.owner_id ? Number(editForm.owner_id) : undefined
+    });
     setIsEditing(false);
     loadData();
   };
@@ -75,6 +83,24 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
     loadData();
   };
 
+  const exportToPDF = async () => {
+    const element = document.getElementById('property-report');
+    if (!element) return;
+    
+    try {
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`property-${property?.name.replace(/\s+/g, '-').toLowerCase()}-report.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    }
+  };
+
   if (loading || !property) {
     return (
       <div className="p-8 flex items-center justify-center h-full">
@@ -84,13 +110,14 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-12 pb-24">
+    <div className="p-8 max-w-7xl mx-auto space-y-12 pb-24" id="property-report">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div className="space-y-4">
           <button 
             onClick={onBack}
             className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors text-xs uppercase tracking-widest font-bold"
+            data-html2canvas-ignore
           >
             <ArrowLeft size={14} />
             Back to Portfolio
@@ -102,9 +129,21 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
               <MapPin size={14} className="text-violet-600 dark:text-violet-400" />
               <span>{property.address}</span>
             </div>
+            {property.owner_name && (
+              <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-sm mt-1">
+                <span className="font-bold">Owner:</span> {property.owner_name}
+              </div>
+            )}
           </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3" data-html2canvas-ignore>
+          <button 
+            onClick={exportToPDF}
+            className="vintsy-button-secondary flex items-center gap-2 text-[10px] uppercase tracking-widest"
+          >
+            <Download size={14} />
+            Export PDF
+          </button>
           <button 
             onClick={() => setIsEditing(true)}
             className="vintsy-button-secondary flex items-center gap-2 text-[10px] uppercase tracking-widest"
@@ -233,6 +272,10 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                   <p className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Type</p>
                   <p className="text-sm font-bold text-zinc-900 dark:text-white">{property.type}</p>
                 </div>
+                <div className="col-span-2 p-4 bg-violet-50/30 dark:bg-zinc-800/50 border border-violet-50 dark:border-zinc-800 rounded-xl">
+                  <p className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Property Value</p>
+                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">${(property.property_value ?? 0).toLocaleString()}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -307,14 +350,36 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Main Image URL</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Property Value</label>
                     <input 
-                      type="text" 
-                      value={editForm.image_url}
-                      onChange={(e) => setEditForm({ ...editForm, image_url: e.target.value })}
+                      type="number" 
+                      value={editForm.property_value || ''}
+                      onChange={(e) => setEditForm({ ...editForm, property_value: Number(e.target.value) })}
                       className="vintsy-input w-full"
                     />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Owner</label>
+                  <select 
+                    value={editForm.owner_id || ''}
+                    onChange={(e) => setEditForm({ ...editForm, owner_id: Number(e.target.value) })}
+                    className="vintsy-input w-full appearance-none"
+                  >
+                    <option value="">Select an owner...</option>
+                    {owners.map(o => (
+                      <option key={o.id} value={o.id}>{o.first_name} {o.last_name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Main Image URL</label>
+                  <input 
+                    type="text" 
+                    value={editForm.image_url}
+                    onChange={(e) => setEditForm({ ...editForm, image_url: e.target.value })}
+                    className="vintsy-input w-full"
+                  />
                 </div>
                 <button type="submit" className="w-full vintsy-button-primary py-4 text-xs uppercase tracking-widest">
                   Save Changes

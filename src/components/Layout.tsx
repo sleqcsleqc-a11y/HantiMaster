@@ -11,7 +11,10 @@ import {
   Bell,
   UserCircle,
   Sun,
-  Moon
+  Moon,
+  MessageSquare,
+  CheckSquare,
+  Briefcase
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -23,9 +26,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'properties', icon: Building2, label: 'Properties' },
+    { id: 'owners', icon: Briefcase, label: 'Owners' },
     { id: 'tenants', icon: Users, label: 'Tenants' },
     { id: 'maintenance', icon: Wrench, label: 'Maintenance' },
     { id: 'finance', icon: CircleDollarSign, label: 'Finance' },
+    { id: 'communication', icon: MessageSquare, label: 'Communication' },
+    { id: 'tasks', icon: CheckSquare, label: 'Tasks' },
   ];
 
   return (

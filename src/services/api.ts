@@ -1,8 +1,24 @@
-import { Property, Unit, Tenant, MaintenanceRequest, FinanceStats, PropertyImage } from "../types";
+import { Property, Unit, Tenant, MaintenanceRequest, FinanceStats, PropertyImage, Owner } from "../types";
 
 const API_BASE = "/api";
 
 export const api = {
+  async getOwners(): Promise<Owner[]> {
+    const res = await fetch(`${API_BASE}/owners`);
+    return res.json();
+  },
+  async getOwner(id: number): Promise<Owner> {
+    const res = await fetch(`${API_BASE}/owners/${id}`);
+    return res.json();
+  },
+  async createOwner(owner: Partial<Owner>): Promise<{ id: number }> {
+    const res = await fetch(`${API_BASE}/owners`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(owner),
+    });
+    return res.json();
+  },
   async getProperties(): Promise<Property[]> {
     const res = await fetch(`${API_BASE}/properties`);
     return res.json();
@@ -14,6 +30,14 @@ export const api = {
   async updateProperty(id: number, data: Partial<Property>): Promise<{ success: boolean }> {
     const res = await fetch(`${API_BASE}/properties/${id}`, {
       method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  async createProperty(data: Partial<Property>): Promise<{ id: number }> {
+    const res = await fetch(`${API_BASE}/properties`, {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });

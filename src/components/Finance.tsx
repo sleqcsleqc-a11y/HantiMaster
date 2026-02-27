@@ -9,12 +9,34 @@ import {
   CreditCard,
   Banknote
 } from 'lucide-react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  LineChart,
+  Line
+} from 'recharts';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { api } from '../services/api';
 import { FinanceStats } from '../types';
 
 export const Finance: React.FC = () => {
   const [stats, setStats] = useState<FinanceStats | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const revenueData = [
+    { name: 'Jan', income: 40000, expenses: 24000 },
+    { name: 'Feb', income: 45000, expenses: 28000 },
+    { name: 'Mar', income: 42000, expenses: 25000 },
+    { name: 'Apr', income: 50000, expenses: 29000 },
+    { name: 'May', income: 55000, expenses: 31000 },
+    { name: 'Jun', income: 58000, expenses: 32000 },
+  ];
 
   useEffect(() => {
     api.getFinanceStats().then(data => {
@@ -23,14 +45,35 @@ export const Finance: React.FC = () => {
     });
   }, []);
 
+  const exportToPDF = async () => {
+    const element = document.getElementById('finance-report');
+    if (!element) return;
+    
+    try {
+      const canvas = await html2canvas(element, { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save('financial-report.pdf');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    }
+  };
+
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="p-8 space-y-8 max-w-7xl mx-auto" id="finance-report">
       <div className="flex justify-between items-center mb-12">
         <div>
           <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">Financials</h3>
           <p className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Revenue & Performance</p>
         </div>
-        <button className="vintsy-button-secondary flex items-center gap-2 text-[10px] uppercase tracking-widest">
+        <button 
+          onClick={exportToPDF}
+          className="vintsy-button-secondary flex items-center gap-2 text-[10px] uppercase tracking-widest"
+        >
           <Download size={14} />
           Export Report
         </button>
@@ -58,6 +101,38 @@ export const Finance: React.FC = () => {
                 <Calendar size={16} />
                 <span>Due in 4 days</span>
               </div>
+            </div>
+          </div>
+
+          <div className="vintsy-card p-8">
+            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8">Income vs Expenses</h4>
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" className="dark:stroke-zinc-800" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 10, fill: '#71717a', fontWeight: 600 }} 
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 10, fill: '#71717a', fontWeight: 600 }}
+                    tickFormatter={(value) => `$${value / 1000}k`}
+                  />
+                  <Tooltip 
+                    cursor={{ fill: 'rgba(139, 92, 246, 0.05)' }}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(8px)' }}
+                    itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                    labelStyle={{ fontSize: '10px', fontWeight: 'bold', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}
+                  />
+                  <Bar dataKey="income" fill="#7c3aed" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  <Bar dataKey="expenses" fill="#c4b5fd" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
@@ -112,6 +187,37 @@ export const Finance: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="vintsy-card p-8">
+            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8">Income Trends</h4>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" className="dark:stroke-zinc-800" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 10, fill: '#71717a', fontWeight: 600 }} 
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 10, fill: '#71717a', fontWeight: 600 }}
+                    tickFormatter={(value) => `$${value / 1000}k`}
+                  />
+                  <Tooltip 
+                    cursor={{ stroke: 'rgba(139, 92, 246, 0.2)', strokeWidth: 2 }}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(8px)' }}
+                    itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                    labelStyle={{ fontSize: '10px', fontWeight: 'bold', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}
+                  />
+                  <Line type="monotone" dataKey="income" stroke="#7c3aed" strokeWidth={3} dot={{ r: 4, fill: '#7c3aed', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6, fill: '#7c3aed', strokeWidth: 2, stroke: '#fff' }} />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </div>
 

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Building2, MapPin, Home, MoreVertical, Plus, Filter, ArrowUpDown } from 'lucide-react';
+import { Building2, MapPin, Home, MoreVertical, Plus, Filter, ArrowUpDown, Search, X } from 'lucide-react';
 import { api } from '../services/api';
-import { Property } from '../types';
+import { Property, Owner } from '../types';
 
 interface PropertiesProps {
   onSelectProperty: (id: number) => void;
@@ -15,72 +15,257 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
   
   // Filter & Sort states
   const [filterType, setFilterType] = useState('All');
-  const [sortBy, setSortBy] = useState<'name' | 'units' | 'occupancy'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'units' | 'occupancy' | 'value'>('name');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [occupancyStatus, setOccupancyStatus] = useState('All');
+  const [showAddProperty, setShowAddProperty] = useState(false);
+  const [owners, setOwners] = useState<Owner[]>([]);
+  const [propertyForm, setPropertyForm] = useState({ name: '', address: '', type: 'Residential', image_url: '', property_value: 0, owner_id: '' });
 
-  useEffect(() => {
+  const loadProperties = () => {
     api.getProperties().then(data => {
       setProperties(data);
       setFilteredProperties(data);
       setLoading(false);
     });
+  };
+
+  useEffect(() => {
+    loadProperties();
+    api.getOwners().then(setOwners);
   }, []);
+
+  const handleAddProperty = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await api.createProperty({
+      ...propertyForm,
+      owner_id: propertyForm.owner_id ? Number(propertyForm.owner_id) : undefined
+    });
+    setShowAddProperty(false);
+    setPropertyForm({ name: '', address: '', type: 'Residential', image_url: '', property_value: 0, owner_id: '' });
+    loadProperties();
+  };
 
   useEffect(() => {
     let result = [...properties];
     
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(p => 
+        p.name.toLowerCase().includes(q) || 
+        p.address.toLowerCase().includes(q)
+      );
+    }
+
     if (filterType !== 'All') {
       result = result.filter(p => p.type === filterType);
+    }
+
+    if (minPrice) {
+      result = result.filter(p => (p.property_value ?? 0) >= Number(minPrice));
+    }
+    
+    if (maxPrice) {
+      result = result.filter(p => (p.property_value ?? 0) <= Number(maxPrice));
+    }
+
+    if (occupancyStatus !== 'All') {
+      if (occupancyStatus === 'Fully Occupied') {
+        result = result.filter(p => (p.occupancy_rate ?? 0) >= 100);
+      } else if (occupancyStatus === 'Partially Occupied') {
+        result = result.filter(p => (p.occupancy_rate ?? 0) > 0 && (p.occupancy_rate ?? 0) < 100);
+      } else if (occupancyStatus === 'Vacant') {
+        result = result.filter(p => (p.occupancy_rate ?? 0) === 0);
+      }
     }
 
     result.sort((a, b) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name);
       if (sortBy === 'units') return (b.unit_count ?? 0) - (a.unit_count ?? 0);
       if (sortBy === 'occupancy') return (b.occupancy_rate ?? 0) - (a.occupancy_rate ?? 0);
+      if (sortBy === 'value') return (b.property_value ?? 0) - (a.property_value ?? 0);
       return 0;
     });
 
     setFilteredProperties(result);
-  }, [filterType, sortBy, properties]);
+  }, [filterType, sortBy, searchQuery, minPrice, maxPrice, occupancyStatus, properties]);
 
   const propertyTypes = ['All', ...new Set(properties.map(p => p.type))];
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
         <div>
           <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">Portfolio</h3>
           <p className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Real Estate Assets</p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl px-4 py-2.5 shadow-sm hover:shadow-md transition-all">
-            <Filter size={14} className="text-violet-600 dark:text-violet-400" />
+        <button 
+          onClick={() => setShowAddProperty(true)}
+          className="vintsy-button-primary flex items-center gap-2 text-xs uppercase tracking-widest"
+        >
+          <Plus size={16} />
+          Add Property
+        </button>
+      </div>
+
+      {showAddProperty && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-zinc-900 rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-violet-100 dark:border-zinc-800 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Add New Property</h3>
+              <button 
+                onClick={() => setShowAddProperty(false)}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleAddProperty} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Property Name</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={propertyForm.name}
+                    onChange={e => setPropertyForm({...propertyForm, name: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Property Type</label>
+                  <select 
+                    value={propertyForm.type}
+                    onChange={e => setPropertyForm({...propertyForm, type: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                  >
+                    <option value="Residential">Residential</option>
+                    <option value="Commercial">Commercial</option>
+                    <option value="Industrial">Industrial</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Address</label>
+                <input 
+                  type="text" 
+                  required
+                  value={propertyForm.address}
+                  onChange={e => setPropertyForm({...propertyForm, address: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Property Value ($)</label>
+                  <input 
+                    type="number" 
+                    required
+                    value={propertyForm.property_value}
+                    onChange={e => setPropertyForm({...propertyForm, property_value: Number(e.target.value)})}
+                    className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Owner</label>
+                  <select 
+                    value={propertyForm.owner_id}
+                    onChange={e => setPropertyForm({...propertyForm, owner_id: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                  >
+                    <option value="">Select an owner...</option>
+                    {owners.map(o => (
+                      <option key={o.id} value={o.id}>{o.first_name} {o.last_name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Image URL</label>
+                <input 
+                  type="url" 
+                  required
+                  value={propertyForm.image_url}
+                  onChange={e => setPropertyForm({...propertyForm, image_url: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                />
+              </div>
+              <button type="submit" className="w-full vintsy-button-primary py-3 mt-6">
+                Save Property
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      <div className="vintsy-card p-6 mb-12 space-y-4">
+        <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">
+          <Filter size={16} />
+          Advanced Search
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={14} />
+            <input 
+              type="text" 
+              placeholder="Search by name or location..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400"
+            />
+          </div>
+          <div className="flex gap-2">
+            <input 
+              type="number" 
+              placeholder="Min Price" 
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              className="w-full px-4 py-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400"
+            />
+            <input 
+              type="number" 
+              placeholder="Max Price" 
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              className="w-full px-4 py-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400"
+            />
+          </div>
+          <select 
+            value={occupancyStatus}
+            onChange={(e) => setOccupancyStatus(e.target.value)}
+            className="w-full px-4 py-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all appearance-none cursor-pointer"
+          >
+            <option value="All">All Occupancy</option>
+            <option value="Fully Occupied">Fully Occupied</option>
+            <option value="Partially Occupied">Partially Occupied</option>
+            <option value="Vacant">Vacant</option>
+          </select>
+          <div className="flex gap-2">
             <select 
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="bg-transparent text-[10px] font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-widest outline-none cursor-pointer"
+              className="w-full px-4 py-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all appearance-none cursor-pointer"
             >
-              {propertyTypes.map(type => <option key={type} value={type} className="bg-white dark:bg-zinc-800">{type}</option>)}
+              {propertyTypes.map(type => <option key={type} value={type}>{type}</option>)}
             </select>
-          </div>
-
-          <div className="flex items-center gap-2 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl px-4 py-2.5 shadow-sm hover:shadow-md transition-all">
-            <ArrowUpDown size={13} className="text-violet-600 dark:text-violet-400" />
             <select 
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-transparent text-[10px] font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-widest outline-none cursor-pointer"
+              className="w-full px-4 py-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all appearance-none cursor-pointer"
             >
-              <option value="name" className="bg-white dark:bg-zinc-800">Name</option>
-              <option value="units" className="bg-white dark:bg-zinc-800">Units</option>
-              <option value="occupancy" className="bg-white dark:bg-zinc-800">Occupancy</option>
+              <option value="name">Sort: Name</option>
+              <option value="units">Sort: Units</option>
+              <option value="occupancy">Sort: Occupancy</option>
+              <option value="value">Sort: Value</option>
             </select>
           </div>
-
-          <button className="vintsy-button-primary flex items-center gap-2 text-xs uppercase tracking-widest">
-            <Plus size={16} />
-            Add Property
-          </button>
         </div>
       </div>
 
@@ -116,7 +301,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
                 <span>{property.address}</span>
               </div>
               
-              <div className="grid grid-cols-2 gap-8 pt-6 border-t border-violet-100/50 dark:border-zinc-800">
+              <div className="grid grid-cols-3 gap-4 pt-6 border-t border-violet-100/50 dark:border-zinc-800">
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Units</span>
                   <p className="text-sm font-bold text-zinc-900 dark:text-white">{property.unit_count} Units</p>
@@ -124,6 +309,10 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Occupancy</span>
                   <p className="text-sm font-bold text-violet-700 dark:text-violet-400">{Math.round(property.occupancy_rate ?? 0)}%</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Value</span>
+                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">${((property.property_value ?? 0) / 1000000).toFixed(1)}M</p>
                 </div>
               </div>
 
