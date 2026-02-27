@@ -1,0 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-white text-zinc-900 antialiased transition-colors duration-300 min-h-screen;
+  }
+  
+  .dark body {
+    @apply bg-zinc-950 text-zinc-100;
+  }
+}
+
+@layer components {
+  .vintsy-main-gradient {
+    @apply bg-gradient-to-br from-violet-50 via-white to-violet-50/30 min-h-screen;
+  }
+
+  .dark .vintsy-main-gradient {
+    @apply bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 min-h-screen;
+  }
+
+  .vintsy-card {
+    @apply bg-white/80 backdrop-blur-sm border border-violet-100/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:shadow-violet-200/40 hover:-translate-y-1 transition-all duration-300;
+  }
+  
+  .dark .vintsy-card {
+    @apply bg-zinc-900/80 border-zinc-800/50 hover:shadow-violet-900/10 hover:shadow-2xl hover:border-violet-500/30;
+  }
+  
+  .vintsy-button-primary {
+    @apply bg-gradient-to-r from-violet-700 to-violet-900 text-white font-semibold px-5 py-2.5 rounded-xl hover:from-violet-800 hover:to-black transition-all active:scale-95 shadow-lg shadow-violet-600/20 hover:shadow-violet-600/40;
+  }
+  
+  .dark .vintsy-button-primary {
+    @apply from-violet-600 to-violet-800 hover:from-violet-500 hover:to-violet-700 shadow-violet-500/20;
+  }
+  
+  .vintsy-button-secondary {
+    @apply bg-violet-50 text-violet-900 border border-violet-200 font-semibold px-5 py-2.5 rounded-xl hover:bg-violet-100 hover:border-violet-300 transition-all active:scale-95 shadow-sm;
+  }
+
+  .dark .vintsy-button-secondary {
+    @apply bg-zinc-800 text-zinc-100 border-zinc-700 hover:bg-zinc-700 hover:border-zinc-600;
+  }
+
+  .vintsy-input {
+    @apply bg-white/50 border border-violet-200 rounded-xl px-4 py-3 text-sm text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400;
+  }
+
+  .dark .vintsy-input {
+    @apply bg-zinc-800/50 border-zinc-700 text-zinc-100 focus:border-violet-500 focus:ring-violet-500/10;
+  }
+}

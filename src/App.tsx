@@ -1,0 +1,92 @@
+import React, { useState, useEffect } from 'react';
+import { Sidebar, Header } from './components/Layout';
+import { Dashboard } from './components/Dashboard';
+import { Properties } from './components/Properties';
+import { Tenants } from './components/Tenants';
+import { Maintenance } from './components/Maintenance';
+import { Finance } from './components/Finance';
+import { PropertyDetails } from './components/PropertyDetails';
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') === 'dark';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
+
+  const renderContent = () => {
+    if (activeTab === 'properties' && selectedPropertyId !== null) {
+      return (
+        <PropertyDetails 
+          propertyId={selectedPropertyId} 
+          onBack={() => setSelectedPropertyId(null)} 
+        />
+      );
+    }
+
+    switch (activeTab) {
+      case 'dashboard':
+        return <Dashboard />;
+      case 'properties':
+        return <Properties onSelectProperty={(id) => setSelectedPropertyId(id)} />;
+      case 'tenants':
+        return <Tenants />;
+      case 'maintenance':
+        return <Maintenance />;
+      case 'finance':
+        return <Finance />;
+      default:
+        return <Dashboard />;
+    }
+  };
+
+  const getTitle = () => {
+    if (activeTab === 'properties' && selectedPropertyId !== null) {
+      return 'Property Details';
+    }
+    switch (activeTab) {
+      case 'dashboard': return 'Overview';
+      case 'properties': return 'Property Portfolio';
+      case 'tenants': return 'Tenant Directory';
+      case 'maintenance': return 'Maintenance & Service';
+      case 'finance': return 'Financial Management';
+      default: return 'Dashboard';
+    }
+  };
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setSelectedPropertyId(null);
+  };
+
+  return (
+    <div className="flex h-screen vintsy-main-gradient font-sans text-zinc-900 dark:text-zinc-100 selection:bg-violet-100 selection:text-violet-900 transition-colors duration-300">
+      <Sidebar activeTab={activeTab} setActiveTab={handleTabChange} />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header 
+          title={getTitle()} 
+          isDarkMode={isDarkMode} 
+          toggleDarkMode={toggleDarkMode} 
+        />
+        <main className="flex-1 overflow-y-auto">
+          {renderContent()}
+        </main>
+      </div>
+    </div>
+  );
+}
