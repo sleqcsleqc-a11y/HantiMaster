@@ -17,8 +17,18 @@ try {
   if (!hasOwnerId) {
     db.exec("ALTER TABLE properties ADD COLUMN owner_id INTEGER REFERENCES owners(id)");
   }
+  
+  const hasStatus = tableInfo.some(col => col.name === 'status');
+  if (!hasStatus) {
+    db.exec("ALTER TABLE properties ADD COLUMN status TEXT DEFAULT 'For Sale'");
+  }
+  
+  const hasAmenities = tableInfo.some(col => col.name === 'amenities');
+  if (!hasAmenities) {
+    db.exec("ALTER TABLE properties ADD COLUMN amenities TEXT DEFAULT '[]'");
+  }
 } catch (e) {
-  console.error("Error checking/adding owner_id column:", e);
+  console.error("Error checking/adding columns to properties:", e);
 }
 
 // Initialize Database Schema
@@ -60,7 +70,19 @@ db.exec(`
     phone TEXT,
     lease_start DATE,
     lease_end DATE,
+    notes TEXT,
+    auto_rent_reminders BOOLEAN DEFAULT 0,
     FOREIGN KEY (unit_id) REFERENCES units(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS tenant_documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    url TEXT NOT NULL,
+    type TEXT NOT NULL,
+    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
   );
 
   CREATE TABLE IF NOT EXISTS maintenance_requests (
@@ -94,6 +116,29 @@ db.exec(`
     property_id INTEGER,
     image_url TEXT NOT NULL,
     FOREIGN KEY (property_id) REFERENCES properties(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender_id INTEGER NOT NULL,
+    sender_type TEXT NOT NULL,
+    receiver_id INTEGER NOT NULL,
+    receiver_type TEXT NOT NULL,
+    content TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    read BOOLEAN DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    assignee TEXT NOT NULL,
+    due_date DATE NOT NULL,
+    priority TEXT DEFAULT 'Medium',
+    status TEXT DEFAULT 'Pending',
+    cost REAL DEFAULT 0,
+    time_spent REAL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
 
@@ -134,6 +179,21 @@ if (transactionCount.count === 0) {
   insertTransaction.run(1, 1, 1200, "Rent", "Paid", new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString());
   insertTransaction.run(3, 2, 1500, "Rent", "Paid", new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString());
   insertTransaction.run(3, 2, 1500, "Rent", "Pending", new Date().toISOString());
+}
+
+const taskCount = db.prepare("SELECT COUNT(*) as count FROM tasks").get() as { count: number };
+if (taskCount.count === 0) {
+  const insertTask = db.prepare("INSERT INTO tasks (title, assignee, due_date, priority, status, cost, time_spent) VALUES (?, ?, ?, ?, ?, ?, ?)");
+  const today = new Date();
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+  const nextWeek = new Date(today); nextWeek.setDate(nextWeek.getDate() + 7);
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  
+  insertTask.run("Inspect Unit 204 roof leak", "Maintenance Team", tomorrow.toISOString().split('T')[0], "High", "Pending", 0, 0);
+  insertTask.run("Process lease renewal for Unit 101", "Admin", nextWeek.toISOString().split('T')[0], "Medium", "In Progress", 0, 2.5);
+  insertTask.run("Schedule annual fire safety inspection", "Admin", nextWeek.toISOString().split('T')[0], "Medium", "Pending", 0, 0);
+  insertTask.run("Fix broken window in lobby", "Maintenance Team", yesterday.toISOString().split('T')[0], "Emergency", "Completed", 450, 4);
+  insertTask.run("HVAC Maintenance Unit 302", "Contractor", yesterday.toISOString().split('T')[0], "High", "Completed", 1200, 6);
 }
 
 async function startServer() {
@@ -187,12 +247,12 @@ async function startServer() {
   });
 
   app.put("/api/properties/:id", (req, res) => {
-    const { name, address, type, image_url, property_value, owner_id } = req.body;
+    const { name, address, type, image_url, property_value, owner_id, status, amenities } = req.body;
     db.prepare(`
       UPDATE properties 
-      SET name = ?, address = ?, type = ?, image_url = ?, property_value = ?, owner_id = ?
+      SET name = ?, address = ?, type = ?, image_url = ?, property_value = ?, owner_id = ?, status = ?, amenities = ?
       WHERE id = ?
-    `).run(name, address, type, image_url, property_value || 0, owner_id || null, req.params.id);
+    `).run(name, address, type, image_url, property_value || 0, owner_id || null, status || 'For Sale', amenities || '[]', req.params.id);
     res.json({ success: true });
   });
 
@@ -210,6 +270,12 @@ async function startServer() {
     res.json({ id: info.lastInsertRowid });
   });
 
+  app.put("/api/units/:id", (req, res) => {
+    const { status } = req.body;
+    db.prepare("UPDATE units SET status = ? WHERE id = ?").run(status, req.params.id);
+    res.json({ success: true });
+  });
+
   app.get("/api/properties/:id/images", (req, res) => {
     const images = db.prepare("SELECT * FROM property_images WHERE property_id = ?").all(req.params.id);
     res.json(images);
@@ -222,6 +288,12 @@ async function startServer() {
       VALUES (?, ?)
     `).run(req.params.id, image_url);
     res.json({ id: info.lastInsertRowid });
+  });
+
+  app.put("/api/property_images/:id", (req, res) => {
+    const { image_url } = req.body;
+    db.prepare("UPDATE property_images SET image_url = ? WHERE id = ?").run(image_url, req.params.id);
+    res.json({ success: true });
   });
 
   app.get("/api/units", (req, res) => {
@@ -241,6 +313,125 @@ async function startServer() {
       JOIN properties p ON u.property_id = p.id
     `).all();
     res.json(tenants);
+  });
+
+  app.post("/api/tenants", (req, res) => {
+    const { first_name, last_name, email, phone, unit_id, lease_start, lease_end } = req.body;
+    try {
+      const info = db.prepare(`
+        INSERT INTO tenants (first_name, last_name, email, phone, unit_id, lease_start, lease_end)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(first_name, last_name, email, phone, unit_id, lease_start, lease_end);
+      
+      // Update unit status to Occupied
+      db.prepare("UPDATE units SET status = 'Occupied' WHERE id = ?").run(unit_id);
+      
+      res.json({ id: info.lastInsertRowid });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/tenants/:id", (req, res) => {
+    const tenant = db.prepare(`
+      SELECT t.*, u.unit_number, u.rent_amount, p.name as property_name, p.address as property_address
+      FROM tenants t
+      JOIN units u ON t.unit_id = u.id
+      JOIN properties p ON u.property_id = p.id
+      WHERE t.id = ?
+    `).get(req.params.id);
+    
+    if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+    const transactions = db.prepare(`
+      SELECT * FROM transactions
+      WHERE tenant_id = ?
+      ORDER BY date DESC
+    `).all(req.params.id);
+
+    const maintenance = db.prepare(`
+      SELECT * FROM maintenance_requests
+      WHERE tenant_id = ?
+      ORDER BY created_at DESC
+    `).all(req.params.id);
+
+    const documents = db.prepare(`
+      SELECT * FROM tenant_documents
+      WHERE tenant_id = ?
+      ORDER BY uploaded_at DESC
+    `).all(req.params.id);
+
+    const messages = db.prepare(`
+      SELECT * FROM messages
+      WHERE (sender_id = ? AND sender_type = 'Tenant') OR (receiver_id = ? AND receiver_type = 'Tenant')
+      ORDER BY timestamp DESC
+    `).all(req.params.id, req.params.id);
+
+    // Aggregate activities
+    const activities = [
+      ...transactions.map((t: any) => ({
+        id: `tx-${t.id}`,
+        type: 'Payment',
+        description: `Payment of $${t.amount} (${t.status})`,
+        date: t.date
+      })),
+      ...maintenance.map((m: any) => ({
+        id: `maint-${m.id}`,
+        type: 'Maintenance',
+        description: `Maintenance request: ${m.title}`,
+        date: m.created_at
+      })),
+      ...documents.map((d: any) => ({
+        id: `doc-${d.id}`,
+        type: 'Document',
+        description: `Uploaded document: ${d.name}`,
+        date: d.uploaded_at
+      })),
+      ...messages.map((m: any) => ({
+        id: `msg-${m.id}`,
+        type: 'Message',
+        description: m.sender_type === 'Tenant' ? 'Sent a message' : 'Received a message',
+        date: m.timestamp
+      }))
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    res.json({ ...tenant, transactions, maintenance, documents, activities });
+  });
+
+  app.put("/api/tenants/:id", (req, res) => {
+    const { notes, auto_rent_reminders, lease_end } = req.body;
+    
+    const updates = [];
+    const values = [];
+    
+    if (notes !== undefined) {
+      updates.push("notes = ?");
+      values.push(notes);
+    }
+    if (auto_rent_reminders !== undefined) {
+      updates.push("auto_rent_reminders = ?");
+      values.push(auto_rent_reminders ? 1 : 0);
+    }
+    if (lease_end !== undefined) {
+      updates.push("lease_end = ?");
+      values.push(lease_end);
+    }
+    
+    if (updates.length > 0) {
+      values.push(req.params.id);
+      db.prepare(`UPDATE tenants SET ${updates.join(", ")} WHERE id = ?`).run(...values);
+    }
+    
+    res.json({ success: true });
+  });
+
+  app.post("/api/tenants/:id/documents", (req, res) => {
+    const { name, url, type } = req.body;
+    const info = db.prepare(`
+      INSERT INTO tenant_documents (tenant_id, name, url, type)
+      VALUES (?, ?, ?, ?)
+    `).run(req.params.id, name, url, type);
+    res.json({ id: info.lastInsertRowid });
   });
 
   app.get("/api/maintenance", (req, res) => {
@@ -272,6 +463,51 @@ async function startServer() {
       FROM transactions
     `).get();
     res.json(stats);
+  });
+
+  // Messages Routes
+  app.get("/api/messages", (req, res) => {
+    const messages = db.prepare("SELECT * FROM messages ORDER BY timestamp ASC").all();
+    res.json(messages);
+  });
+
+  app.post("/api/messages", (req, res) => {
+    const { sender_id, sender_type, receiver_id, receiver_type, content } = req.body;
+    const info = db.prepare(`
+      INSERT INTO messages (sender_id, sender_type, receiver_id, receiver_type, content)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(sender_id, sender_type, receiver_id, receiver_type, content);
+    res.json({ id: info.lastInsertRowid });
+  });
+
+  app.put("/api/messages/read/:id", (req, res) => {
+    db.prepare("UPDATE messages SET read = 1 WHERE id = ?").run(req.params.id);
+    res.json({ success: true });
+  });
+
+  // Tasks Routes
+  app.get("/api/tasks", (req, res) => {
+    const tasks = db.prepare("SELECT * FROM tasks ORDER BY due_date ASC").all();
+    res.json(tasks);
+  });
+
+  app.post("/api/tasks", (req, res) => {
+    const { title, assignee, due_date, priority, status, cost, time_spent } = req.body;
+    const info = db.prepare(`
+      INSERT INTO tasks (title, assignee, due_date, priority, status, cost, time_spent)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(title, assignee, due_date, priority || 'Medium', status || 'Pending', cost || 0, time_spent || 0);
+    res.json({ id: info.lastInsertRowid });
+  });
+
+  app.put("/api/tasks/:id", (req, res) => {
+    const { title, assignee, due_date, priority, status, cost, time_spent } = req.body;
+    db.prepare(`
+      UPDATE tasks 
+      SET title = ?, assignee = ?, due_date = ?, priority = ?, status = ?, cost = ?, time_spent = ?
+      WHERE id = ?
+    `).run(title, assignee, due_date, priority, status, cost, time_spent, req.params.id);
+    res.json({ success: true });
   });
 
   // Owner Routes

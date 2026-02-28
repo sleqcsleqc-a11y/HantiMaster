@@ -21,9 +21,10 @@ import { Property, Unit, PropertyImage, Owner } from '../types';
 interface PropertyDetailsProps {
   propertyId: number;
   onBack: () => void;
+  onSelectOwner: (id: number) => void;
 }
 
-export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, onBack }) => {
+export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, onBack, onSelectOwner }) => {
   const [property, setProperty] = useState<Property | null>(null);
   const [units, setUnits] = useState<Unit[]>([]);
   const [images, setImages] = useState<PropertyImage[]>([]);
@@ -31,12 +32,15 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
   const [isEditing, setIsEditing] = useState(false);
   const [showAddUnit, setShowAddUnit] = useState(false);
   const [showAddImage, setShowAddImage] = useState(false);
+  const [editingImageId, setEditingImageId] = useState<number | null>(null);
   const [owners, setOwners] = useState<Owner[]>([]);
 
   // Form states
   const [editForm, setEditForm] = useState<Partial<Property>>({});
   const [unitForm, setUnitForm] = useState({ unit_number: '', rent_amount: 0, status: 'Vacant' as const });
   const [imageForm, setImageForm] = useState({ image_url: '' });
+
+  const availableAmenities = ['Pool', 'Gym', 'Parking', 'Elevator', 'Security', 'Laundry', 'Balcony', 'Pet Friendly', 'WiFi'];
 
   useEffect(() => {
     loadData();
@@ -77,9 +81,20 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
 
   const handleAddImage = async (e: React.FormEvent) => {
     e.preventDefault();
-    await api.addPropertyImage(propertyId, imageForm);
+    if (editingImageId) {
+      await api.updatePropertyImage(editingImageId, imageForm.image_url);
+    } else {
+      await api.addPropertyImage(propertyId, imageForm);
+    }
     setShowAddImage(false);
+    setEditingImageId(null);
     setImageForm({ image_url: '' });
+    loadData();
+  };
+
+  const handleToggleUnitStatus = async (unit: Unit) => {
+    const newStatus = unit.status === 'Vacant' ? 'Occupied' : 'Vacant';
+    await api.updateUnit(unit.id, { status: newStatus });
     loadData();
   };
 
@@ -124,14 +139,31 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
           </button>
           <div>
             <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">{property.type}</h3>
-            <h2 className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight">{property.name}</h2>
+            <h2 className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight flex items-center gap-4">
+              {property.name}
+              <span className={`text-[10px] px-3 py-1 rounded-full uppercase tracking-widest font-bold border ${
+                property.status === 'For Sale' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800' :
+                property.status === 'Sold' ? 'bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700' :
+                property.status === 'Rented' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' :
+                property.status === 'Under Maintenance' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' :
+                'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
+              }`}>
+                {property.status || 'Active'}
+              </span>
+            </h2>
             <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-sm mt-2">
               <MapPin size={14} className="text-violet-600 dark:text-violet-400" />
               <span>{property.address}</span>
             </div>
             {property.owner_name && (
               <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-sm mt-1">
-                <span className="font-bold">Owner:</span> {property.owner_name}
+                <span className="font-bold">Owner:</span> 
+                <button 
+                  onClick={() => property.owner_id && onSelectOwner(property.owner_id)}
+                  className="text-violet-600 dark:text-violet-400 hover:underline cursor-pointer"
+                >
+                  {property.owner_name}
+                </button>
               </div>
             )}
           </div>
@@ -194,8 +226,35 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                     alt="Gallery"
                     referrerPolicy="no-referrer"
                   />
+                  <button 
+                    onClick={() => {
+                      setEditingImageId(img.id);
+                      setImageForm({ image_url: img.image_url });
+                      setShowAddImage(true);
+                    }}
+                    className="absolute top-3 right-3 p-2 bg-white/90 dark:bg-zinc-900/90 text-violet-600 dark:text-violet-400 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-violet-50 dark:hover:bg-zinc-800"
+                  >
+                    <Edit3 size={14} />
+                  </button>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Amenities */}
+          <div className="vintsy-card p-8">
+            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8">Amenities</h4>
+            <div className="flex flex-wrap gap-3">
+              {property.amenities && JSON.parse(property.amenities).length > 0 ? (
+                JSON.parse(property.amenities).map((amenity: string) => (
+                  <span key={amenity} className="px-4 py-2 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 text-xs font-bold rounded-xl border border-violet-100 dark:border-violet-800/30 flex items-center gap-2">
+                    <CheckCircle2 size={14} />
+                    {amenity}
+                  </span>
+                ))
+              ) : (
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">No amenities listed.</p>
+              )}
             </div>
           </div>
 
@@ -223,13 +282,16 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                       <td className="px-8 py-5 text-sm font-bold text-zinc-900 dark:text-white">Unit {unit.unit_number}</td>
                       <td className="px-8 py-5 text-sm font-bold text-zinc-900 dark:text-white">${unit.rent_amount.toLocaleString()}</td>
                       <td className="px-8 py-5">
-                        <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
-                          unit.status === 'Occupied' 
-                            ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800' 
-                            : 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border-violet-100 dark:border-violet-800'
-                        }`}>
+                        <button 
+                          onClick={() => handleToggleUnitStatus(unit)}
+                          className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border transition-colors ${
+                            unit.status === 'Occupied' 
+                              ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40' 
+                              : 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border-violet-100 dark:border-violet-800 hover:bg-violet-100 dark:hover:bg-violet-900/40'
+                          }`}
+                        >
                           {unit.status}
-                        </span>
+                        </button>
                       </td>
                       <td className="px-8 py-5 text-right">
                         <button className="text-zinc-300 dark:text-zinc-600 hover:text-violet-700 dark:hover:text-violet-400 transition-colors">

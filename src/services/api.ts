@@ -1,4 +1,4 @@
-import { Property, Unit, Tenant, MaintenanceRequest, FinanceStats, PropertyImage, Owner } from "../types";
+import { Property, Unit, Tenant, MaintenanceRequest, FinanceStats, PropertyImage, Owner, Task, Message } from "../types";
 
 const API_BASE = "/api";
 
@@ -67,12 +67,56 @@ export const api = {
     });
     return res.json();
   },
+  async updatePropertyImage(imageId: number, image_url: string): Promise<{ success: boolean }> {
+    const res = await fetch(`${API_BASE}/property_images/${imageId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image_url }),
+    });
+    return res.json();
+  },
   async getUnits(): Promise<Unit[]> {
     const res = await fetch(`${API_BASE}/units`);
     return res.json();
   },
+  async updateUnit(id: number, data: Partial<Unit>): Promise<{ success: boolean }> {
+    const res = await fetch(`${API_BASE}/units/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
   async getTenants(): Promise<Tenant[]> {
     const res = await fetch(`${API_BASE}/tenants`);
+    return res.json();
+  },
+  async getTenant(id: number): Promise<Tenant> {
+    const res = await fetch(`${API_BASE}/tenants/${id}`);
+    return res.json();
+  },
+  async createTenant(data: Partial<Tenant>): Promise<{ id: number }> {
+    const res = await fetch(`${API_BASE}/tenants`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  async updateTenant(id: number, data: Partial<Tenant>): Promise<{ success: boolean }> {
+    const res = await fetch(`${API_BASE}/tenants/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  async uploadTenantDocument(id: number, data: { name: string, url: string, type: string }): Promise<{ id: number }> {
+    const res = await fetch(`${API_BASE}/tenants/${id}/documents`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
     return res.json();
   },
   async getMaintenance(): Promise<MaintenanceRequest[]> {
@@ -91,4 +135,42 @@ export const api = {
     const res = await fetch(`${API_BASE}/finance/stats`);
     return res.json();
   },
+  async getTasks(): Promise<Task[]> {
+    const res = await fetch(`${API_BASE}/tasks`);
+    return res.json();
+  },
+  async createTask(data: Partial<Task>): Promise<{ id: number }> {
+    const res = await fetch(`${API_BASE}/tasks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  async updateTask(id: number, data: Partial<Task>): Promise<{ success: boolean }> {
+    const res = await fetch(`${API_BASE}/tasks/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  async getMessages(): Promise<Message[]> {
+    const res = await fetch(`${API_BASE}/messages`);
+    return res.json();
+  },
+  async sendMessage(data: Partial<Message>): Promise<{ id: number }> {
+    const res = await fetch(`${API_BASE}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  async markMessageRead(id: number): Promise<{ success: boolean }> {
+    const res = await fetch(`${API_BASE}/messages/read/${id}`, {
+      method: "PUT",
+    });
+    return res.json();
+  }
 };

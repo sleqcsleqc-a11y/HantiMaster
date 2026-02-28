@@ -1,26 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Plus, CheckSquare, Clock, Calendar, MoreVertical, CheckCircle2, Circle, LayoutGrid, List, DollarSign, Timer } from 'lucide-react';
+import { Plus, CheckSquare, Clock, Calendar, MoreVertical, CheckCircle2, Circle, LayoutGrid, List, DollarSign, Timer, Filter, X, AlertCircle } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-
-interface Task {
-  id: string;
-  title: string;
-  assignee: string;
-  dueDate: string;
-  priority: 'Low' | 'Medium' | 'High' | 'Emergency';
-  status: 'Pending' | 'In Progress' | 'Completed';
-  cost: number;
-  timeSpent: number; // in hours
-}
-
-const initialTasks: Task[] = [
-  { id: '1', title: 'Inspect Unit 204 roof leak', assignee: 'Maintenance Team', dueDate: '2024-03-01', priority: 'High', status: 'Pending', cost: 0, timeSpent: 0 },
-  { id: '2', title: 'Process lease renewal for Unit 101', assignee: 'Admin', dueDate: '2024-03-05', priority: 'Medium', status: 'In Progress', cost: 0, timeSpent: 2.5 },
-  { id: '3', title: 'Schedule annual fire safety inspection', assignee: 'Admin', dueDate: '2024-03-15', priority: 'Medium', status: 'Pending', cost: 0, timeSpent: 0 },
-  { id: '4', title: 'Fix broken window in lobby', assignee: 'Maintenance Team', dueDate: '2024-02-28', priority: 'Emergency', status: 'Completed', cost: 450, timeSpent: 4 },
-  { id: '5', title: 'HVAC Maintenance Unit 302', assignee: 'Contractor', dueDate: '2024-02-25', priority: 'High', status: 'Completed', cost: 1200, timeSpent: 6 },
-];
+import { api } from '../services/api';
+import { Task } from '../types';
 
 const priorityColors = {
   Emergency: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-100 dark:border-red-800',
@@ -32,31 +15,96 @@ const priorityColors = {
 const columns = ['Pending', 'In Progress', 'Completed'] as const;
 
 export const Tasks: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [view, setView] = useState<'board' | 'list' | 'report'>('board');
   const [isBrowser, setIsBrowser] = useState(false);
+  const [showAddTask, setShowAddTask] = useState(false);
+  
+  // Filters
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [priorityFilter, setPriorityFilter] = useState('All');
+  const [assigneeFilter, setAssigneeFilter] = useState('All');
+
+  const [taskForm, setTaskForm] = useState<Partial<Task>>({
+    title: '',
+    assignee: '',
+    due_date: new Date().toISOString().split('T')[0],
+    priority: 'Medium',
+    status: 'Pending',
+    cost: 0,
+    time_spent: 0
+  });
+
+  const loadTasks = () => {
+    api.getTasks().then(setTasks);
+  };
 
   useEffect(() => {
     setIsBrowser(true);
+    loadTasks();
   }, []);
 
-  const onDragEnd = (result: DropResult) => {
+  const handleAddTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await api.createTask(taskForm);
+    setShowAddTask(false);
+    setTaskForm({
+      title: '',
+      assignee: '',
+      due_date: new Date().toISOString().split('T')[0],
+      priority: 'Medium',
+      status: 'Pending',
+      cost: 0,
+      time_spent: 0
+    });
+    loadTasks();
+  };
+
+  const onDragEnd = async (result: DropResult) => {
     if (!result.destination) return;
     
-    const { source, destination } = result;
+    const { source, destination, draggableId } = result;
     
     if (source.droppableId !== destination.droppableId) {
       const newTasks = [...tasks];
-      const taskIndex = newTasks.findIndex(t => t.id === result.draggableId);
+      const taskIndex = newTasks.findIndex(t => t.id.toString() === draggableId);
       if (taskIndex > -1) {
-        newTasks[taskIndex].status = destination.droppableId as Task['status'];
-        setTasks(newTasks);
+        const updatedTask = { ...newTasks[taskIndex], status: destination.droppableId as Task['status'] };
+        newTasks[taskIndex] = updatedTask;
+        setTasks(newTasks); // Optimistic update
+        await api.updateTask(updatedTask.id, { status: updatedTask.status });
+        loadTasks();
       }
     }
   };
 
-  const totalCost = tasks.reduce((sum, t) => sum + t.cost, 0);
-  const totalTime = tasks.reduce((sum, t) => sum + t.timeSpent, 0);
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(t => {
+      if (statusFilter !== 'All' && t.status !== statusFilter) return false;
+      if (priorityFilter !== 'All' && t.priority !== priorityFilter) return false;
+      if (assigneeFilter !== 'All' && t.assignee !== assigneeFilter) return false;
+      return true;
+    });
+  }, [tasks, statusFilter, priorityFilter, assigneeFilter]);
+
+  const uniqueAssignees = Array.from(new Set(tasks.map(t => t.assignee)));
+
+  const totalCost = filteredTasks.reduce((sum, t) => sum + (t.cost || 0), 0);
+  const totalTime = filteredTasks.reduce((sum, t) => sum + (t.time_spent || 0), 0);
+
+  const getDueDateStatus = (dueDate: string, status: string) => {
+    if (status === 'Completed') return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    const diffTime = due.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) return 'overdue';
+    if (diffDays <= 2) return 'soon';
+    return null;
+  };
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -86,23 +134,181 @@ export const Tasks: React.FC = () => {
               <span className="text-[10px] font-bold uppercase tracking-widest">Report</span>
             </button>
           </div>
-          <button className="vintsy-button-primary flex items-center gap-2 text-[10px] uppercase tracking-widest">
+          <button 
+            onClick={() => setShowAddTask(true)}
+            className="vintsy-button-primary flex items-center gap-2 text-[10px] uppercase tracking-widest"
+          >
             <Plus size={16} />
             New Task
           </button>
         </div>
       </div>
 
+      <div className="vintsy-card p-6 mb-8 space-y-4">
+        <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">
+          <Filter size={16} />
+          Filters
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Status</label>
+            <select 
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="vintsy-input w-full appearance-none"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Priority</label>
+            <select 
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="vintsy-input w-full appearance-none"
+            >
+              <option value="All">All Priorities</option>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+              <option value="Emergency">Emergency</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Assignee</label>
+            <select 
+              value={assigneeFilter}
+              onChange={(e) => setAssigneeFilter(e.target.value)}
+              className="vintsy-input w-full appearance-none"
+            >
+              <option value="All">All Assignees</option>
+              {uniqueAssignees.map(a => (
+                <option key={a} value={a}>{a}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {showAddTask && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-zinc-900 rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-violet-100 dark:border-zinc-800 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Create New Task</h3>
+              <button 
+                onClick={() => setShowAddTask(false)}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleAddTask} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Title</label>
+                <input 
+                  type="text" 
+                  required
+                  value={taskForm.title}
+                  onChange={e => setTaskForm({...taskForm, title: e.target.value})}
+                  className="vintsy-input w-full"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Assignee</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={taskForm.assignee}
+                    onChange={e => setTaskForm({...taskForm, assignee: e.target.value})}
+                    className="vintsy-input w-full"
+                    placeholder="e.g., Maintenance Team"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Due Date</label>
+                  <input 
+                    type="date" 
+                    required
+                    value={taskForm.due_date}
+                    onChange={e => setTaskForm({...taskForm, due_date: e.target.value})}
+                    className="vintsy-input w-full"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Priority</label>
+                  <select 
+                    value={taskForm.priority}
+                    onChange={e => setTaskForm({...taskForm, priority: e.target.value as any})}
+                    className="vintsy-input w-full appearance-none"
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Emergency">Emergency</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Status</label>
+                  <select 
+                    value={taskForm.status}
+                    onChange={e => setTaskForm({...taskForm, status: e.target.value as any})}
+                    className="vintsy-input w-full appearance-none"
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Cost ($)</label>
+                  <input 
+                    type="number" 
+                    value={taskForm.cost}
+                    onChange={e => setTaskForm({...taskForm, cost: Number(e.target.value)})}
+                    className="vintsy-input w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Time Spent (Hours)</label>
+                  <input 
+                    type="number" 
+                    step="0.5"
+                    value={taskForm.time_spent}
+                    onChange={e => setTaskForm({...taskForm, time_spent: Number(e.target.value)})}
+                    className="vintsy-input w-full"
+                  />
+                </div>
+              </div>
+              <button type="submit" className="w-full vintsy-button-primary py-3 mt-6">
+                Save Task
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
       {view === 'report' && (
         <div className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="vintsy-card p-6">
               <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Total Tasks</p>
-              <h4 className="text-3xl font-bold text-zinc-900 dark:text-white">{tasks.length}</h4>
+              <h4 className="text-3xl font-bold text-zinc-900 dark:text-white">{filteredTasks.length}</h4>
             </div>
             <div className="vintsy-card p-6">
               <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Completed</p>
-              <h4 className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{tasks.filter(t => t.status === 'Completed').length}</h4>
+              <h4 className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{filteredTasks.filter(t => t.status === 'Completed').length}</h4>
             </div>
             <div className="vintsy-card p-6">
               <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Total Cost</p>
@@ -133,7 +339,7 @@ export const Tasks: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-violet-50 dark:divide-zinc-800">
-                  {tasks.map(task => (
+                  {filteredTasks.map(task => (
                     <tr key={task.id} className="hover:bg-violet-50/20 dark:hover:bg-zinc-800/30 transition-colors">
                       <td className="px-6 py-4 text-sm font-bold text-zinc-900 dark:text-white">{task.title}</td>
                       <td className="px-6 py-4">
@@ -143,8 +349,8 @@ export const Tasks: React.FC = () => {
                           {task.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">${task.cost.toLocaleString()}</td>
-                      <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">{task.timeSpent}h</td>
+                      <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">${(task.cost || 0).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">{task.time_spent || 0}h</td>
                     </tr>
                   ))}
                 </tbody>
@@ -162,7 +368,7 @@ export const Tasks: React.FC = () => {
                 <div className="flex items-center justify-between px-2">
                   <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{columnId}</h4>
                   <span className="w-6 h-6 rounded-full bg-violet-100 dark:bg-zinc-800 text-violet-700 dark:text-zinc-400 flex items-center justify-center text-[10px] font-bold">
-                    {tasks.filter(t => t.status === columnId).length}
+                    {filteredTasks.filter(t => t.status === columnId).length}
                   </span>
                 </div>
                 <Droppable droppableId={columnId}>
@@ -174,42 +380,51 @@ export const Tasks: React.FC = () => {
                         snapshot.isDraggingOver ? 'bg-violet-50/50 dark:bg-zinc-800/50 border-2 border-dashed border-violet-200 dark:border-zinc-700' : 'bg-zinc-50/50 dark:bg-zinc-900/20 border-2 border-transparent'
                       }`}
                     >
-                      {tasks.filter(t => t.status === columnId).map((task, index) => (
+                      {filteredTasks.filter(t => t.status === columnId).map((task, index) => {
+                        const dueStatus = getDueDateStatus(task.due_date, task.status);
+                        return (
                         // @ts-ignore
-                        <Draggable key={task.id} draggableId={task.id} index={index}>
+                        <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
                           {(provided, snapshot) => (
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              className={`vintsy-card p-5 mb-4 cursor-grab active:cursor-grabbing ${
+                              className={`vintsy-card p-5 mb-4 cursor-grab active:cursor-grabbing relative overflow-hidden ${
                                 snapshot.isDragging ? 'shadow-2xl scale-105 rotate-2' : ''
-                              }`}
+                              } ${dueStatus === 'overdue' ? 'border-red-200 dark:border-red-900/50' : dueStatus === 'soon' ? 'border-orange-200 dark:border-orange-900/50' : ''}`}
                             >
+                              {dueStatus === 'overdue' && (
+                                <div className="absolute top-0 right-0 w-12 h-12 bg-red-50 dark:bg-red-900/20 rounded-bl-3xl flex items-start justify-end p-2">
+                                  <AlertCircle size={14} className="text-red-600 dark:text-red-400" />
+                                </div>
+                              )}
+                              {dueStatus === 'soon' && (
+                                <div className="absolute top-0 right-0 w-12 h-12 bg-orange-50 dark:bg-orange-900/20 rounded-bl-3xl flex items-start justify-end p-2">
+                                  <Clock size={14} className="text-orange-600 dark:text-orange-400" />
+                                </div>
+                              )}
                               <div className="flex justify-between items-start mb-3">
                                 <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest border ${priorityColors[task.priority]}`}>
                                   {task.priority}
                                 </span>
-                                <button className="text-zinc-400 hover:text-violet-600 transition-colors">
-                                  <MoreVertical size={14} />
-                                </button>
                               </div>
-                              <h5 className="text-sm font-bold text-zinc-900 dark:text-white mb-4 leading-snug">{task.title}</h5>
+                              <h5 className="text-sm font-bold text-zinc-900 dark:text-white mb-4 leading-snug pr-6">{task.title}</h5>
                               <div className="flex items-center justify-between pt-4 border-t border-violet-50 dark:border-zinc-800">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 flex items-center justify-center font-bold text-[10px]">
+                                  <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 flex items-center justify-center font-bold text-[10px]" title={task.assignee}>
                                     {task.assignee.charAt(0)}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-zinc-500">
+                                <div className={`flex items-center gap-1.5 text-[10px] font-medium ${dueStatus === 'overdue' ? 'text-red-600 dark:text-red-400 font-bold' : dueStatus === 'soon' ? 'text-orange-600 dark:text-orange-400 font-bold' : 'text-zinc-500'}`}>
                                   <Calendar size={12} />
-                                  <span>{new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                  <span>{new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                                 </div>
                               </div>
                             </div>
                           )}
                         </Draggable>
-                      ))}
+                      )})}
                       {provided.placeholder}
                     </div>
                   )}
@@ -234,36 +449,42 @@ export const Tasks: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-violet-50 dark:divide-zinc-800">
-                {tasks.map((task, index) => (
+                {filteredTasks.map((task, index) => {
+                  const dueStatus = getDueDateStatus(task.due_date, task.status);
+                  return (
                   <motion.tr
                     key={task.id}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="hover:bg-violet-50/20 dark:hover:bg-zinc-800/30 transition-all duration-300 group cursor-pointer"
+                    className={`hover:bg-violet-50/20 dark:hover:bg-zinc-800/30 transition-all duration-300 group cursor-pointer ${dueStatus === 'overdue' ? 'bg-red-50/30 dark:bg-red-900/10' : dueStatus === 'soon' ? 'bg-orange-50/30 dark:bg-orange-900/10' : ''}`}
                   >
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-4">
                         <button className="text-zinc-300 dark:text-zinc-600 hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
                           {task.status === 'Completed' ? <CheckCircle2 size={20} className="text-emerald-500" /> : <Circle size={20} />}
                         </button>
-                        <p className={`text-sm font-bold ${task.status === 'Completed' ? 'text-zinc-400 dark:text-zinc-600 line-through' : 'text-zinc-900 dark:text-white'}`}>
-                          {task.title}
-                        </p>
+                        <div className="flex flex-col">
+                          <p className={`text-sm font-bold ${task.status === 'Completed' ? 'text-zinc-400 dark:text-zinc-600 line-through' : 'text-zinc-900 dark:text-white'}`}>
+                            {task.title}
+                          </p>
+                          {dueStatus === 'overdue' && <span className="text-[9px] font-bold text-red-600 uppercase tracking-widest mt-1 flex items-center gap-1"><AlertCircle size={10} /> Overdue</span>}
+                          {dueStatus === 'soon' && <span className="text-[9px] font-bold text-orange-600 uppercase tracking-widest mt-1 flex items-center gap-1"><Clock size={10} /> Due Soon</span>}
+                        </div>
                       </div>
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 flex items-center justify-center font-bold text-[10px] border border-violet-200 dark:border-violet-800 shadow-sm">
+                        <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 flex items-center justify-center font-bold text-[10px] border border-violet-200 dark:border-violet-800 shadow-sm" title={task.assignee}>
                           {task.assignee.charAt(0)}
                         </div>
                         <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{task.assignee}</span>
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                      <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                        <Calendar size={14} className="text-violet-700 dark:text-violet-400" />
-                        <span>{new Date(task.dueDate).toLocaleDateString()}</span>
+                      <div className={`flex items-center gap-2 text-xs font-medium ${dueStatus === 'overdue' ? 'text-red-600 dark:text-red-400 font-bold' : dueStatus === 'soon' ? 'text-orange-600 dark:text-orange-400 font-bold' : 'text-zinc-500 dark:text-zinc-400'}`}>
+                        <Calendar size={14} className={dueStatus ? '' : 'text-violet-700 dark:text-violet-400'} />
+                        <span>{new Date(task.due_date).toLocaleDateString()}</span>
                       </div>
                     </td>
                     <td className="px-8 py-6">
@@ -283,7 +504,8 @@ export const Tasks: React.FC = () => {
                       </span>
                     </td>
                   </motion.tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

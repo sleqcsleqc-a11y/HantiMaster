@@ -54,6 +54,11 @@ export default function App() {
         <PropertyDetails 
           propertyId={selectedPropertyId} 
           onBack={() => setSelectedPropertyId(null)} 
+          onSelectOwner={(id) => {
+            setActiveTab('owners');
+            setSelectedOwnerId(id);
+            setSelectedPropertyId(null);
+          }}
         />
       );
     }
