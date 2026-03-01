@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Plus, CheckSquare, Clock, Calendar, MoreVertical, CheckCircle2, Circle, LayoutGrid, List, DollarSign, Timer, Filter, X, AlertCircle } from 'lucide-react';
+import { Plus, CheckSquare, Clock, Calendar, MoreVertical, CheckCircle2, Circle, LayoutGrid, List, DollarSign, Timer, Filter, X, AlertCircle, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { api } from '../services/api';
 import { Task } from '../types';
 
@@ -24,6 +25,8 @@ export const Tasks: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [assigneeFilter, setAssigneeFilter] = useState('All');
+  const [sortField, setSortField] = useState<'due_date' | 'priority' | 'status'>('due_date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const [taskForm, setTaskForm] = useState<Partial<Task>>({
     title: '',
@@ -78,19 +81,54 @@ export const Tasks: React.FC = () => {
     }
   };
 
-  const filteredTasks = useMemo(() => {
-    return tasks.filter(t => {
+  const priorityOrder = { Emergency: 0, High: 1, Medium: 2, Low: 3 };
+  const statusOrder = { Pending: 0, 'In Progress': 1, Completed: 2 };
+
+  const processedTasks = useMemo(() => {
+    let result = tasks.filter(t => {
       if (statusFilter !== 'All' && t.status !== statusFilter) return false;
       if (priorityFilter !== 'All' && t.priority !== priorityFilter) return false;
       if (assigneeFilter !== 'All' && t.assignee !== assigneeFilter) return false;
       return true;
     });
-  }, [tasks, statusFilter, priorityFilter, assigneeFilter]);
 
-  const uniqueAssignees = Array.from(new Set(tasks.map(t => t.assignee)));
+    result.sort((a, b) => {
+      let comparison = 0;
+      if (sortField === 'due_date') {
+        comparison = new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+      } else if (sortField === 'priority') {
+        comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
+      } else if (sortField === 'status') {
+        comparison = statusOrder[a.status] - statusOrder[b.status];
+      }
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
 
-  const totalCost = filteredTasks.reduce((sum, t) => sum + (t.cost || 0), 0);
-  const totalTime = filteredTasks.reduce((sum, t) => sum + (t.time_spent || 0), 0);
+    return result;
+  }, [tasks, statusFilter, priorityFilter, assigneeFilter, sortField, sortDirection]);
+
+  const uniqueAssignees = Array.from(new Set(tasks.map(t => t.assignee))).filter((a): a is string => !!a);
+
+  const totalCost = processedTasks.reduce((sum, t) => sum + (t.cost || 0), 0);
+  const totalTime = processedTasks.reduce((sum, t) => sum + (t.time_spent || 0), 0);
+
+  const chartData = useMemo(() => {
+    const statuses = ['Pending', 'In Progress', 'Completed'];
+    return statuses.map(status => ({
+      name: status,
+      value: processedTasks.filter(t => t.status === status).length
+    }));
+  }, [processedTasks]);
+
+  const costData = useMemo(() => {
+    return processedTasks.slice(0, 10).map(t => ({
+      name: t.title.length > 15 ? t.title.substring(0, 15) + '...' : t.title,
+      cost: t.cost || 0,
+      time: t.time_spent || 0
+    }));
+  }, [processedTasks]);
+
+  const COLORS = ['#94a3b8', '#6366f1', '#10b981'];
 
   const getDueDateStatus = (dueDate: string, status: string) => {
     if (status === 'Completed') return null;
@@ -145,11 +183,25 @@ export const Tasks: React.FC = () => {
       </div>
 
       <div className="vintsy-card p-6 mb-8 space-y-4">
-        <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">
-          <Filter size={16} />
-          Filters
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+            <Filter size={16} />
+            Filters & Sorting
+          </div>
+          <button 
+            onClick={() => {
+              setStatusFilter('All');
+              setPriorityFilter('All');
+              setAssigneeFilter('All');
+              setSortField('due_date');
+              setSortDirection('asc');
+            }}
+            className="text-[10px] font-bold uppercase tracking-widest text-violet-600 dark:text-violet-400 hover:underline"
+          >
+            Reset
+          </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Status</label>
             <select 
@@ -190,6 +242,29 @@ export const Tasks: React.FC = () => {
               ))}
             </select>
           </div>
+          <div>
+            <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Sort By</label>
+            <select 
+              value={sortField}
+              onChange={(e) => setSortField(e.target.value as any)}
+              className="vintsy-input w-full appearance-none"
+            >
+              <option value="due_date">Due Date</option>
+              <option value="priority">Priority</option>
+              <option value="status">Status</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Order</label>
+            <select 
+              value={sortDirection}
+              onChange={(e) => setSortDirection(e.target.value as any)}
+              className="vintsy-input w-full appearance-none"
+            >
+              <option value="asc">Ascending</option>
+              <option value="desc">Descending</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -223,14 +298,30 @@ export const Tasks: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Assignee</label>
-                  <input 
-                    type="text" 
+                  <select 
                     required
                     value={taskForm.assignee}
                     onChange={e => setTaskForm({...taskForm, assignee: e.target.value})}
-                    className="vintsy-input w-full"
-                    placeholder="e.g., Maintenance Team"
-                  />
+                    className="vintsy-input w-full appearance-none"
+                  >
+                    <option value="">Select Assignee</option>
+                    <option value="Maintenance Team">Maintenance Team</option>
+                    <option value="Property Manager">Property Manager</option>
+                    <option value="Admin">Admin</option>
+                    <option value="External Contractor">External Contractor</option>
+                    {uniqueAssignees.filter(a => !['Maintenance Team', 'Property Manager', 'Admin', 'External Contractor'].includes(a)).map(a => (
+                      <option key={a} value={a}>{a}</option>
+                    ))}
+                    <option value="Other">Other...</option>
+                  </select>
+                  {taskForm.assignee === 'Other' && (
+                    <input 
+                      type="text"
+                      placeholder="Enter assignee name"
+                      className="vintsy-input w-full mt-2"
+                      onChange={e => setTaskForm({...taskForm, assignee: e.target.value})}
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Due Date</label>
@@ -301,27 +392,91 @@ export const Tasks: React.FC = () => {
 
       {view === 'report' && (
         <div className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="vintsy-card p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="vintsy-card p-4">
               <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Total Tasks</p>
-              <h4 className="text-3xl font-bold text-zinc-900 dark:text-white">{filteredTasks.length}</h4>
+              <h4 className="text-2xl font-bold text-zinc-900 dark:text-white">{processedTasks.length}</h4>
             </div>
-            <div className="vintsy-card p-6">
+            <div className="vintsy-card p-4">
+              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Pending</p>
+              <h4 className="text-2xl font-bold text-zinc-500">{processedTasks.filter(t => t.status === 'Pending').length}</h4>
+            </div>
+            <div className="vintsy-card p-4">
+              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">In Progress</p>
+              <h4 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{processedTasks.filter(t => t.status === 'In Progress').length}</h4>
+            </div>
+            <div className="vintsy-card p-4">
               <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Completed</p>
-              <h4 className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{filteredTasks.filter(t => t.status === 'Completed').length}</h4>
+              <h4 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{processedTasks.filter(t => t.status === 'Completed').length}</h4>
             </div>
-            <div className="vintsy-card p-6">
+            <div className="vintsy-card p-4">
               <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Total Cost</p>
               <div className="flex items-center gap-2">
-                <DollarSign size={20} className="text-violet-600 dark:text-violet-400" />
-                <h4 className="text-3xl font-bold text-zinc-900 dark:text-white">{totalCost.toLocaleString()}</h4>
+                <DollarSign size={16} className="text-violet-600 dark:text-violet-400" />
+                <h4 className="text-2xl font-bold text-zinc-900 dark:text-white">{totalCost.toLocaleString()}</h4>
               </div>
             </div>
-            <div className="vintsy-card p-6">
+            <div className="vintsy-card p-4">
               <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Time Spent</p>
               <div className="flex items-center gap-2">
-                <Timer size={20} className="text-orange-600 dark:text-orange-400" />
-                <h4 className="text-3xl font-bold text-zinc-900 dark:text-white">{totalTime}h</h4>
+                <Timer size={16} className="text-orange-600 dark:text-orange-400" />
+                <h4 className="text-2xl font-bold text-zinc-900 dark:text-white">{totalTime}h</h4>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="vintsy-card p-6">
+              <h4 className="text-sm font-bold text-zinc-900 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+                <PieChartIcon size={16} />
+                Status Distribution
+              </h4>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={chartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#18181b', border: 'none', borderRadius: '8px', color: '#fff' }}
+                      itemStyle={{ color: '#fff' }}
+                    />
+                    <Legend verticalAlign="bottom" height={36}/>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="vintsy-card p-6">
+              <h4 className="text-sm font-bold text-zinc-900 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+                <BarChart3 size={16} />
+                Cost & Time Analysis
+              </h4>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={costData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" vertical={false} />
+                    <XAxis dataKey="name" stroke="#71717a" fontSize={10} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#71717a" fontSize={10} tickLine={false} axisLine={false} />
+                    <Tooltip 
+                      cursor={{ fill: 'rgba(139, 92, 246, 0.1)' }}
+                      contentStyle={{ backgroundColor: '#18181b', border: 'none', borderRadius: '8px', color: '#fff' }}
+                    />
+                    <Legend />
+                    <Bar dataKey="cost" name="Cost ($)" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="time" name="Time (h)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
@@ -339,12 +494,14 @@ export const Tasks: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-violet-50 dark:divide-zinc-800">
-                  {filteredTasks.map(task => (
+                  {processedTasks.map(task => (
                     <tr key={task.id} className="hover:bg-violet-50/20 dark:hover:bg-zinc-800/30 transition-colors">
                       <td className="px-6 py-4 text-sm font-bold text-zinc-900 dark:text-white">{task.title}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
-                          task.status === 'Completed' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800' : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-100 dark:border-zinc-700'
+                          task.status === 'Completed' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800' : 
+                          task.status === 'In Progress' ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800' :
+                          'bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-100 dark:border-zinc-700'
                         }`}>
                           {task.status}
                         </span>
@@ -368,7 +525,7 @@ export const Tasks: React.FC = () => {
                 <div className="flex items-center justify-between px-2">
                   <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{columnId}</h4>
                   <span className="w-6 h-6 rounded-full bg-violet-100 dark:bg-zinc-800 text-violet-700 dark:text-zinc-400 flex items-center justify-center text-[10px] font-bold">
-                    {filteredTasks.filter(t => t.status === columnId).length}
+                    {processedTasks.filter(t => t.status === columnId).length}
                   </span>
                 </div>
                 <Droppable droppableId={columnId}>
@@ -380,7 +537,7 @@ export const Tasks: React.FC = () => {
                         snapshot.isDraggingOver ? 'bg-violet-50/50 dark:bg-zinc-800/50 border-2 border-dashed border-violet-200 dark:border-zinc-700' : 'bg-zinc-50/50 dark:bg-zinc-900/20 border-2 border-transparent'
                       }`}
                     >
-                      {filteredTasks.filter(t => t.status === columnId).map((task, index) => {
+                      {processedTasks.filter(t => t.status === columnId).map((task, index) => {
                         const dueStatus = getDueDateStatus(task.due_date, task.status);
                         return (
                         // @ts-ignore
@@ -449,7 +606,7 @@ export const Tasks: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-violet-50 dark:divide-zinc-800">
-                {filteredTasks.map((task, index) => {
+                {processedTasks.map((task, index) => {
                   const dueStatus = getDueDateStatus(task.due_date, task.status);
                   return (
                   <motion.tr

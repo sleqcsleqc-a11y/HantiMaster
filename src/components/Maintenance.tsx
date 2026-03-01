@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   Wrench, 
   AlertTriangle, 
@@ -9,12 +10,14 @@ import {
   MessageSquare,
   Home,
   ChevronRight,
-  X
+  X,
+  Lock
 } from 'lucide-react';
 import { api } from '../services/api';
 import { MaintenanceRequest, Unit, Tenant } from '../types';
 
 export const Maintenance: React.FC = () => {
+  const { user, hasPermission } = useAuth();
   const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -29,20 +32,44 @@ export const Maintenance: React.FC = () => {
   });
 
   const loadData = async () => {
-    const [requestsData, unitsData, tenantsData] = await Promise.all([
-      api.getMaintenance(),
-      api.getUnits(),
-      api.getTenants()
-    ]);
-    setRequests(requestsData);
-    setUnits(unitsData);
-    setTenants(tenantsData);
-    setLoading(false);
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const [requestsData, unitsData, tenantsData] = await Promise.all([
+        api.getMaintenance(user.id),
+        api.getUnits(),
+        api.getTenants()
+      ]);
+      setRequests(requestsData);
+      setUnits(unitsData);
+      setTenants(tenantsData);
+    } catch (error) {
+      console.error("Failed to load maintenance data", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user]);
+
+  if (!hasPermission('MAINTENANCE', 'view')) {
+    return (
+      <div className="p-8 h-[calc(100vh-80px)] flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-800 rounded-3xl flex items-center justify-center mx-auto mb-6">
+            <Lock size={32} className="text-zinc-400" />
+          </div>
+          <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Access Restricted</h3>
+          <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">
+            You do not have the required permissions to view maintenance requests.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const handleAddRequest = async (e: React.FormEvent) => {
     e.preventDefault();

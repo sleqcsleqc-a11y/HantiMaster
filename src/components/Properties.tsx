@@ -3,12 +3,14 @@ import { motion } from 'motion/react';
 import { Building2, MapPin, Home, MoreVertical, Plus, Filter, ArrowUpDown, Search, X } from 'lucide-react';
 import { api } from '../services/api';
 import { Property, Owner } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 interface PropertiesProps {
   onSelectProperty: (id: number) => void;
 }
 
 export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
+  const { user, hasPermission } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +27,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
   const [propertyForm, setPropertyForm] = useState({ name: '', address: '', type: 'Residential', image_url: '', property_value: 0, owner_id: '' });
 
   const loadProperties = () => {
-    api.getProperties().then(data => {
+    api.getProperties(user?.id).then(data => {
       setProperties(data);
       setFilteredProperties(data);
       setLoading(false);
@@ -33,9 +35,11 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
   };
 
   useEffect(() => {
-    loadProperties();
-    api.getOwners().then(setOwners);
-  }, []);
+    if (user) {
+      loadProperties();
+      api.getOwners().then(setOwners);
+    }
+  }, [user]);
 
   const handleAddProperty = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,13 +106,15 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
           <p className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Real Estate Assets</p>
         </div>
         
-        <button 
-          onClick={() => setShowAddProperty(true)}
-          className="vintsy-button-primary flex items-center gap-2 text-xs uppercase tracking-widest"
-        >
-          <Plus size={16} />
-          Add Property
-        </button>
+        {hasPermission('PROPERTY_MANAGEMENT', 'create') && (
+          <button 
+            onClick={() => setShowAddProperty(true)}
+            className="vintsy-button-primary flex items-center gap-2 text-xs uppercase tracking-widest"
+          >
+            <Plus size={16} />
+            Add Property
+          </button>
+        )}
       </div>
 
       {showAddProperty && (

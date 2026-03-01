@@ -16,10 +16,34 @@ export interface Owner {
   last_name: string;
   email: string;
   phone: string;
+  address?: string;
+  nationality?: string;
+  dob?: string;
+  id_type?: string;
+  id_number?: string;
+  id_expiry?: string;
   property_count?: number;
   total_portfolio_value?: number;
   properties?: Property[];
   transactions?: Transaction[];
+  documents?: OwnerDocument[];
+  activities?: OwnerActivity[];
+}
+
+export interface OwnerDocument {
+  id: number;
+  owner_id: number;
+  name: string;
+  url: string;
+  type: string;
+  uploaded_at: string;
+}
+
+export interface OwnerActivity {
+  id: string;
+  type: 'Message' | 'Property' | 'Payment' | 'Document';
+  description: string;
+  date: string;
 }
 
 export interface Property {
@@ -81,6 +105,13 @@ export interface Tenant {
   lease_end: string;
   notes?: string;
   auto_rent_reminders?: boolean;
+  nationality?: string;
+  dob?: string;
+  id_type?: string;
+  id_number?: string;
+  id_expiry?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
   unit_number?: string;
   property_name?: string;
   property_address?: string;
@@ -127,6 +158,74 @@ export interface Task {
   status: 'Pending' | 'In Progress' | 'Completed';
   cost: number;
   time_spent: number;
+}
+
+export interface User {
+  id: number;
+  role_id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role_name?: string;
+  property_scope?: 'Global' | 'Assigned';
+  tenant_id?: number;
+  owner_id?: number;
+  status: 'Active' | 'Suspended' | 'Locked' | 'Terminated';
+  last_login?: string;
+  mfa_enabled: boolean;
+}
+
+export interface Role {
+  id: number;
+  name: string;
+  description: string;
+  is_locked: boolean;
+}
+
+export interface Permission {
+  id: number;
+  module: string;
+  action: string;
+}
+
+export interface RolePermission {
+  role_id: number;
+  permission_id: number;
+}
+
+export interface PermissionRequest {
+  id: number;
+  user_id: number;
+  user_name?: string;
+  module: string;
+  action: string;
+  justification: string;
+  status: 'Pending' | 'Approved' | 'Denied';
+  reviewed_by?: number;
+  reviewer_name?: string;
+  expiration_date?: string;
+  created_at: string;
+  reviewed_at?: string;
+}
+
+export interface PermissionOverride {
+  id: number;
+  user_id: number;
+  permission_id: number;
+  override_type: 'Grant' | 'Deny';
+  expiration_date?: string;
+  created_at: string;
+}
+
+export interface AuditLog {
+  id: number;
+  user_id: number;
+  action: string;
+  timestamp: string;
+  entity_type: string;
+  entity_id: number;
+  user_name?: string;
+  details?: string;
 }
 
 export interface FinanceStats {

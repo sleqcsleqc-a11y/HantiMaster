@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   CircleDollarSign, 
   ArrowUpRight, 
@@ -7,7 +8,8 @@ import {
   Download, 
   Calendar,
   CreditCard,
-  Banknote
+  Banknote,
+  Lock
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -26,6 +28,7 @@ import { api } from '../services/api';
 import { FinanceStats } from '../types';
 
 export const Finance: React.FC = () => {
+  const { hasPermission } = useAuth();
   const [stats, setStats] = useState<FinanceStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -39,11 +42,32 @@ export const Finance: React.FC = () => {
   ];
 
   useEffect(() => {
-    api.getFinanceStats().then(data => {
-      setStats(data);
+    if (hasPermission('FINANCE', 'view')) {
+      api.getFinanceStats().then(data => {
+        setStats(data);
+        setLoading(false);
+      });
+    } else {
       setLoading(false);
-    });
-  }, []);
+    }
+  }, [hasPermission]);
+
+  if (!hasPermission('FINANCE', 'view')) {
+    return (
+      <div className="p-8 h-[calc(100vh-80px)] flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-800 rounded-3xl flex items-center justify-center mx-auto mb-6">
+            <Lock size={32} className="text-zinc-400" />
+          </div>
+          <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Access Restricted</h3>
+          <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">
+            You do not have the required permissions to view financial analytics. 
+            Please contact your administrator if you believe this is an error.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const exportToPDF = async () => {
     const element = document.getElementById('finance-report');

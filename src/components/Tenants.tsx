@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Mail, Phone, Calendar, Search, Filter, ChevronRight, Plus, X, ArrowUpDown, Building2, Wrench, DollarSign, FileText, Printer } from 'lucide-react';
+import { Mail, Phone, Calendar, Search, Filter, ChevronRight, Plus, X, ArrowUpDown, Building2, Wrench, DollarSign, FileText, Printer, User } from 'lucide-react';
 import { api } from '../services/api';
 import { Tenant, Unit } from '../types';
 
@@ -11,9 +11,12 @@ export const Tenants: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
   const [tenantDetails, setTenantDetails] = useState<Tenant | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'lease' | 'transactions' | 'maintenance' | 'documents'>('overview');
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [notes, setNotes] = useState('');
   const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [isEditingPersonal, setIsEditingPersonal] = useState(false);
+  const [personalForm, setPersonalForm] = useState<Partial<Tenant>>({});
   const [showRenewalModal, setShowRenewalModal] = useState(false);
   const [renewalDate, setRenewalDate] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -56,6 +59,15 @@ export const Tenants: React.FC = () => {
       api.getTenant(selectedTenantId).then((data) => {
         setTenantDetails(data);
         setNotes(data.notes || '');
+        setPersonalForm({
+          nationality: data.nationality || '',
+          dob: data.dob || '',
+          id_type: data.id_type || 'National ID',
+          id_number: data.id_number || '',
+          id_expiry: data.id_expiry || '',
+          emergency_contact_name: data.emergency_contact_name || '',
+          emergency_contact_phone: data.emergency_contact_phone || ''
+        });
       });
     } else {
       setTenantDetails(null);
@@ -146,6 +158,13 @@ export const Tenants: React.FC = () => {
     api.getTenant(selectedTenantId).then(setTenantDetails);
   };
 
+  const handleSavePersonal = async () => {
+    if (!selectedTenantId) return;
+    await api.updateTenant(selectedTenantId, personalForm);
+    setIsEditingPersonal(false);
+    api.getTenant(selectedTenantId).then(setTenantDetails);
+  };
+
   const handleToggleReminders = async () => {
     if (!selectedTenantId || !tenantDetails) return;
     const newValue = !tenantDetails.auto_rent_reminders;
@@ -170,8 +189,16 @@ export const Tenants: React.FC = () => {
   };
 
   if (selectedTenantId && tenantDetails) {
+    const tabs = [
+      { id: 'overview', label: 'Overview', icon: <User size={16} /> },
+      { id: 'lease', label: 'Lease Data', icon: <Building2 size={16} /> },
+      { id: 'transactions', label: 'Transaction History', icon: <DollarSign size={16} /> },
+      { id: 'maintenance', label: 'Tenant Requests', icon: <Wrench size={16} /> },
+      { id: 'documents', label: 'Documents', icon: <FileText size={16} /> },
+    ];
+
     return (
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="p-8 max-w-7xl mx-auto pb-24">
         <div className="flex justify-between items-center mb-8">
           <button 
             onClick={() => setSelectedTenantId(null)}
@@ -180,144 +207,439 @@ export const Tenants: React.FC = () => {
             <ChevronRight size={16} className="rotate-180" />
             Back to Directory
           </button>
-          <button 
-            onClick={() => setShowInvoiceModal(true)}
-            className="vintsy-button-primary flex items-center gap-2 text-[10px] uppercase tracking-widest"
-          >
-            <FileText size={16} />
-            Generate Invoice
-          </button>
+          <div className="flex gap-4">
+            <button 
+              onClick={() => setShowInvoiceModal(true)}
+              className="vintsy-button-secondary flex items-center gap-2 text-[10px] uppercase tracking-widest"
+            >
+              <FileText size={16} />
+              Generate Invoice
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1 space-y-8">
-            <div className="vintsy-card p-8 text-center">
-              <div className="w-24 h-24 mx-auto rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 flex items-center justify-center font-bold text-3xl mb-4 border-4 border-white dark:border-zinc-900 shadow-xl">
-                {tenantDetails.first_name[0]}{tenantDetails.last_name[0]}
+        <div className="vintsy-card p-8 mb-8">
+          <div className="flex flex-col md:flex-row items-center gap-8">
+            <div className="w-24 h-24 rounded-2xl bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 flex items-center justify-center font-bold text-3xl border-4 border-white dark:border-zinc-900 shadow-xl">
+              {tenantDetails.first_name[0]}{tenantDetails.last_name[0]}
+            </div>
+            <div className="text-center md:text-left flex-1">
+              <div className="flex flex-wrap items-center gap-3 mb-2 justify-center md:justify-start">
+                <h2 className="text-3xl font-bold text-zinc-900 dark:text-white">
+                  {tenantDetails.first_name} {tenantDetails.last_name}
+                </h2>
+                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                  getTenantStatus(tenantDetails) === 'Active' 
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                    : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
+                }`}>
+                  {getTenantStatus(tenantDetails)} Tenant
+                </span>
               </div>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-1">
-                {tenantDetails.first_name} {tenantDetails.last_name}
-              </h2>
-              <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                getTenantStatus(tenantDetails) === 'Active' 
-                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                  : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
-              }`}>
-                {getTenantStatus(tenantDetails)} Tenant
-              </span>
-
-              <div className="mt-8 space-y-4 text-left">
-                <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
-                  <Mail size={16} className="text-violet-600 dark:text-violet-400" />
+              <div className="flex flex-wrap items-center gap-6 text-sm text-zinc-500 justify-center md:justify-start">
+                <div className="flex items-center gap-2">
+                  <Mail size={16} className="text-violet-600" />
                   {tenantDetails.email}
                 </div>
-                <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
-                  <Phone size={16} className="text-violet-600 dark:text-violet-400" />
+                <div className="flex items-center gap-2">
+                  <Phone size={16} className="text-violet-600" />
                   {tenantDetails.phone}
                 </div>
-              </div>
-            </div>
-
-            <div className="vintsy-card p-6">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-6 flex items-center gap-2">
-                <Building2 size={16} />
-                Lease Details
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Property</p>
-                  <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.property_name}</p>
-                  <p className="text-xs text-zinc-500">{tenantDetails.property_address}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Unit</p>
-                  <p className="text-sm font-bold text-zinc-900 dark:text-white">Unit {tenantDetails.unit_number}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Rent</p>
-                  <p className="text-sm font-bold text-zinc-900 dark:text-white">${tenantDetails.rent_amount?.toLocaleString()}/mo</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Lease Period</p>
-                  <p className="text-sm font-bold text-zinc-900 dark:text-white">
-                    {new Date(tenantDetails.lease_start).toLocaleDateString()} - {new Date(tenantDetails.lease_end).toLocaleDateString()}
-                  </p>
+                <div className="flex items-center gap-2">
+                  <Building2 size={16} className="text-violet-600" />
+                  {tenantDetails.property_name}, Unit {tenantDetails.unit_number}
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
+        <div className="flex border-b border-violet-100 dark:border-zinc-800 mb-8 overflow-x-auto scrollbar-hide">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 px-6 py-4 text-xs font-bold uppercase tracking-widest transition-all relative whitespace-nowrap ${
+                activeTab === tab.id 
+                  ? 'text-violet-600 dark:text-violet-400' 
+                  : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+              {activeTab === tab.id && (
+                <motion.div 
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-600 dark:bg-violet-400"
+                />
+              )}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
-            <div className="vintsy-card p-6">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-6 flex items-center gap-2">
-                <DollarSign size={16} />
-                Transaction History
-              </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-violet-50 dark:border-zinc-800">
-                      <th className="pb-3 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Date</th>
-                      <th className="pb-3 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Type</th>
-                      <th className="pb-3 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Amount</th>
-                      <th className="pb-3 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-violet-50 dark:divide-zinc-800">
-                    {tenantDetails.transactions?.map(tx => (
-                      <tr key={tx.id}>
-                        <td className="py-4 text-sm text-zinc-900 dark:text-white">{new Date(tx.date).toLocaleDateString()}</td>
-                        <td className="py-4 text-sm text-zinc-600 dark:text-zinc-400">{tx.type}</td>
-                        <td className="py-4 text-sm font-bold text-zinc-900 dark:text-white">${tx.amount.toLocaleString()}</td>
-                        <td className="py-4">
-                          <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                            tx.status === 'Paid' 
-                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                              : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                          }`}>
-                            {tx.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                    {(!tenantDetails.transactions || tenantDetails.transactions.length === 0) && (
-                      <tr>
-                        <td colSpan={4} className="py-8 text-center text-sm text-zinc-500">No transactions found.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+            {activeTab === 'overview' && (
+              <div className="space-y-8">
+                <div className="vintsy-card p-8">
+                  <div className="flex justify-between items-center mb-8">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 flex items-center gap-2">
+                      <User size={16} />
+                      Personal Information & Identification
+                    </h3>
+                    <button 
+                      onClick={() => setIsEditingPersonal(!isEditingPersonal)}
+                      className="text-[10px] font-bold uppercase tracking-widest text-violet-600 hover:underline"
+                    >
+                      {isEditingPersonal ? 'Cancel' : 'Edit Details'}
+                    </button>
+                  </div>
+                  
+                  {isEditingPersonal ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Nationality</label>
+                        <input 
+                          type="text" 
+                          value={personalForm.nationality}
+                          onChange={e => setPersonalForm({...personalForm, nationality: e.target.value})}
+                          className="vintsy-input w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Date of Birth</label>
+                        <input 
+                          type="date" 
+                          value={personalForm.dob}
+                          onChange={e => setPersonalForm({...personalForm, dob: e.target.value})}
+                          className="vintsy-input w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">ID Type</label>
+                        <select 
+                          value={personalForm.id_type}
+                          onChange={e => setPersonalForm({...personalForm, id_type: e.target.value})}
+                          className="vintsy-input w-full appearance-none"
+                        >
+                          <option value="National ID">National ID</option>
+                          <option value="Passport">Passport</option>
+                          <option value="Driver's License">Driver's License</option>
+                          <option value="Government ID">Government ID</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">ID Number</label>
+                        <input 
+                          type="text" 
+                          value={personalForm.id_number}
+                          onChange={e => setPersonalForm({...personalForm, id_number: e.target.value})}
+                          className="vintsy-input w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">ID Expiry</label>
+                        <input 
+                          type="date" 
+                          value={personalForm.id_expiry}
+                          onChange={e => setPersonalForm({...personalForm, id_expiry: e.target.value})}
+                          className="vintsy-input w-full"
+                        />
+                      </div>
+                      <div className="md:col-span-2 pt-4 border-t border-violet-50 dark:border-zinc-800">
+                        <button 
+                          onClick={handleSavePersonal}
+                          className="vintsy-button-primary w-full"
+                        >
+                          Save Personal Information
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-6">
+                        <div>
+                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Nationality</p>
+                          <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.nationality || 'Not specified'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Date of Birth</p>
+                          <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.dob ? new Date(tenantDetails.dob).toLocaleDateString() : 'Not specified'}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-6">
+                        <div>
+                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">{tenantDetails.id_type || 'ID'} Number</p>
+                          <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.id_number || 'Not specified'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">ID Expiry Date</p>
+                          <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.id_expiry ? new Date(tenantDetails.id_expiry).toLocaleDateString() : 'Not specified'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="vintsy-card p-8">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8 flex items-center gap-2">
+                    <Phone size={16} />
+                    Emergency Contact
+                  </h3>
+                  {isEditingPersonal ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Contact Name</label>
+                        <input 
+                          type="text" 
+                          value={personalForm.emergency_contact_name}
+                          onChange={e => setPersonalForm({...personalForm, emergency_contact_name: e.target.value})}
+                          className="vintsy-input w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Contact Phone</label>
+                        <input 
+                          type="tel" 
+                          value={personalForm.emergency_contact_phone}
+                          onChange={e => setPersonalForm({...personalForm, emergency_contact_phone: e.target.value})}
+                          className="vintsy-input w-full"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Name</p>
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.emergency_contact_name || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Phone</p>
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.emergency_contact_phone || 'Not specified'}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
+            )}
+
+            {activeTab === 'lease' && (
+              <div className="space-y-8">
+                <div className="vintsy-card p-8">
+                  <div className="flex justify-between items-center mb-8">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 flex items-center gap-2">
+                      <Building2 size={16} />
+                      Lease Information
+                    </h3>
+                    <button 
+                      onClick={() => setShowRenewalModal(true)}
+                      className="vintsy-button-primary text-[10px] uppercase tracking-widest"
+                    >
+                      Renew Lease
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div className="space-y-6">
+                      <div>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Property</p>
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.property_name}</p>
+                        <p className="text-xs text-zinc-500 mt-1">{tenantDetails.property_address}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Unit Number</p>
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white">Unit {tenantDetails.unit_number}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Monthly Rent</p>
+                        <p className="text-lg font-bold text-violet-600 dark:text-violet-400">${tenantDetails.rent_amount?.toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-6">
+                      <div>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Lease Start Date</p>
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{new Date(tenantDetails.lease_start).toLocaleDateString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Lease End Date</p>
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{new Date(tenantDetails.lease_end).toLocaleDateString()}</p>
+                      </div>
+                      <div className="p-4 rounded-xl bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-violet-700 dark:text-violet-400 uppercase tracking-widest">Auto Reminders</span>
+                          <button 
+                            onClick={handleToggleReminders}
+                            className={`w-10 h-5 rounded-full transition-colors relative ${tenantDetails.auto_rent_reminders ? 'bg-violet-600' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                          >
+                            <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${tenantDetails.auto_rent_reminders ? 'left-6' : 'left-1'}`} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'transactions' && (
+              <div className="vintsy-card p-8">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8 flex items-center gap-2">
+                  <DollarSign size={16} />
+                  Transaction History
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-violet-50 dark:border-zinc-800">
+                        <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Date</th>
+                        <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Type</th>
+                        <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Amount</th>
+                        <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-violet-50 dark:divide-zinc-800">
+                      {tenantDetails.transactions?.map(tx => (
+                        <tr key={tx.id} className="hover:bg-violet-50/20 transition-colors">
+                          <td className="py-5 text-sm text-zinc-900 dark:text-white">{new Date(tx.date).toLocaleDateString()}</td>
+                          <td className="py-5 text-sm text-zinc-600 dark:text-zinc-400">{tx.type}</td>
+                          <td className="py-5 text-sm font-bold text-zinc-900 dark:text-white">${tx.amount.toLocaleString()}</td>
+                          <td className="py-5">
+                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest ${
+                              tx.status === 'Paid' 
+                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800' 
+                                : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-100 dark:border-amber-800'
+                            }`}>
+                              {tx.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'maintenance' && (
+              <div className="vintsy-card p-8">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8 flex items-center gap-2">
+                  <Wrench size={16} />
+                  Maintenance Requests
+                </h3>
+                <div className="space-y-6">
+                  {tenantDetails.maintenance?.map(req => (
+                    <div key={req.id} className="p-6 rounded-2xl border border-violet-50 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/30">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h4 className="text-sm font-bold text-zinc-900 dark:text-white mb-1">{req.title}</h4>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">{req.description}</p>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
+                          req.priority === 'Emergency' ? 'bg-red-50 text-red-700 border-red-100' :
+                          req.priority === 'High' ? 'bg-orange-50 text-orange-700 border-orange-100' :
+                          'bg-zinc-100 text-zinc-700 border-zinc-200'
+                        }`}>
+                          {req.priority}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center pt-4 border-t border-violet-50 dark:border-zinc-800">
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{new Date(req.created_at).toLocaleDateString()}</span>
+                        <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-widest">{req.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'documents' && (
+              <div className="vintsy-card p-8">
+                <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 flex items-center gap-2">
+                    <FileText size={16} />
+                    Document Vault
+                  </h3>
+                  <button 
+                    onClick={() => setShowUploadModal(true)}
+                    className="vintsy-button-primary text-[10px] uppercase tracking-widest"
+                  >
+                    Upload Document
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {tenantDetails.documents?.map(doc => (
+                    <div key={doc.id} className="p-4 rounded-xl border border-violet-50 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 flex items-center justify-between group">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 flex items-center justify-center">
+                          <FileText size={20} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-zinc-900 dark:text-white">{doc.name}</p>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-widest">{doc.type} • {new Date(doc.uploaded_at).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <a 
+                        href={doc.url} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="p-2 text-zinc-400 hover:text-violet-600 transition-colors"
+                      >
+                        <ChevronRight size={20} />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="lg:col-span-1 space-y-8">
+            <div className="vintsy-card p-8">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Internal Notes</h3>
+                <button 
+                  onClick={() => setIsEditingNotes(!isEditingNotes)}
+                  className="text-[10px] font-bold uppercase tracking-widest text-violet-600 hover:underline"
+                >
+                  {isEditingNotes ? 'Cancel' : 'Edit'}
+                </button>
+              </div>
+              {isEditingNotes ? (
+                <div className="space-y-4">
+                  <textarea 
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                    className="vintsy-input w-full min-h-[150px] text-sm"
+                    placeholder="Add internal notes about this tenant..."
+                  />
+                  <button 
+                    onClick={handleSaveNotes}
+                    className="vintsy-button-primary w-full"
+                  >
+                    Save Notes
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap italic">
+                  {tenantDetails.notes || 'No notes added yet.'}
+                </p>
+              )}
             </div>
 
-            <div className="vintsy-card p-6">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-6 flex items-center gap-2">
-                <Wrench size={16} />
-                Maintenance Requests
-              </h3>
-              <div className="space-y-4">
-                {tenantDetails.maintenance?.map(req => (
-                  <div key={req.id} className="p-4 rounded-xl border border-violet-50 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="text-sm font-bold text-zinc-900 dark:text-white">{req.title}</h4>
-                      <span className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest border ${
-                        req.priority === 'Emergency' ? 'bg-red-50 text-red-700 border-red-200' :
-                        req.priority === 'High' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                        'bg-zinc-100 text-zinc-700 border-zinc-200'
-                      }`}>
-                        {req.priority}
-                      </span>
-                    </div>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">{req.description}</p>
-                    <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                      <span>{new Date(req.created_at).toLocaleDateString()}</span>
-                      <span className="text-violet-600 dark:text-violet-400">{req.status}</span>
+            <div className="vintsy-card p-8">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-6">Recent Activity</h3>
+              <div className="space-y-6">
+                {tenantDetails.activities?.map((activity, idx) => (
+                  <div key={activity.id} className="flex gap-4 relative">
+                    {idx !== (tenantDetails.activities?.length || 0) - 1 && (
+                      <div className="absolute left-2 top-6 bottom-0 w-px bg-violet-100 dark:bg-zinc-800" />
+                    )}
+                    <div className="w-4 h-4 rounded-full bg-violet-100 dark:bg-violet-900/40 border-2 border-white dark:border-zinc-900 z-10 mt-1" />
+                    <div>
+                      <p className="text-sm text-zinc-900 dark:text-white font-medium">{activity.description}</p>
+                      <p className="text-[10px] text-zinc-400 uppercase tracking-widest mt-1">{new Date(activity.date).toLocaleDateString()}</p>
                     </div>
                   </div>
                 ))}
-                {(!tenantDetails.maintenance || tenantDetails.maintenance.length === 0) && (
-                  <p className="text-center text-sm text-zinc-500 py-4">No maintenance requests found.</p>
-                )}
               </div>
             </div>
           </div>

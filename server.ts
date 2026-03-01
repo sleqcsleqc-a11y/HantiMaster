@@ -10,27 +10,6 @@ const __dirname = path.dirname(__filename);
 
 const db = new Database("proppulse.db");
 
-// Check if owner_id column exists in properties table, if not, add it
-try {
-  const tableInfo = db.prepare("PRAGMA table_info(properties)").all() as any[];
-  const hasOwnerId = tableInfo.some(col => col.name === 'owner_id');
-  if (!hasOwnerId) {
-    db.exec("ALTER TABLE properties ADD COLUMN owner_id INTEGER REFERENCES owners(id)");
-  }
-  
-  const hasStatus = tableInfo.some(col => col.name === 'status');
-  if (!hasStatus) {
-    db.exec("ALTER TABLE properties ADD COLUMN status TEXT DEFAULT 'For Sale'");
-  }
-  
-  const hasAmenities = tableInfo.some(col => col.name === 'amenities');
-  if (!hasAmenities) {
-    db.exec("ALTER TABLE properties ADD COLUMN amenities TEXT DEFAULT '[]'");
-  }
-} catch (e) {
-  console.error("Error checking/adding columns to properties:", e);
-}
-
 // Initialize Database Schema
 db.exec(`
   CREATE TABLE IF NOT EXISTS owners (
@@ -75,6 +54,31 @@ db.exec(`
     FOREIGN KEY (unit_id) REFERENCES units(id)
   );
 
+  CREATE TABLE IF NOT EXISTS roles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    is_locked BOOLEAN DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role_id INTEGER,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL, -- In a real app, this would be hashed
+    property_scope TEXT DEFAULT 'Assigned', -- 'Global' or 'Assigned'
+    tenant_id INTEGER,
+    owner_id INTEGER,
+    status TEXT DEFAULT 'Active', -- 'Active', 'Suspended', 'Locked', 'Terminated'
+    last_login DATETIME,
+    mfa_enabled BOOLEAN DEFAULT 0,
+    FOREIGN KEY (role_id) REFERENCES roles(id),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    FOREIGN KEY (owner_id) REFERENCES owners(id)
+  );
+
   CREATE TABLE IF NOT EXISTS tenant_documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tenant_id INTEGER NOT NULL,
@@ -95,9 +99,11 @@ db.exec(`
     status TEXT DEFAULT 'Open',
     cost REAL DEFAULT 0,
     time_spent REAL DEFAULT 0,
+    assigned_to INTEGER, -- User ID of the Repair Team member
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (unit_id) REFERENCES units(id),
-    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    FOREIGN KEY (assigned_to) REFERENCES users(id)
   );
 
   CREATE TABLE IF NOT EXISTS transactions (
@@ -111,6 +117,7 @@ db.exec(`
     FOREIGN KEY (unit_id) REFERENCES units(id),
     FOREIGN KEY (tenant_id) REFERENCES tenants(id)
   );
+
   CREATE TABLE IF NOT EXISTS property_images (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     property_id INTEGER,
@@ -129,6 +136,75 @@ db.exec(`
     read BOOLEAN DEFAULT 0
   );
 
+  CREATE TABLE IF NOT EXISTS owner_documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    url TEXT NOT NULL,
+    type TEXT NOT NULL,
+    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (owner_id) REFERENCES owners(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS permissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    module TEXT NOT NULL,
+    action TEXT NOT NULL,
+    UNIQUE(module, action)
+  );
+
+  CREATE TABLE IF NOT EXISTS role_permissions (
+    role_id INTEGER,
+    permission_id INTEGER,
+    PRIMARY KEY (role_id, permission_id),
+    FOREIGN KEY (role_id) REFERENCES roles(id),
+    FOREIGN KEY (permission_id) REFERENCES permissions(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS permission_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    module TEXT NOT NULL,
+    action TEXT NOT NULL,
+    justification TEXT,
+    status TEXT DEFAULT 'Pending', -- 'Pending', 'Approved', 'Denied'
+    reviewed_by INTEGER,
+    expiration_date DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (reviewed_by) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS permission_overrides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    permission_id INTEGER NOT NULL,
+    override_type TEXT NOT NULL, -- 'Grant', 'Deny'
+    expiration_date DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (permission_id) REFERENCES permissions(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS user_property_access (
+    user_id INTEGER,
+    property_id INTEGER,
+    PRIMARY KEY (user_id, property_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (property_id) REFERENCES properties(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS audit_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    action TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    entity_type TEXT,
+    entity_id INTEGER,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
   CREATE TABLE IF NOT EXISTS tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
@@ -141,6 +217,63 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
+
+// Check if owner_id column exists in properties table, if not, add it
+try {
+  const tableInfo = db.prepare("PRAGMA table_info(properties)").all() as any[];
+  const hasOwnerId = tableInfo.some(col => col.name === 'owner_id');
+  if (!hasOwnerId) {
+    db.exec("ALTER TABLE properties ADD COLUMN owner_id INTEGER REFERENCES owners(id)");
+  }
+  
+  const hasStatus = tableInfo.some(col => col.name === 'status');
+  if (!hasStatus) {
+    db.exec("ALTER TABLE properties ADD COLUMN status TEXT DEFAULT 'For Sale'");
+  }
+  
+  const hasAmenities = tableInfo.some(col => col.name === 'amenities');
+  if (!hasAmenities) {
+    db.exec("ALTER TABLE properties ADD COLUMN amenities TEXT DEFAULT '[]'");
+  }
+
+  // Add new columns to tenants table
+  const tenantInfo = db.prepare("PRAGMA table_info(tenants)").all() as any[];
+  const tenantColumns = ['nationality', 'dob', 'id_type', 'id_number', 'id_expiry', 'emergency_contact_name', 'emergency_contact_phone'];
+  tenantColumns.forEach(col => {
+    if (!tenantInfo.some(c => c.name === col)) {
+      db.exec(`ALTER TABLE tenants ADD COLUMN ${col} TEXT`);
+    }
+  });
+
+  // Add new columns to owners table
+  const ownerInfo = db.prepare("PRAGMA table_info(owners)").all() as any[];
+  const ownerColumns = ['address', 'nationality', 'dob', 'id_type', 'id_number', 'id_expiry'];
+  ownerColumns.forEach(col => {
+    if (!ownerInfo.some(c => c.name === col)) {
+      db.exec(`ALTER TABLE owners ADD COLUMN ${col} TEXT`);
+    }
+  });
+
+  // Add new columns to users table
+  const userInfo = db.prepare("PRAGMA table_info(users)").all() as any[];
+  if (!userInfo.some(c => c.name === 'status')) {
+    db.exec("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'Active'");
+  }
+  if (!userInfo.some(c => c.name === 'last_login')) {
+    db.exec("ALTER TABLE users ADD COLUMN last_login DATETIME");
+  }
+  if (!userInfo.some(c => c.name === 'mfa_enabled')) {
+    db.exec("ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN DEFAULT 0");
+  }
+
+  // Add new columns to roles table
+  const roleInfo = db.prepare("PRAGMA table_info(roles)").all() as any[];
+  if (!roleInfo.some(c => c.name === 'is_locked')) {
+    db.exec("ALTER TABLE roles ADD COLUMN is_locked BOOLEAN DEFAULT 0");
+  }
+} catch (e) {
+  console.error("Error migrating database schema:", e);
+}
 
 // Seed initial data if empty
 const ownerCount = db.prepare("SELECT COUNT(*) as count FROM owners").get() as { count: number };
@@ -196,6 +329,64 @@ if (taskCount.count === 0) {
   insertTask.run("HVAC Maintenance Unit 302", "Contractor", yesterday.toISOString().split('T')[0], "High", "Completed", 1200, 6);
 }
 
+// Seed RBAC Data
+const roleCount = db.prepare("SELECT COUNT(*) as count FROM roles").get() as { count: number };
+if (roleCount.count === 0) {
+  const roles = [
+    { name: 'System Administrator', desc: 'Full access across all modules', locked: 0 },
+    { name: 'Property Management Staff', desc: 'Operational property management', locked: 0 },
+    { name: 'Finance Team', desc: 'Financial operations only', locked: 1 },
+    { name: 'Maintenance Coordinator', desc: 'Manages repair workflow', locked: 0 },
+    { name: 'Repair Team', desc: 'Assigned tasks only', locked: 0 },
+    { name: 'Tenant', desc: 'Portal access for self', locked: 0 },
+    { name: 'Property Owner', desc: 'Portfolio access for owned properties', locked: 0 },
+    { name: 'HR Manager', desc: 'User lifecycle management', locked: 0 }
+  ];
+
+  const insertRole = db.prepare("INSERT INTO roles (name, description, is_locked) VALUES (?, ?, ?)");
+  roles.forEach(r => insertRole.run(r.name, r.desc, r.locked));
+}
+
+// Seed Users
+const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
+if (userCount.count === 0) {
+  const insertUser = db.prepare("INSERT INTO users (role_id, first_name, last_name, email, password, property_scope, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
+  insertUser.run(1, "Admin", "User", "admin@hantimaster.com", "admin123", "Global", "Active");
+  insertUser.run(2, "Sarah", "Manager", "sarah@hantimaster.com", "staff123", "Assigned", "Active");
+  insertUser.run(3, "Frank", "Finance", "frank@hantimaster.com", "finance123", "Assigned", "Active");
+  insertUser.run(4, "Mike", "Maintenance", "mike@hantimaster.com", "maint123", "Assigned", "Active");
+  insertUser.run(8, "Helen", "HR", "helen@hantimaster.com", "hr123", "Assigned", "Active");
+  
+  // Seed Permissions
+  const permissionCount = db.prepare("SELECT COUNT(*) as count FROM permissions").get() as { count: number };
+  if (permissionCount.count === 0) {
+    const perms = [
+      { module: 'PROPERTY_MANAGEMENT', action: 'view' },
+      { module: 'PROPERTY_MANAGEMENT', action: 'create' },
+      { module: 'PROPERTY_MANAGEMENT', action: 'update' },
+      { module: 'PROPERTY_MANAGEMENT', action: 'delete' },
+      { module: 'TENANT_MANAGEMENT', action: 'view' },
+      { module: 'TENANT_MANAGEMENT', action: 'create' },
+      { module: 'FINANCE', action: 'view' },
+      { module: 'FINANCE', action: 'export' },
+      { module: 'ADMIN_GOVERNANCE', action: 'view' },
+      { module: 'USER_MANAGEMENT', action: 'view' },
+      { module: 'USER_MANAGEMENT', action: 'update' },
+      { module: 'USER_MANAGEMENT', action: 'delete' },
+      { module: 'ROLE_MANAGEMENT', action: 'view' },
+      { module: 'ROLE_MANAGEMENT', action: 'update' },
+      { module: 'SECURITY_AUDIT', action: 'view' }
+    ];
+    const insertPerm = db.prepare("INSERT INTO permissions (module, action) VALUES (?, ?)");
+    perms.forEach(p => insertPerm.run(p.module, p.action));
+
+    // Grant all permissions to System Administrator (Role ID 1)
+    const allPerms = db.prepare("SELECT id FROM permissions").all() as any[];
+    const grantPerm = db.prepare("INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
+    allPerms.forEach(p => grantPerm.run(1, p.id));
+  }
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -205,7 +396,8 @@ async function startServer() {
 
   // API Routes
   app.get("/api/properties", (req, res) => {
-    const properties = db.prepare(`
+    const userId = req.query.userId;
+    let query = `
       SELECT 
         p.*, 
         o.first_name || ' ' || o.last_name as owner_name,
@@ -214,8 +406,21 @@ async function startServer() {
       FROM properties p
       LEFT JOIN owners o ON p.owner_id = o.id
       LEFT JOIN units u ON p.id = u.property_id
-      GROUP BY p.id
-    `).all();
+    `;
+
+    const params = [];
+
+    if (userId) {
+      const user = db.prepare("SELECT * FROM users WHERE id = ?").get(userId) as any;
+      if (user && user.property_scope === 'Assigned') {
+        query += ` WHERE p.id IN (SELECT property_id FROM user_property_access WHERE user_id = ?) `;
+        params.push(userId);
+      }
+    }
+
+    query += ` GROUP BY p.id `;
+    
+    const properties = db.prepare(query).all(...params);
     res.json(properties);
   });
 
@@ -399,23 +604,21 @@ async function startServer() {
   });
 
   app.put("/api/tenants/:id", (req, res) => {
-    const { notes, auto_rent_reminders, lease_end } = req.body;
+    const { notes, auto_rent_reminders, lease_end, nationality, dob, id_type, id_number, id_expiry, emergency_contact_name, emergency_contact_phone } = req.body;
     
     const updates = [];
     const values = [];
     
-    if (notes !== undefined) {
-      updates.push("notes = ?");
-      values.push(notes);
-    }
-    if (auto_rent_reminders !== undefined) {
-      updates.push("auto_rent_reminders = ?");
-      values.push(auto_rent_reminders ? 1 : 0);
-    }
-    if (lease_end !== undefined) {
-      updates.push("lease_end = ?");
-      values.push(lease_end);
-    }
+    if (notes !== undefined) { updates.push("notes = ?"); values.push(notes); }
+    if (auto_rent_reminders !== undefined) { updates.push("auto_rent_reminders = ?"); values.push(auto_rent_reminders ? 1 : 0); }
+    if (lease_end !== undefined) { updates.push("lease_end = ?"); values.push(lease_end); }
+    if (nationality !== undefined) { updates.push("nationality = ?"); values.push(nationality); }
+    if (dob !== undefined) { updates.push("dob = ?"); values.push(dob); }
+    if (id_type !== undefined) { updates.push("id_type = ?"); values.push(id_type); }
+    if (id_number !== undefined) { updates.push("id_number = ?"); values.push(id_number); }
+    if (id_expiry !== undefined) { updates.push("id_expiry = ?"); values.push(id_expiry); }
+    if (emergency_contact_name !== undefined) { updates.push("emergency_contact_name = ?"); values.push(emergency_contact_name); }
+    if (emergency_contact_phone !== undefined) { updates.push("emergency_contact_phone = ?"); values.push(emergency_contact_phone); }
     
     if (updates.length > 0) {
       values.push(req.params.id);
@@ -435,13 +638,46 @@ async function startServer() {
   });
 
   app.get("/api/maintenance", (req, res) => {
-    const requests = db.prepare(`
-      SELECT m.*, u.unit_number, t.first_name, t.last_name
+    const userId = req.query.userId;
+    let query = `
+      SELECT 
+        m.*, 
+        u.unit_number, 
+        p.name as property_name,
+        t.first_name, 
+        t.last_name,
+        v.first_name || ' ' || v.last_name as assignee_name
       FROM maintenance_requests m
       JOIN units u ON m.unit_id = u.id
+      JOIN properties p ON u.property_id = p.id
       JOIN tenants t ON m.tenant_id = t.id
-      ORDER BY m.created_at DESC
-    `).all();
+      LEFT JOIN users v ON m.assigned_to = v.id
+    `;
+
+    const params = [];
+
+    if (userId) {
+      const user = db.prepare("SELECT u.*, r.name as role_name FROM users u JOIN roles r ON u.role_id = r.id WHERE u.id = ?").get(userId) as any;
+      if (user) {
+        if (user.role_name === 'Tenant') {
+          query += ` WHERE m.tenant_id = ? `;
+          params.push(user.tenant_id);
+        } else if (user.role_name === 'Property Owner') {
+          query += ` WHERE p.owner_id = ? `;
+          params.push(user.owner_id);
+        } else if (user.role_name === 'Repair Team') {
+          query += ` WHERE m.assigned_to = ? `;
+          params.push(userId);
+        } else if (user.property_scope === 'Assigned') {
+          query += ` WHERE p.id IN (SELECT property_id FROM user_property_access WHERE user_id = ?) `;
+          params.push(userId);
+        }
+      }
+    }
+
+    query += ` ORDER BY m.created_at DESC `;
+    
+    const requests = db.prepare(query).all(...params);
     res.json(requests);
   });
 
@@ -510,6 +746,215 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  // Governance & Permission Control Routes
+  app.get("/api/governance/stats", (req, res) => {
+    const stats = {
+      total_users: db.prepare("SELECT COUNT(*) as count FROM users").get().count,
+      active_users: db.prepare("SELECT COUNT(*) as count FROM users WHERE status = 'Active'").get().count,
+      suspended_users: db.prepare("SELECT COUNT(*) as count FROM users WHERE status = 'Suspended'").get().count,
+      pending_requests: db.prepare("SELECT COUNT(*) as count FROM permission_requests WHERE status = 'Pending'").get().count,
+      role_distribution: db.prepare(`
+        SELECT r.name as role, COUNT(u.id) as count 
+        FROM roles r 
+        LEFT JOIN users u ON r.id = u.role_id 
+        GROUP BY r.id
+      `).all()
+    };
+    res.json(stats);
+  });
+
+  app.get("/api/governance/users", (req, res) => {
+    const users = db.prepare(`
+      SELECT u.*, r.name as role_name 
+      FROM users u 
+      JOIN roles r ON u.role_id = r.id
+    `).all();
+    res.json(users);
+  });
+
+  app.put("/api/governance/users/:id", (req, res) => {
+    const { status, role_id, first_name, last_name, email } = req.body;
+    const updates = [];
+    const params = [];
+
+    if (status) { updates.push("status = ?"); params.push(status); }
+    if (role_id) { updates.push("role_id = ?"); params.push(role_id); }
+    if (first_name) { updates.push("first_name = ?"); params.push(first_name); }
+    if (last_name) { updates.push("last_name = ?"); params.push(last_name); }
+    if (email) { updates.push("email = ?"); params.push(email); }
+
+    if (updates.length > 0) {
+      params.push(req.params.id);
+      db.prepare(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`).run(...params);
+      
+      // Log the change
+      db.prepare("INSERT INTO audit_logs (user_id, action, entity_type, entity_id) VALUES (?, ?, ?, ?)")
+        .run(req.query.adminId || null, `Updated user ${req.params.id}`, 'User', req.params.id);
+    }
+    res.json({ success: true });
+  });
+
+  app.get("/api/governance/permission-requests", (req, res) => {
+    const requests = db.prepare(`
+      SELECT pr.*, u.first_name || ' ' || u.last_name as user_name, r.first_name || ' ' || r.last_name as reviewer_name
+      FROM permission_requests pr
+      JOIN users u ON pr.user_id = u.id
+      LEFT JOIN users r ON pr.reviewed_by = r.id
+      ORDER BY pr.created_at DESC
+    `).all();
+    res.json(requests);
+  });
+
+  app.post("/api/governance/permission-requests", (req, res) => {
+    const { user_id, module, action, justification } = req.body;
+    const info = db.prepare(`
+      INSERT INTO permission_requests (user_id, module, action, justification)
+      VALUES (?, ?, ?, ?)
+    `).run(user_id, module, action, justification);
+    res.json({ id: info.lastInsertRowid });
+  });
+
+  app.put("/api/governance/permission-requests/:id", (req, res) => {
+    const { status, reviewed_by, expiration_date } = req.body;
+    db.prepare(`
+      UPDATE permission_requests 
+      SET status = ?, reviewed_by = ?, expiration_date = ?, reviewed_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(status, reviewed_by, expiration_date || null, req.params.id);
+
+    if (status === 'Approved') {
+      const request = db.prepare("SELECT * FROM permission_requests WHERE id = ?").get(req.params.id) as any;
+      const permission = db.prepare("SELECT id FROM permissions WHERE module = ? AND action = ?").get(request.module, request.action) as any;
+      
+      if (permission) {
+        db.prepare(`
+          INSERT INTO permission_overrides (user_id, permission_id, override_type, expiration_date)
+          VALUES (?, ?, 'Grant', ?)
+        `).run(request.user_id, permission.id, expiration_date || null);
+      }
+    }
+
+    res.json({ success: true });
+  });
+
+  app.get("/api/governance/audit-logs", (req, res) => {
+    const logs = db.prepare(`
+      SELECT al.*, u.first_name || ' ' || u.last_name as user_name 
+      FROM audit_logs al 
+      LEFT JOIN users u ON al.user_id = u.id 
+      ORDER BY al.timestamp DESC
+      LIMIT 100
+    `).all();
+    res.json(logs);
+  });
+
+  app.get("/api/governance/security-alerts", (req, res) => {
+    // Mocking security alerts for now
+    const alerts = [
+      { id: 1, type: 'Failed Login', user: 'Unknown', timestamp: new Date().toISOString(), risk: 'Low', description: 'Multiple failed login attempts from IP 192.168.1.45' },
+      { id: 2, type: 'Privilege Escalation', user: 'Sarah Manager', timestamp: new Date(Date.now() - 3600000).toISOString(), risk: 'High', description: 'Attempted to access Finance module without permission' },
+      { id: 3, type: 'Admin Change', user: 'Admin User', timestamp: new Date(Date.now() - 7200000).toISOString(), risk: 'Medium', description: 'Modified system-wide password policy' },
+      { id: 4, type: 'Suspicious Activity', user: 'Frank Finance', timestamp: new Date(Date.now() - 86400000).toISOString(), risk: 'Critical', description: 'Large batch export of financial data outside business hours' }
+    ];
+    res.json(alerts);
+  });
+
+  app.get("/api/governance/system-rules", (req, res) => {
+    res.json({
+      password_policy: { min_length: 8, complexity: 'High', rotation_days: 90 },
+      mfa_settings: { enforced_roles: ['System Administrator', 'Finance Team'], optional_roles: ['All Others'] },
+      session_settings: { timeout_minutes: 30, auto_logout: true }
+    });
+  });
+
+  app.post("/api/governance/matrix", (req, res) => {
+    const { role_id, permission_id, action } = req.body; // action: 'grant' or 'revoke'
+    if (action === 'grant') {
+      db.prepare("INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)").run(role_id, permission_id);
+    } else {
+      db.prepare("DELETE FROM role_permissions WHERE role_id = ? AND permission_id = ?").run(role_id, permission_id);
+    }
+    res.json({ success: true });
+  });
+
+  app.get("/api/governance/overrides/:userId", (req, res) => {
+    const overrides = db.prepare(`
+      SELECT po.*, p.module, p.action
+      FROM permission_overrides po
+      JOIN permissions p ON po.permission_id = p.id
+      WHERE po.user_id = ? AND (po.expiration_date IS NULL OR po.expiration_date > CURRENT_TIMESTAMP)
+    `).all(req.params.userId);
+    res.json(overrides);
+  });
+
+  // Auth Routes
+  app.post("/api/auth/login", (req, res) => {
+    const { email, password } = req.body;
+    const user = db.prepare(`
+      SELECT u.*, r.name as role_name 
+      FROM users u 
+      JOIN roles r ON u.role_id = r.id 
+      WHERE LOWER(u.email) = LOWER(?) AND u.password = ?
+    `).get(email, password) as any;
+
+    if (!user) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    if (user.status === 'Suspended' || user.status === 'Terminated') {
+      return res.status(401).json({ error: "Your account has been suspended or terminated." });
+    }
+
+    // Update last login
+    db.prepare("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?").run(user.id);
+
+    // In a real app, we would return a JWT
+    const { password: _, ...userWithoutPassword } = user;
+    res.json(userWithoutPassword);
+  });
+
+  app.get("/api/users/me", (req, res) => {
+    // This would normally use a JWT from the header
+    const userId = req.query.userId;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const user = db.prepare(`
+      SELECT u.*, r.name as role_name 
+      FROM users u 
+      JOIN roles r ON u.role_id = r.id 
+      WHERE u.id = ?
+    `).get(userId) as any;
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const { password: _, ...userWithoutPassword } = user;
+    res.json(userWithoutPassword);
+  });
+
+  app.get("/api/users", (req, res) => {
+    const users = db.prepare(`
+      SELECT u.*, r.name as role_name 
+      FROM users u 
+      JOIN roles r ON u.role_id = r.id
+    `).all();
+    res.json(users);
+  });
+
+  app.get("/api/roles", (req, res) => {
+    const roles = db.prepare("SELECT * FROM roles").all();
+    res.json(roles);
+  });
+
+  app.get("/api/audit-logs", (req, res) => {
+    const logs = db.prepare(`
+      SELECT a.*, u.first_name || ' ' || u.last_name as user_name
+      FROM audit_logs a
+      JOIN users u ON a.user_id = u.id
+      ORDER BY a.timestamp DESC
+      LIMIT 100
+    `).all();
+    res.json(logs);
+  });
+
   // Owner Routes
   app.get("/api/owners", (req, res) => {
     const owners = db.prepare(`
@@ -567,13 +1012,83 @@ async function startServer() {
       ORDER BY tr.date DESC
     `).all(req.params.id);
 
-    res.json({ ...owner, properties, transactions });
+    const documents = db.prepare(`
+      SELECT * FROM owner_documents
+      WHERE owner_id = ?
+      ORDER BY uploaded_at DESC
+    `).all(req.params.id);
+
+    const messages = db.prepare(`
+      SELECT * FROM messages
+      WHERE (sender_id = ? AND sender_type = 'Owner') OR (receiver_id = ? AND receiver_type = 'Owner')
+      ORDER BY timestamp DESC
+    `).all(req.params.id, req.params.id);
+
+    const activities = [
+      ...properties.map((p: any) => ({
+        id: `prop-${p.id}`,
+        type: 'Property',
+        description: `Property managed: ${p.name}`,
+        date: new Date().toISOString()
+      })),
+      ...transactions.map((t: any) => ({
+        id: `tx-${t.id}`,
+        type: 'Payment',
+        description: `Rent payment received: $${t.amount}`,
+        date: t.date
+      })),
+      ...documents.map((d: any) => ({
+        id: `doc-${d.id}`,
+        type: 'Document',
+        description: `Document uploaded: ${d.name}`,
+        date: d.uploaded_at
+      })),
+      ...messages.map((m: any) => ({
+        id: `msg-${m.id}`,
+        type: 'Message',
+        description: m.sender_type === 'Owner' ? 'Sent a message' : 'Received a message',
+        date: m.timestamp
+      }))
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    res.json({ ...owner, properties, transactions, documents, activities });
+  });
+
+  app.put("/api/owners/:id", (req, res) => {
+    const { address, nationality, dob, id_type, id_number, id_expiry } = req.body;
+    const updates = [];
+    const values = [];
+    
+    if (address !== undefined) { updates.push("address = ?"); values.push(address); }
+    if (nationality !== undefined) { updates.push("nationality = ?"); values.push(nationality); }
+    if (dob !== undefined) { updates.push("dob = ?"); values.push(dob); }
+    if (id_type !== undefined) { updates.push("id_type = ?"); values.push(id_type); }
+    if (id_number !== undefined) { updates.push("id_number = ?"); values.push(id_number); }
+    if (id_expiry !== undefined) { updates.push("id_expiry = ?"); values.push(id_expiry); }
+    
+    if (updates.length > 0) {
+      values.push(req.params.id);
+      db.prepare(`UPDATE owners SET ${updates.join(", ")} WHERE id = ?`).run(...values);
+    }
+    res.json({ success: true });
+  });
+
+  app.post("/api/owners/:id/documents", (req, res) => {
+    const { name, url, type } = req.body;
+    const info = db.prepare(`
+      INSERT INTO owner_documents (owner_id, name, url, type)
+      VALUES (?, ?, ?, ?)
+    `).run(req.params.id, name, url, type);
+    res.json({ id: info.lastInsertRowid });
   });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { 
+        middlewareMode: true,
+        hmr: process.env.DISABLE_HMR !== 'true'
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);

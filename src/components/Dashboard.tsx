@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   TrendingUp, 
   Users, 
@@ -7,21 +8,27 @@ import {
   Clock,
   ArrowUpRight,
   ArrowDownRight,
-  ChevronRight
+  ChevronRight,
+  Lock
 } from 'lucide-react';
 import { api } from '../services/api';
 import { FinanceStats } from '../types';
 
 export const Dashboard: React.FC = () => {
+  const { user, hasPermission } = useAuth();
   const [stats, setStats] = useState<FinanceStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getFinanceStats().then(data => {
-      setStats(data);
+    if (hasPermission('FINANCE', 'view')) {
+      api.getFinanceStats().then(data => {
+        setStats(data);
+        setLoading(false);
+      });
+    } else {
       setLoading(false);
-    });
-  }, []);
+    }
+  }, [hasPermission]);
 
   const kpis = [
     { 
@@ -30,6 +37,7 @@ export const Dashboard: React.FC = () => {
       change: '+12.5%', 
       trend: 'up',
       icon: TrendingUp,
+      permission: 'FINANCE'
     },
     { 
       label: 'Active Tenants', 
@@ -37,6 +45,7 @@ export const Dashboard: React.FC = () => {
       change: '+3', 
       trend: 'up',
       icon: Users,
+      permission: 'TENANT_MANAGEMENT'
     },
     { 
       label: 'Pending Payments', 
@@ -44,6 +53,7 @@ export const Dashboard: React.FC = () => {
       change: '-2.4%', 
       trend: 'down',
       icon: Clock,
+      permission: 'FINANCE'
     },
     { 
       label: 'Open Requests', 
@@ -51,11 +61,17 @@ export const Dashboard: React.FC = () => {
       change: '+2', 
       trend: 'up',
       icon: AlertCircle,
+      permission: 'MAINTENANCE'
     },
-  ];
+  ].filter(kpi => hasPermission(kpi.permission, 'view'));
 
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Welcome back, {user?.first_name}</h2>
+        <p className="text-zinc-500 dark:text-zinc-400 mt-1">Here's what's happening with your portfolio today.</p>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi, index) => (
           <motion.div
@@ -83,6 +99,12 @@ export const Dashboard: React.FC = () => {
             </div>
           </motion.div>
         ))}
+        {kpis.length === 0 && (
+          <div className="lg:col-span-4 p-12 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-200 dark:border-zinc-800 text-center">
+            <Lock size={32} className="mx-auto text-zinc-400 mb-4" />
+            <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">No high-level metrics available for your role.</p>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

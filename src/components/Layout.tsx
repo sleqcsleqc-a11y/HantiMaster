@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   LayoutDashboard, 
   Building2, 
@@ -14,8 +15,11 @@ import {
   Moon,
   MessageSquare,
   CheckSquare,
-  Briefcase
+  Briefcase,
+  ShieldAlert,
+  Key
 } from 'lucide-react';
+import { RequestPermissionModal } from './RequestPermissionModal';
 
 interface SidebarProps {
   activeTab: string;
@@ -23,16 +27,46 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
-  const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { id: 'properties', icon: Building2, label: 'Properties' },
-    { id: 'owners', icon: Briefcase, label: 'Owners' },
-    { id: 'tenants', icon: Users, label: 'Tenants' },
-    { id: 'maintenance', icon: Wrench, label: 'Maintenance' },
-    { id: 'finance', icon: CircleDollarSign, label: 'Finance' },
-    { id: 'communication', icon: MessageSquare, label: 'Communication' },
-    { id: 'tasks', icon: CheckSquare, label: 'Tasks' },
+  const { user, hasPermission } = useAuth();
+  const [isRequestModalOpen, setIsRequestModalOpen] = React.useState(false);
+  
+  const allMenuItems = [
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', module: 'DASHBOARD' },
+    { id: 'properties', icon: Building2, label: 'Properties', module: 'PROPERTY_MANAGEMENT' },
+    { id: 'owners', icon: Briefcase, label: 'Owners', module: 'OWNER_MANAGEMENT' },
+    { id: 'tenants', icon: Users, label: 'Tenants', module: 'TENANT_MANAGEMENT' },
+    { id: 'maintenance', icon: Wrench, label: 'Maintenance', module: 'MAINTENANCE' },
+    { id: 'finance', icon: CircleDollarSign, label: 'Finance', module: 'FINANCE' },
+    { id: 'communication', icon: MessageSquare, label: 'Communication', module: 'COMMUNICATION' },
+    { id: 'tasks', icon: CheckSquare, label: 'Tasks', module: 'TASKS' },
+    { id: 'governance', icon: ShieldAlert, label: 'Admin Control', module: 'ADMIN_GOVERNANCE' },
   ];
+
+  const menuItems = allMenuItems.filter(item => {
+    if (user?.role_name === 'System Administrator') return true;
+    if (user?.role_name === 'HR Manager') {
+      return ['dashboard', 'governance'].includes(item.id);
+    }
+    if (user?.role_name === 'Property Management Staff') {
+      return !['finance'].includes(item.id);
+    }
+    if (user?.role_name === 'Finance Team') {
+      return ['dashboard', 'finance', 'properties', 'owners'].includes(item.id);
+    }
+    if (user?.role_name === 'Maintenance Coordinator') {
+      return ['dashboard', 'maintenance', 'tasks', 'properties'].includes(item.id);
+    }
+    if (user?.role_name === 'Repair Team') {
+      return ['dashboard', 'tasks', 'maintenance'].includes(item.id);
+    }
+    if (user?.role_name === 'Tenant') {
+      return ['dashboard', 'communication', 'maintenance'].includes(item.id);
+    }
+    if (user?.role_name === 'Property Owner') {
+      return ['dashboard', 'properties', 'finance', 'maintenance'].includes(item.id);
+    }
+    return true;
+  });
 
   return (
     <div className="w-64 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-zinc-900 dark:text-zinc-100 h-screen flex flex-col border-r border-violet-100 dark:border-zinc-800 transition-colors duration-300">
@@ -58,16 +92,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
             <span className="text-sm">{item.label}</span>
           </button>
         ))}
+        <button
+          onClick={() => setIsRequestModalOpen(true)}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-400 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50 dark:hover:bg-zinc-800 transition-all duration-300 group mt-4 border border-dashed border-zinc-200 dark:border-zinc-800"
+        >
+          <Key size={18} className="text-zinc-400 group-hover:text-violet-600" />
+          <span className="text-sm">Request Access</span>
+        </button>
       </nav>
+
+      <RequestPermissionModal isOpen={isRequestModalOpen} onClose={() => setIsRequestModalOpen(false)} />
 
       <div className="p-6 border-t border-violet-50 dark:border-zinc-800">
         <div className="flex items-center gap-3 px-2 py-2 text-zinc-500 dark:text-zinc-400">
-          <div className="w-8 h-8 rounded-full bg-violet-50 dark:bg-zinc-800 border border-violet-100 dark:border-zinc-700 flex items-center justify-center">
-            <UserCircle size={20} className="text-violet-600 dark:text-violet-400" />
+          <div className="w-8 h-8 rounded-full bg-violet-50 dark:bg-zinc-800 border border-violet-100 dark:border-zinc-700 flex items-center justify-center text-[10px] font-bold text-violet-600">
+            {user?.first_name[0]}{user?.last_name[0]}
           </div>
           <div className="flex flex-col text-left">
-            <span className="text-xs font-bold text-zinc-900 dark:text-white">Admin</span>
-            <span className="text-[10px]">Property Manager</span>
+            <span className="text-xs font-bold text-zinc-900 dark:text-white">{user?.first_name} {user?.last_name}</span>
+            <span className="text-[10px] font-medium text-zinc-500">{user?.role_name}</span>
           </div>
         </div>
       </div>
