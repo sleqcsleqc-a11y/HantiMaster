@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { AdminDashboard } from './Dashboard';
 import { UserGovernance } from './UserGovernance';
+import { UserProfilePanel } from '../UserProfilePanel';
 import { RoleManagement } from './RoleManagement';
 import { PermissionMatrix } from './PermissionMatrix';
 import { PermissionRequests } from './PermissionRequests';
@@ -14,6 +15,7 @@ interface AdminControlCenterProps {
 
 export const AdminControlCenter: React.FC<AdminControlCenterProps> = ({ onExit }) => {
   const [activeModule, setActiveModule] = useState('dashboard');
+  const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
 
   const renderModule = () => {
     switch (activeModule) {
@@ -39,8 +41,16 @@ export const AdminControlCenter: React.FC<AdminControlCenterProps> = ({ onExit }
   };
 
   return (
-    <AdminLayout activeModule={activeModule} onModuleChange={setActiveModule} onExit={onExit}>
-      {renderModule()}
-    </AdminLayout>
+    <>
+      <AdminLayout 
+        activeModule={activeModule} 
+        onModuleChange={setActiveModule} 
+        onExit={onExit}
+        onProfileClick={() => setIsProfilePanelOpen(true)}
+      >
+        {renderModule()}
+      </AdminLayout>
+      <UserProfilePanel isOpen={isProfilePanelOpen} onClose={() => setIsProfilePanelOpen(false)} />
+    </>
   );
 };

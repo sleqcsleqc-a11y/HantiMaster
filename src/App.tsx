@@ -11,6 +11,7 @@ import { Tasks } from './components/Tasks';
 import { AdminControlCenter } from './components/Admin/AdminControlCenter';
 import { Owners } from './components/Owners';
 import { OwnerDetails } from './components/OwnerDetails';
+import { UserProfilePanel } from './components/UserProfilePanel';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { RoleSwitcher } from './components/RoleSwitcher';
 import { Building2 } from 'lucide-react';
@@ -21,6 +22,7 @@ const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [selectedOwnerId, setSelectedOwnerId] = useState<number | null>(null);
+  const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [loginError, setLoginError] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -213,18 +215,20 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="flex h-screen vintsy-main-gradient font-sans text-zinc-900 dark:text-zinc-100 selection:bg-violet-100 selection:text-violet-900 transition-colors duration-300">
-      <Sidebar activeTab={activeTab} setActiveTab={handleTabChange} />
+      <Sidebar activeTab={activeTab} setActiveTab={handleTabChange} onProfileClick={() => setIsProfilePanelOpen(true)} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header 
           title={getTitle()} 
           isDarkMode={isDarkMode} 
           toggleDarkMode={toggleDarkMode} 
+          onProfileClick={() => setIsProfilePanelOpen(true)}
         />
         <main className="flex-1 overflow-y-auto">
           {renderContent()}
         </main>
       </div>
       <RoleSwitcher />
+      <UserProfilePanel isOpen={isProfilePanelOpen} onClose={() => setIsProfilePanelOpen(false)} />
     </div>
   );
 };

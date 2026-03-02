@@ -17,9 +17,11 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import { Role } from '../../types';
 
 export const PermissionMatrix: React.FC = () => {
+  const { user } = useAuth();
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<any[]>([]);
   const [rolePermissions, setRolePermissions] = useState<any[]>([]);
@@ -55,7 +57,8 @@ export const PermissionMatrix: React.FC = () => {
     await api.updatePermissionMatrix({
       role_id: roleId,
       permission_id: permissionId,
-      action: isGranted ? 'revoke' : 'grant'
+      action: isGranted ? 'revoke' : 'grant',
+      admin_id: user?.id
     });
     loadData();
   };

@@ -52,6 +52,17 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
     loadProperties();
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPropertyForm({ ...propertyForm, image_url: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   useEffect(() => {
     let result = [...properties];
     
@@ -194,14 +205,32 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Image URL</label>
-                <input 
-                  type="url" 
-                  required
-                  value={propertyForm.image_url}
-                  onChange={e => setPropertyForm({...propertyForm, image_url: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
-                />
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Property Image</label>
+                <div className="flex items-center gap-4">
+                  <div className="w-24 h-24 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center overflow-hidden bg-zinc-50 dark:bg-zinc-800/50">
+                    {propertyForm.image_url ? (
+                      <img src={propertyForm.image_url} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <Building2 className="text-zinc-300" size={32} />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="property-image-upload"
+                    />
+                    <label 
+                      htmlFor="property-image-upload"
+                      className="inline-block px-4 py-2 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-all"
+                    >
+                      Choose Image
+                    </label>
+                    <p className="text-[9px] text-zinc-400 mt-2 uppercase tracking-widest font-bold">PNG, JPG up to 5MB. Auto-resized to fit.</p>
+                  </div>
+                </div>
               </div>
               <button type="submit" className="w-full vintsy-button-primary py-3 mt-6">
                 Save Property

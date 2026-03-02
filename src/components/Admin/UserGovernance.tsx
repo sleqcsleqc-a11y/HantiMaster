@@ -31,8 +31,22 @@ export const UserGovernance: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [roleFilter, setRoleFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+  const [selectedUser, setSelectedUser] = useState<any>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ status: '', role_id: 0 });
+  const [addForm, setAddForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    password: '',
+    role_id: 0,
+    property_scope: 'Assigned' as 'Global' | 'Assigned'
+  });
 
   const loadData = async () => {
     setLoading(true);
@@ -62,10 +76,87 @@ export const UserGovernance: React.FC = () => {
     }
   };
 
-  const filteredUsers = users.filter(u => 
-    `${u.first_name} ${u.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleSelectUser = async (user: User) => {
+    setSelectedUser(user);
+    setIsDrawerOpen(true);
+    setIsEditing(false);
+    setEditForm({ status: user.status, role_id: user.role_id });
+    try {
+      const details = await api.getGovernanceUserDetails(user.id);
+      setSelectedUser(details);
+    } catch (error) {
+      console.error("Failed to load user details", error);
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    if (!selectedUser) return;
+    try {
+      await api.updateGovernanceUser(selectedUser.id, editForm, currentUser?.id);
+      setIsEditing(false);
+      loadData();
+      const details = await api.getGovernanceUserDetails(selectedUser.id);
+      setSelectedUser(details);
+    } catch (error) {
+      console.error("Failed to update user", error);
+    }
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.createGovernanceUser(addForm, currentUser?.id);
+      setIsAddModalOpen(false);
+      setAddForm({
+        first_name: '',
+        last_name: '',
+        email: '',
+        password: '',
+        role_id: roles[0]?.id || 0,
+        property_scope: 'Assigned'
+      });
+      loadData();
+    } catch (error) {
+      console.error("Failed to add user", error);
+    }
+  };
+
+  const handleSort = (key: string) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const filteredUsers = users
+    .filter(u => {
+      const matchesSearch = `${u.first_name} ${u.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          u.email.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesRole = roleFilter === 'All' || u.role_name === roleFilter;
+      const matchesStatus = statusFilter === 'All' || u.status === statusFilter;
+      return matchesSearch && matchesRole && matchesStatus;
+    })
+    .sort((a, b) => {
+      let valA: any, valB: any;
+      
+      if (sortConfig.key === 'name') {
+        valA = `${a.first_name} ${a.last_name}`.toLowerCase();
+        valB = `${b.first_name} ${b.last_name}`.toLowerCase();
+      } else if (sortConfig.key === 'role') {
+        valA = a.role_name.toLowerCase();
+        valB = b.role_name.toLowerCase();
+      } else if (sortConfig.key === 'status') {
+        valA = a.status;
+        valB = b.status;
+      } else if (sortConfig.key === 'last_login') {
+        valA = a.last_login ? new Date(a.last_login).getTime() : 0;
+        valB = b.last_login ? new Date(b.last_login).getTime() : 0;
+      }
+
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   return (
     <div className="space-y-6">
@@ -82,11 +173,32 @@ export const UserGovernance: React.FC = () => {
           />
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all">
-            <Filter size={14} />
-            Filters
-          </button>
-          <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-violet-700 transition-all shadow-lg shadow-violet-600/20">
+          <select 
+            value={roleFilter}
+            onChange={e => setRoleFilter(e.target.value)}
+            className="px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-xs font-bold focus:outline-none transition-all"
+          >
+            <option value="All">All Roles</option>
+            {roles.map(role => <option key={role.id} value={role.name}>{role.name}</option>)}
+          </select>
+          <select 
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-xs font-bold focus:outline-none transition-all"
+          >
+            <option value="All">All Status</option>
+            <option value="Active">Active</option>
+            <option value="Suspended">Suspended</option>
+            <option value="Locked">Locked</option>
+            <option value="Terminated">Terminated</option>
+          </select>
+          <button 
+            onClick={() => {
+              setAddForm(prev => ({ ...prev, role_id: roles[0]?.id || 0 }));
+              setIsAddModalOpen(true);
+            }}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-violet-700 transition-all shadow-lg shadow-violet-600/20"
+          >
             <UserPlus size={14} />
             Add User
           </button>
@@ -99,10 +211,18 @@ export const UserGovernance: React.FC = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-zinc-50 dark:bg-zinc-800/50 text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                <th className="px-8 py-5">User Profile</th>
-                <th className="px-8 py-5">Role & Scope</th>
-                <th className="px-8 py-5">Status</th>
-                <th className="px-8 py-5">Last Login</th>
+                <th className="px-8 py-5 cursor-pointer hover:text-violet-600 transition-colors" onClick={() => handleSort('name')}>
+                  User Profile {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="px-8 py-5 cursor-pointer hover:text-violet-600 transition-colors" onClick={() => handleSort('role')}>
+                  Role & Scope {sortConfig.key === 'role' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="px-8 py-5 cursor-pointer hover:text-violet-600 transition-colors" onClick={() => handleSort('status')}>
+                  Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="px-8 py-5 cursor-pointer hover:text-violet-600 transition-colors" onClick={() => handleSort('last_login')}>
+                  Last Login {sortConfig.key === 'last_login' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
                 <th className="px-8 py-5 text-right">Actions</th>
               </tr>
             </thead>
@@ -111,10 +231,7 @@ export const UserGovernance: React.FC = () => {
                 <tr 
                   key={u.id} 
                   className="group hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer"
-                  onClick={() => {
-                    setSelectedUser(u);
-                    setIsDrawerOpen(true);
-                  }}
+                  onClick={() => handleSelectUser(u)}
                 >
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-4">
@@ -172,6 +289,106 @@ export const UserGovernance: React.FC = () => {
 
       {/* User Profile Slide-over */}
       <AnimatePresence>
+        {isAddModalOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAddModalOpen(false)}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[80]"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl z-[90] overflow-hidden"
+            >
+              <div className="p-8 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">Add New User</h3>
+                  <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-400">
+                    <X size={20} />
+                  </button>
+                </div>
+                <form onSubmit={handleAddUser} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">First Name</label>
+                      <input 
+                        required
+                        type="text" 
+                        value={addForm.first_name}
+                        onChange={e => setAddForm({...addForm, first_name: e.target.value})}
+                        className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Last Name</label>
+                      <input 
+                        required
+                        type="text" 
+                        value={addForm.last_name}
+                        onChange={e => setAddForm({...addForm, last_name: e.target.value})}
+                        className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Email Address</label>
+                    <input 
+                      required
+                      type="email" 
+                      value={addForm.email}
+                      onChange={e => setAddForm({...addForm, email: e.target.value})}
+                      className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Initial Password</label>
+                    <input 
+                      type="password" 
+                      placeholder="Default: welcome123"
+                      value={addForm.password}
+                      onChange={e => setAddForm({...addForm, password: e.target.value})}
+                      className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Role</label>
+                      <select 
+                        value={addForm.role_id}
+                        onChange={e => setAddForm({...addForm, role_id: parseInt(e.target.value)})}
+                        className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold"
+                      >
+                        {roles.map(role => <option key={role.id} value={role.id}>{role.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Scope</label>
+                      <select 
+                        value={addForm.property_scope}
+                        onChange={e => setAddForm({...addForm, property_scope: e.target.value as any})}
+                        className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold"
+                      >
+                        <option value="Assigned">Assigned</option>
+                        <option value="Global">Global</option>
+                      </select>
+                    </div>
+                  </div>
+                  <button 
+                    type="submit"
+                    className="w-full py-4 bg-violet-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-violet-700 transition-all shadow-lg shadow-violet-600/20 mt-4"
+                  >
+                    Create User Account
+                  </button>
+                </form>
+              </div>
+            </motion.div>
+          </>
+        )}
+
         {isDrawerOpen && selectedUser && (
           <>
             <motion.div 
@@ -191,12 +408,24 @@ export const UserGovernance: React.FC = () => {
               <div className="p-8 space-y-8">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">User Profile Panel</h3>
-                  <button 
-                    onClick={() => setIsDrawerOpen(false)}
-                    className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-400 transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => setIsEditing(!isEditing)}
+                      className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
+                        isEditing 
+                          ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400' 
+                          : 'bg-violet-50 dark:bg-violet-900/20 text-violet-600 border border-violet-100 dark:border-violet-800'
+                      }`}
+                    >
+                      {isEditing ? 'Cancel' : 'Edit Profile'}
+                    </button>
+                    <button 
+                      onClick={() => setIsDrawerOpen(false)}
+                      className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-400 transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Header Info */}
@@ -225,21 +454,95 @@ export const UserGovernance: React.FC = () => {
 
                 {/* Sections */}
                 <div className="grid grid-cols-1 gap-6">
-                  {/* Basic Info */}
+                  {/* Edit Form */}
+                  {isEditing && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="vintsy-card p-6 space-y-6 border-violet-200 dark:border-violet-800 bg-violet-50/10"
+                    >
+                      <h5 className="text-[10px] font-bold text-violet-600 uppercase tracking-widest">Edit User Configuration</h5>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Status</label>
+                          <select 
+                            value={editForm.status}
+                            onChange={e => setEditForm({...editForm, status: e.target.value})}
+                            className="w-full px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-bold"
+                          >
+                            <option value="Active">Active</option>
+                            <option value="Suspended">Suspended</option>
+                            <option value="Locked">Locked</option>
+                            <option value="Terminated">Terminated</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Role</label>
+                          <select 
+                            value={editForm.role_id}
+                            onChange={e => setEditForm({...editForm, role_id: parseInt(e.target.value)})}
+                            className="w-full px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-bold"
+                          >
+                            {roles.map(role => <option key={role.id} value={role.id}>{role.name}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={handleUpdateUser}
+                        className="w-full py-3 bg-violet-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-violet-700 transition-all shadow-lg shadow-violet-600/20"
+                      >
+                        Save Changes
+                      </button>
+                    </motion.div>
+                  )}
+
+                  {/* Property Access */}
                   <div className="vintsy-card p-6 space-y-4">
                     <h5 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                       <Building2 size={12} />
-                      Governance & Scope
+                      Property Access ({selectedUser.properties?.length || 0})
                     </h5>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Assigned Role</p>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{selectedUser.role_name}</p>
-                      </div>
-                      <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Property Scope</p>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{selectedUser.property_scope}</p>
-                      </div>
+                    <div className="space-y-2">
+                      {selectedUser.properties?.length > 0 ? (
+                        selectedUser.properties.map((prop: any) => (
+                          <div key={prop.id} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-800">
+                            <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">{prop.name}</span>
+                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{prop.type}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-zinc-500 italic p-4 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">
+                          No specific property access assigned.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Recent Activity */}
+                  <div className="vintsy-card p-6 space-y-4">
+                    <h5 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                      <History size={12} />
+                      Recent Activity History
+                    </h5>
+                    <div className="space-y-4">
+                      {selectedUser.activity?.length > 0 ? (
+                        selectedUser.activity.map((act: any) => (
+                          <div key={act.id} className="flex gap-4">
+                            <div className="mt-1">
+                              <div className="w-2 h-2 rounded-full bg-violet-500" />
+                              <div className="w-px h-full bg-zinc-100 dark:bg-zinc-800 mx-auto mt-1" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-zinc-900 dark:text-white">{act.action}</p>
+                              <p className="text-[10px] text-zinc-500 mt-1">
+                                {new Date(act.timestamp).toLocaleString()} • {act.entity_type}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-zinc-500 italic p-4 text-center">No recent activity found.</p>
+                      )}
                     </div>
                   </div>
 
@@ -266,14 +569,6 @@ export const UserGovernance: React.FC = () => {
                           {selectedUser.last_login ? new Date(selectedUser.last_login).toLocaleDateString() : 'Never'}
                         </span>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 pt-2">
-                      <button className="px-4 py-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-[10px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all">
-                        Reset Password
-                      </button>
-                      <button className="px-4 py-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-[10px] font-bold uppercase tracking-widest text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all">
-                        Revoke Sessions
-                      </button>
                     </div>
                   </div>
 

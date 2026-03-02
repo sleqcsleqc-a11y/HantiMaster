@@ -229,11 +229,23 @@ export const api = {
     const res = await fetch(`${API_BASE}/governance/users`);
     return res.json();
   },
+  createGovernanceUser: async (data: any, adminId?: number) => {
+    const res = await fetch(`${API_BASE}/governance/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...data, admin_id: adminId })
+    });
+    return res.json();
+  },
+  getGovernanceUserDetails: async (id: number) => {
+    const res = await fetch(`${API_BASE}/governance/users/${id}`);
+    return res.json();
+  },
   updateGovernanceUser: async (id: number, data: any, adminId?: number) => {
-    const res = await fetch(`${API_BASE}/governance/users/${id}${adminId ? `?adminId=${adminId}` : ''}`, {
+    const res = await fetch(`${API_BASE}/governance/users/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify({ ...data, admin_id: adminId })
     });
     return res.json();
   },
@@ -269,7 +281,21 @@ export const api = {
     const res = await fetch(`${API_BASE}/governance/system-rules`);
     return res.json();
   },
-  updatePermissionMatrix: async (data: { role_id: number, permission_id: number, action: 'grant' | 'revoke' }) => {
+  createHierarchyRule: async (data: any) => {
+    const res = await fetch(`${API_BASE}/governance/hierarchy-rules`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+  deleteHierarchyRule: async (id: number, adminId: number) => {
+    const res = await fetch(`${API_BASE}/governance/hierarchy-rules/${id}?admin_id=${adminId}`, {
+      method: 'DELETE'
+    });
+    return res.json();
+  },
+  updatePermissionMatrix: async (data: { role_id: number, permission_id: number, action: 'grant' | 'revoke', admin_id?: number }) => {
     const res = await fetch(`${API_BASE}/governance/matrix`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

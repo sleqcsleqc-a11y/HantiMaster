@@ -72,6 +72,8 @@ db.exec(`
     tenant_id INTEGER,
     owner_id INTEGER,
     status TEXT DEFAULT 'Active', -- 'Active', 'Suspended', 'Locked', 'Terminated'
+    phone TEXT,
+    address TEXT,
     last_login DATETIME,
     mfa_enabled BOOLEAN DEFAULT 0,
     FOREIGN KEY (role_id) REFERENCES roles(id),
@@ -205,6 +207,17 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
 
+  CREATE TABLE IF NOT EXISTS role_hierarchy_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL, -- 'Inheritance' or 'Restricted'
+    role_a_id INTEGER NOT NULL,
+    role_b_id INTEGER NOT NULL,
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (role_a_id) REFERENCES roles(id),
+    FOREIGN KEY (role_b_id) REFERENCES roles(id)
+  );
+
   CREATE TABLE IF NOT EXISTS tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
@@ -245,6 +258,21 @@ try {
     }
   });
 
+  // Add new columns to users table
+  const userInfo = db.prepare("PRAGMA table_info(users)").all() as any[];
+  if (!userInfo.some(c => c.name === 'phone')) {
+    db.exec("ALTER TABLE users ADD COLUMN phone TEXT");
+  }
+  if (!userInfo.some(c => c.name === 'address')) {
+    db.exec("ALTER TABLE users ADD COLUMN address TEXT");
+  }
+  if (!userInfo.some(c => c.name === 'status')) {
+    db.exec("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'Active'");
+  }
+  if (!userInfo.some(c => c.name === 'last_login')) {
+    db.exec("ALTER TABLE users ADD COLUMN last_login DATETIME");
+  }
+
   // Add new columns to owners table
   const ownerInfo = db.prepare("PRAGMA table_info(owners)").all() as any[];
   const ownerColumns = ['address', 'nationality', 'dob', 'id_type', 'id_number', 'id_expiry'];
@@ -253,15 +281,6 @@ try {
       db.exec(`ALTER TABLE owners ADD COLUMN ${col} TEXT`);
     }
   });
-
-  // Add new columns to users table
-  const userInfo = db.prepare("PRAGMA table_info(users)").all() as any[];
-  if (!userInfo.some(c => c.name === 'status')) {
-    db.exec("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'Active'");
-  }
-  if (!userInfo.some(c => c.name === 'last_login')) {
-    db.exec("ALTER TABLE users ADD COLUMN last_login DATETIME");
-  }
   if (!userInfo.some(c => c.name === 'mfa_enabled')) {
     db.exec("ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN DEFAULT 0");
   }
@@ -333,14 +352,16 @@ if (taskCount.count === 0) {
 const roleCount = db.prepare("SELECT COUNT(*) as count FROM roles").get() as { count: number };
 if (roleCount.count === 0) {
   const roles = [
-    { name: 'System Administrator', desc: 'Full access across all modules', locked: 0 },
-    { name: 'Property Management Staff', desc: 'Operational property management', locked: 0 },
-    { name: 'Finance Team', desc: 'Financial operations only', locked: 1 },
-    { name: 'Maintenance Coordinator', desc: 'Manages repair workflow', locked: 0 },
-    { name: 'Repair Team', desc: 'Assigned tasks only', locked: 0 },
-    { name: 'Tenant', desc: 'Portal access for self', locked: 0 },
-    { name: 'Property Owner', desc: 'Portfolio access for owned properties', locked: 0 },
-    { name: 'HR Manager', desc: 'User lifecycle management', locked: 0 }
+    { name: 'System Administrator', desc: 'Full administrative control of the entire platform', locked: 1 },
+    { name: 'Property Manager', desc: 'Operational management of properties, units, and tenants', locked: 0 },
+    { name: 'Leasing Agent', desc: 'Handles tenant onboarding, leases, and unit availability', locked: 0 },
+    { name: 'Maintenance Supervisor', desc: 'Oversees maintenance requests and task assignments', locked: 0 },
+    { name: 'Maintenance Technician', desc: 'Executes assigned maintenance tasks and repairs', locked: 0 },
+    { name: 'Accountant', desc: 'Manages financial transactions, rent collection, and reporting', locked: 0 },
+    { name: 'Property Owner', desc: 'View-only access to their specific property portfolio', locked: 0 },
+    { name: 'Tenant', desc: 'Access to personal lease, payments, and maintenance requests', locked: 0 },
+    { name: 'HR Manager', desc: 'Manages internal staff users and roles', locked: 0 },
+    { name: 'Security Officer', desc: 'Monitors audit logs and security alerts', locked: 0 }
   ];
 
   const insertRole = db.prepare("INSERT INTO roles (name, description, is_locked) VALUES (?, ?, ?)");
@@ -367,15 +388,22 @@ if (userCount.count === 0) {
       { module: 'PROPERTY_MANAGEMENT', action: 'delete' },
       { module: 'TENANT_MANAGEMENT', action: 'view' },
       { module: 'TENANT_MANAGEMENT', action: 'create' },
+      { module: 'TENANT_MANAGEMENT', action: 'update' },
       { module: 'FINANCE', action: 'view' },
       { module: 'FINANCE', action: 'export' },
+      { module: 'FINANCE', action: 'manage' },
       { module: 'ADMIN_GOVERNANCE', action: 'view' },
       { module: 'USER_MANAGEMENT', action: 'view' },
+      { module: 'USER_MANAGEMENT', action: 'create' },
       { module: 'USER_MANAGEMENT', action: 'update' },
       { module: 'USER_MANAGEMENT', action: 'delete' },
       { module: 'ROLE_MANAGEMENT', action: 'view' },
       { module: 'ROLE_MANAGEMENT', action: 'update' },
-      { module: 'SECURITY_AUDIT', action: 'view' }
+      { module: 'SECURITY_AUDIT', action: 'view' },
+      { module: 'MAINTENANCE', action: 'view' },
+      { module: 'MAINTENANCE', action: 'create' },
+      { module: 'MAINTENANCE', action: 'update' },
+      { module: 'MAINTENANCE', action: 'assign' }
     ];
     const insertPerm = db.prepare("INSERT INTO permissions (module, action) VALUES (?, ?)");
     perms.forEach(p => insertPerm.run(p.module, p.action));
@@ -687,6 +715,24 @@ async function startServer() {
       INSERT INTO maintenance_requests (unit_id, tenant_id, title, description, priority)
       VALUES (?, ?, ?, ?, ?)
     `).run(unit_id, tenant_id, title, description, priority);
+    
+    // Automatically convert to a task
+    const tenant = db.prepare("SELECT first_name, last_name FROM tenants WHERE id = ?").get(tenant_id) as any;
+    const unit = db.prepare("SELECT unit_number FROM units WHERE id = ?").get(unit_id) as any;
+    const tenantName = tenant ? `${tenant.first_name} ${tenant.last_name}` : 'Unknown Tenant';
+    const unitNum = unit ? unit.unit_number : 'Unknown Unit';
+
+    db.prepare(`
+      INSERT INTO tasks (title, assignee, due_date, priority, status)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      `Maintenance: ${title} (Unit ${unitNum})`,
+      'Maintenance Team',
+      new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default 2 days due
+      priority || 'Medium',
+      'Pending'
+    );
+
     res.json({ id: info.lastInsertRowid });
   });
 
@@ -772,8 +818,54 @@ async function startServer() {
     res.json(users);
   });
 
+  app.post("/api/governance/users", (req, res) => {
+    const { first_name, last_name, email, password, role_id, property_scope, admin_id } = req.body;
+    try {
+      const info = db.prepare(`
+        INSERT INTO users (first_name, last_name, email, password, role_id, property_scope, status)
+        VALUES (?, ?, ?, ?, ?, ?, 'Active')
+      `).run(first_name, last_name, email, password || 'welcome123', role_id, property_scope || 'Assigned');
+      
+      // Log the creation
+      db.prepare("INSERT INTO audit_logs (user_id, action, entity_type, entity_id) VALUES (?, ?, ?, ?)")
+        .run(admin_id || null, `Created user: ${first_name} ${last_name}`, 'User', info.lastInsertRowid);
+        
+      res.json({ id: info.lastInsertRowid });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/governance/users/:id", (req, res) => {
+    const user = db.prepare(`
+      SELECT u.*, r.name as role_name 
+      FROM users u 
+      JOIN roles r ON u.role_id = r.id 
+      WHERE u.id = ?
+    `).get(req.params.id) as any;
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const properties = db.prepare(`
+      SELECT p.* 
+      FROM properties p
+      JOIN user_property_access upa ON p.id = upa.property_id
+      WHERE upa.user_id = ?
+    `).all(req.params.id);
+
+    const activity = db.prepare(`
+      SELECT * FROM audit_logs 
+      WHERE user_id = ? OR (entity_type = 'User' AND entity_id = ?)
+      ORDER BY timestamp DESC
+      LIMIT 20
+    `).all(req.params.id, req.params.id);
+
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({ ...userWithoutPassword, properties, activity });
+  });
+
   app.put("/api/governance/users/:id", (req, res) => {
-    const { status, role_id, first_name, last_name, email } = req.body;
+    const { status, role_id, first_name, last_name, email, phone, address, admin_id } = req.body;
     const updates = [];
     const params = [];
 
@@ -782,6 +874,8 @@ async function startServer() {
     if (first_name) { updates.push("first_name = ?"); params.push(first_name); }
     if (last_name) { updates.push("last_name = ?"); params.push(last_name); }
     if (email) { updates.push("email = ?"); params.push(email); }
+    if (phone !== undefined) { updates.push("phone = ?"); params.push(phone); }
+    if (address !== undefined) { updates.push("address = ?"); params.push(address); }
 
     if (updates.length > 0) {
       params.push(req.params.id);
@@ -789,7 +883,7 @@ async function startServer() {
       
       // Log the change
       db.prepare("INSERT INTO audit_logs (user_id, action, entity_type, entity_id) VALUES (?, ?, ?, ?)")
-        .run(req.query.adminId || null, `Updated user ${req.params.id}`, 'User', req.params.id);
+        .run(admin_id || null, `Updated user ${req.params.id}: ${updates.join(", ")}`, 'User', req.params.id);
     }
     res.json({ success: true });
   });
@@ -821,6 +915,10 @@ async function startServer() {
       SET status = ?, reviewed_by = ?, expiration_date = ?, reviewed_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(status, reviewed_by, expiration_date || null, req.params.id);
+
+    // Log the review
+    db.prepare("INSERT INTO audit_logs (user_id, action, entity_type, entity_id) VALUES (?, ?, ?, ?)")
+      .run(reviewed_by || null, `${status} permission request`, 'PermissionRequest', req.params.id);
 
     if (status === 'Approved') {
       const request = db.prepare("SELECT * FROM permission_requests WHERE id = ?").get(req.params.id) as any;
@@ -860,20 +958,66 @@ async function startServer() {
   });
 
   app.get("/api/governance/system-rules", (req, res) => {
-    res.json({
+    const rules = {
       password_policy: { min_length: 8, complexity: 'High', rotation_days: 90 },
       mfa_settings: { enforced_roles: ['System Administrator', 'Finance Team'], optional_roles: ['All Others'] },
       session_settings: { timeout_minutes: 30, auto_logout: true }
-    });
+    };
+    
+    const hierarchyRules = db.prepare(`
+      SELECT rhr.*, ra.name as role_a_name, rb.name as role_b_name
+      FROM role_hierarchy_rules rhr
+      JOIN roles ra ON rhr.role_a_id = ra.id
+      JOIN roles rb ON rhr.role_b_id = rb.id
+    `).all();
+
+    res.json({ ...rules, hierarchy_rules: hierarchyRules });
+  });
+
+  app.post("/api/governance/hierarchy-rules", (req, res) => {
+    const { type, role_a_id, role_b_id, description, admin_id } = req.body;
+    const info = db.prepare(`
+      INSERT INTO role_hierarchy_rules (type, role_a_id, role_b_id, description)
+      VALUES (?, ?, ?, ?)
+    `).run(type, role_a_id, role_b_id, description);
+
+    db.prepare(`
+      INSERT INTO audit_logs (user_id, action, entity_type, entity_id)
+      VALUES (?, ?, ?, ?)
+    `).run(admin_id || null, `Created hierarchy rule: ${type}`, 'RoleHierarchy', info.lastInsertRowid);
+
+    res.json({ id: info.lastInsertRowid });
+  });
+
+  app.delete("/api/governance/hierarchy-rules/:id", (req, res) => {
+    const { admin_id } = req.query;
+    db.prepare(`
+      INSERT INTO audit_logs (user_id, action, entity_type, entity_id)
+      VALUES (?, ?, ?, ?)
+    `).run(admin_id || null, `Deleted hierarchy rule`, 'RoleHierarchy', req.params.id);
+
+    db.prepare("DELETE FROM role_hierarchy_rules WHERE id = ?").run(req.params.id);
+    res.json({ success: true });
+  });
+
+  app.get("/api/governance/matrix", (req, res) => {
+    const permissions = db.prepare("SELECT * FROM permissions").all();
+    const rolePermissions = db.prepare("SELECT * FROM role_permissions").all();
+    res.json({ permissions, rolePermissions });
   });
 
   app.post("/api/governance/matrix", (req, res) => {
-    const { role_id, permission_id, action } = req.body; // action: 'grant' or 'revoke'
+    const { role_id, permission_id, action, admin_id } = req.body; // action: 'grant' or 'revoke'
     if (action === 'grant') {
       db.prepare("INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)").run(role_id, permission_id);
     } else {
       db.prepare("DELETE FROM role_permissions WHERE role_id = ? AND permission_id = ?").run(role_id, permission_id);
     }
+
+    // Log the change
+    db.prepare("INSERT INTO audit_logs (user_id, action, entity_type, entity_id) VALUES (?, ?, ?, ?)")
+      .run(admin_id || null, `${action === 'grant' ? 'Granted' : 'Revoked'} permission ${permission_id} for role ${role_id}`, 'RolePermission', role_id);
+
     res.json({ success: true });
   });
 

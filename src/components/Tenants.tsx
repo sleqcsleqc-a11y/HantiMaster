@@ -37,7 +37,14 @@ export const Tenants: React.FC = () => {
     phone: '',
     unit_id: 0,
     lease_start: new Date().toISOString().split('T')[0],
-    lease_end: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
+    lease_end: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+    nationality: '',
+    dob: '',
+    id_type: 'National ID',
+    id_number: '',
+    id_expiry: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: ''
   });
 
   const loadData = async () => {
@@ -992,6 +999,75 @@ export const Tenants: React.FC = () => {
                     onChange={e => setTenantForm({...tenantForm, lease_end: e.target.value})}
                     className="vintsy-input w-full"
                   />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-violet-50 dark:border-zinc-800">
+                <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Personal Details & ID Verification</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Nationality</label>
+                    <input 
+                      type="text" 
+                      value={tenantForm.nationality}
+                      onChange={e => setTenantForm({...tenantForm, nationality: e.target.value})}
+                      className="vintsy-input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Date of Birth</label>
+                    <input 
+                      type="date" 
+                      value={tenantForm.dob}
+                      onChange={e => setTenantForm({...tenantForm, dob: e.target.value})}
+                      className="vintsy-input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">ID Type</label>
+                    <select 
+                      value={tenantForm.id_type}
+                      onChange={e => setTenantForm({...tenantForm, id_type: e.target.value})}
+                      className="vintsy-input w-full appearance-none"
+                    >
+                      <option value="National ID">National ID</option>
+                      <option value="Passport">Passport</option>
+                      <option value="Driver's License">Driver's License</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">ID Number</label>
+                    <input 
+                      type="text" 
+                      value={tenantForm.id_number}
+                      onChange={e => setTenantForm({...tenantForm, id_number: e.target.value})}
+                      className="vintsy-input w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-violet-50 dark:border-zinc-800">
+                <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Emergency Contact</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Contact Name</label>
+                    <input 
+                      type="text" 
+                      value={tenantForm.emergency_contact_name}
+                      onChange={e => setTenantForm({...tenantForm, emergency_contact_name: e.target.value})}
+                      className="vintsy-input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Contact Phone</label>
+                    <input 
+                      type="tel" 
+                      value={tenantForm.emergency_contact_phone}
+                      onChange={e => setTenantForm({...tenantForm, emergency_contact_phone: e.target.value})}
+                      className="vintsy-input w-full"
+                    />
+                  </div>
                 </div>
               </div>
               <button type="submit" className="w-full vintsy-button-primary py-3 mt-6">

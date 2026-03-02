@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Settings, 
   Lock, 
@@ -17,28 +17,72 @@ import {
   Monitor,
   CheckCircle2,
   XCircle,
-  Info
+  Info,
+  Plus,
+  Trash2,
+  ArrowRight
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { Role } from '../../types';
 
 export const SystemRules: React.FC = () => {
+  const { user } = useAuth();
   const [rules, setRules] = useState<any>(null);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // New rule form state
+  const [newRule, setNewRule] = useState({
+    type: 'Inheritance',
+    role_a_id: '',
+    role_b_id: '',
+    description: ''
+  });
+
+  const loadData = async () => {
+    try {
+      const [rulesData, rolesData] = await Promise.all([
+        api.getSystemRules(),
+        api.getRoles()
+      ]);
+      setRules(rulesData);
+      setRoles(rolesData);
+    } catch (error) {
+      console.error("Failed to load system rules", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const data = await api.getSystemRules();
-        setRules(data);
-      } catch (error) {
-        console.error("Failed to load system rules", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     loadData();
   }, []);
+
+  const handleAddRule = async () => {
+    if (!newRule.role_a_id || !newRule.role_b_id) return;
+    
+    try {
+      await api.createHierarchyRule({
+        ...newRule,
+        admin_id: user?.id
+      });
+      setNewRule({ type: 'Inheritance', role_a_id: '', role_b_id: '', description: '' });
+      loadData();
+    } catch (error) {
+      console.error("Failed to add rule", error);
+    }
+  };
+
+  const handleDeleteRule = async (id: number) => {
+    try {
+      await api.deleteHierarchyRule(id, user?.id || 0);
+      loadData();
+    } catch (error) {
+      console.error("Failed to delete rule", error);
+    }
+  };
 
   if (loading) return <div className="animate-pulse space-y-8">
     <div className="grid grid-cols-2 gap-8 h-96 bg-zinc-100 dark:bg-zinc-800 rounded-3xl" />
@@ -181,32 +225,116 @@ export const SystemRules: React.FC = () => {
         </div>
 
         {/* Role Hierarchy */}
-        <div className="vintsy-card p-8 space-y-8">
+        <div className="vintsy-card p-8 space-y-8 lg:col-span-2">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 flex items-center gap-2">
               <Shield size={16} className="text-violet-500" />
-              Role Hierarchy Rules
+              Role Hierarchy & Restriction Rules
             </h4>
           </div>
 
-          <div className="space-y-6">
-            <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800 rounded-2xl flex items-start gap-4">
-              <AlertTriangle className="text-amber-600 mt-1" size={20} />
-              <div>
-                <p className="text-sm font-bold text-amber-900 dark:text-amber-400 uppercase tracking-widest mb-1">Restricted Combinations</p>
-                <p className="text-xs text-amber-700 dark:text-amber-500 font-medium leading-relaxed">
-                  Users cannot hold both 'Finance Team' and 'Property Management Staff' roles simultaneously to prevent conflict of interest.
-                </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Add New Rule Form */}
+            <div className="md:col-span-1 space-y-6 p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800">
+              <h5 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Create New Rule</h5>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Rule Type</label>
+                  <select 
+                    value={newRule.type}
+                    onChange={e => setNewRule({...newRule, type: e.target.value})}
+                    className="w-full px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                  >
+                    <option value="Inheritance">Inheritance (A inherits B)</option>
+                    <option value="Restricted">Restricted (A cannot have B)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Role A</label>
+                  <select 
+                    value={newRule.role_a_id}
+                    onChange={e => setNewRule({...newRule, role_a_id: e.target.value})}
+                    className="w-full px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                  >
+                    <option value="">Select Role...</option>
+                    {roles.map(role => <option key={role.id} value={role.id}>{role.name}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Role B</label>
+                  <select 
+                    value={newRule.role_b_id}
+                    onChange={e => setNewRule({...newRule, role_b_id: e.target.value})}
+                    className="w-full px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                  >
+                    <option value="">Select Role...</option>
+                    {roles.map(role => <option key={role.id} value={role.id}>{role.name}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Description</label>
+                  <textarea 
+                    value={newRule.description}
+                    onChange={e => setNewRule({...newRule, description: e.target.value})}
+                    placeholder="Why is this rule needed?"
+                    className="w-full px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-violet-500/20 h-20 resize-none"
+                  />
+                </div>
+
+                <button 
+                  onClick={handleAddRule}
+                  disabled={!newRule.role_a_id || !newRule.role_b_id}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-violet-700 transition-all disabled:opacity-50"
+                >
+                  <Plus size={14} />
+                  Add Rule
+                </button>
               </div>
             </div>
-            <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-              <div className="flex items-center gap-3">
-                <Users size={18} className="text-zinc-400" />
-                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Inherit Admin Permissions</span>
-              </div>
-              <div className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked={false} className="sr-only peer" />
-                <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-violet-300 dark:peer-focus:ring-violet-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-violet-600"></div>
+
+            {/* Rules List */}
+            <div className="md:col-span-2 space-y-4">
+              <h5 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Active Rules</h5>
+              
+              <div className="space-y-3">
+                {rules?.hierarchy_rules?.length === 0 ? (
+                  <div className="p-12 text-center border-2 border-dashed border-zinc-100 dark:border-zinc-800 rounded-3xl">
+                    <Shield className="mx-auto text-zinc-200 mb-4" size={32} />
+                    <p className="text-sm text-zinc-500 font-medium">No hierarchy rules defined yet.</p>
+                  </div>
+                ) : (
+                  rules?.hierarchy_rules?.map((rule: any) => (
+                    <div key={rule.id} className="flex items-center justify-between p-5 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl group hover:border-violet-200 dark:hover:border-violet-800 transition-all shadow-sm">
+                      <div className="flex items-center gap-6">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                          rule.type === 'Inheritance' ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'
+                        }`}>
+                          {rule.type === 'Inheritance' ? <ArrowRight size={18} /> : <XCircle size={18} />}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-3 mb-1">
+                            <span className="text-sm font-bold text-zinc-900 dark:text-white">{rule.role_a_name}</span>
+                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                              {rule.type === 'Inheritance' ? 'Inherits' : 'Restricted With'}
+                            </span>
+                            <span className="text-sm font-bold text-zinc-900 dark:text-white">{rule.role_b_name}</span>
+                          </div>
+                          <p className="text-xs text-zinc-500 font-medium">{rule.description || 'No description provided.'}</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handleDeleteRule(rule.id)}
+                        className="p-2.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>

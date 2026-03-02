@@ -13,13 +13,22 @@ export const Owners: React.FC<OwnersProps> = ({ onSelectOwner }) => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddOwner, setShowAddOwner] = useState(false);
-  const [ownerForm, setOwnerForm] = useState({ first_name: '', last_name: '', email: '', phone: '' });
+  const [properties, setProperties] = useState<any[]>([]);
+  const [ownerForm, setOwnerForm] = useState({ 
+    first_name: '', 
+    last_name: '', 
+    email: '', 
+    phone: '', 
+    address: '',
+    property_ids: [] as number[]
+  });
 
   const loadOwners = () => {
     api.getOwners().then(data => {
       setOwners(data);
       setLoading(false);
     });
+    api.getProperties().then(setProperties);
   };
 
   useEffect(() => {
@@ -28,9 +37,18 @@ export const Owners: React.FC<OwnersProps> = ({ onSelectOwner }) => {
 
   const handleAddOwner = async (e: React.FormEvent) => {
     e.preventDefault();
-    await api.createOwner(ownerForm);
+    const { property_ids, ...data } = ownerForm;
+    const { id } = await api.createOwner(data);
+    
+    // Link properties if any
+    if (property_ids.length > 0) {
+      for (const propId of property_ids) {
+        await api.updateProperty(propId, { owner_id: id });
+      }
+    }
+
     setShowAddOwner(false);
-    setOwnerForm({ first_name: '', last_name: '', email: '', phone: '' });
+    setOwnerForm({ first_name: '', last_name: '', email: '', phone: '', address: '', property_ids: [] });
     loadOwners();
   };
 
@@ -124,6 +142,32 @@ export const Owners: React.FC<OwnersProps> = ({ onSelectOwner }) => {
                   onChange={e => setOwnerForm({...ownerForm, phone: e.target.value})}
                   className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
                 />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Address</label>
+                <input 
+                  type="text" 
+                  value={ownerForm.address}
+                  onChange={e => setOwnerForm({...ownerForm, address: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Link Properties</label>
+                <select 
+                  multiple
+                  value={ownerForm.property_ids.map(String)}
+                  onChange={e => {
+                    const values = Array.from(e.target.selectedOptions, (option: HTMLOptionElement) => parseInt(option.value));
+                    setOwnerForm({...ownerForm, property_ids: values});
+                  }}
+                  className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all h-24"
+                >
+                  {properties.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <p className="text-[9px] text-zinc-400 mt-1 uppercase tracking-widest font-bold">Hold Ctrl/Cmd to select multiple</p>
               </div>
               <button type="submit" className="w-full vintsy-button-primary py-3 mt-6">
                 Save Owner

@@ -19,16 +19,15 @@ import {
   ShieldAlert,
   Key
 } from 'lucide-react';
-import { RequestPermissionModal } from './RequestPermissionModal';
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  onProfileClick: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onProfileClick }) => {
   const { user, hasPermission } = useAuth();
-  const [isRequestModalOpen, setIsRequestModalOpen] = React.useState(false);
   
   const allMenuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', module: 'DASHBOARD' },
@@ -92,27 +91,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
             <span className="text-sm">{item.label}</span>
           </button>
         ))}
-        <button
-          onClick={() => setIsRequestModalOpen(true)}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-400 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50 dark:hover:bg-zinc-800 transition-all duration-300 group mt-4 border border-dashed border-zinc-200 dark:border-zinc-800"
-        >
-          <Key size={18} className="text-zinc-400 group-hover:text-violet-600" />
-          <span className="text-sm">Request Access</span>
-        </button>
       </nav>
 
-      <RequestPermissionModal isOpen={isRequestModalOpen} onClose={() => setIsRequestModalOpen(false)} />
-
       <div className="p-6 border-t border-violet-50 dark:border-zinc-800">
-        <div className="flex items-center gap-3 px-2 py-2 text-zinc-500 dark:text-zinc-400">
-          <div className="w-8 h-8 rounded-full bg-violet-50 dark:bg-zinc-800 border border-violet-100 dark:border-zinc-700 flex items-center justify-center text-[10px] font-bold text-violet-600">
+        <button 
+          onClick={onProfileClick}
+          className="w-full flex items-center gap-3 px-2 py-2 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-2xl transition-all group"
+        >
+          <div className="w-8 h-8 rounded-full bg-violet-50 dark:bg-zinc-800 border border-violet-100 dark:border-zinc-700 flex items-center justify-center text-[10px] font-bold text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-all">
             {user?.first_name[0]}{user?.last_name[0]}
           </div>
-          <div className="flex flex-col text-left">
-            <span className="text-xs font-bold text-zinc-900 dark:text-white">{user?.first_name} {user?.last_name}</span>
-            <span className="text-[10px] font-medium text-zinc-500">{user?.role_name}</span>
+          <div className="flex flex-col text-left truncate">
+            <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">{user?.first_name} {user?.last_name}</span>
+            <span className="text-[10px] font-medium text-zinc-500 truncate">{user?.role_name}</span>
           </div>
-        </div>
+          <ChevronRight size={14} className="ml-auto text-zinc-300 group-hover:translate-x-1 transition-transform" />
+        </button>
       </div>
     </div>
   );
@@ -122,9 +116,10 @@ interface HeaderProps {
   title: string;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
+  onProfileClick: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ title, isDarkMode, toggleDarkMode }) => {
+export const Header: React.FC<HeaderProps> = ({ title, isDarkMode, toggleDarkMode, onProfileClick }) => {
   return (
     <header className="h-20 border-b border-violet-100 dark:border-zinc-800 bg-white/30 dark:bg-zinc-950/30 backdrop-blur-xl flex items-center justify-between px-8 transition-colors duration-300">
       <h2 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">{title}</h2>
@@ -149,6 +144,19 @@ export const Header: React.FC<HeaderProps> = ({ title, isDarkMode, toggleDarkMod
           <button className="p-2.5 text-zinc-500 hover:text-violet-600 dark:hover:text-violet-400 transition-all bg-white dark:bg-zinc-800 border border-violet-100 dark:border-zinc-700 rounded-xl shadow-sm hover:shadow-md active:scale-95 relative">
             <Bell size={18} />
             <span className="absolute top-2 right-2 w-2 h-2 bg-violet-600 rounded-full border-2 border-white dark:border-zinc-800" />
+          </button>
+
+          <button 
+            onClick={onProfileClick}
+            className="flex items-center gap-3 pl-6 border-l border-violet-50 dark:border-zinc-800 group"
+          >
+            <div className="text-right hidden sm:block">
+              <p className="text-xs font-bold text-zinc-900 dark:text-white group-hover:text-violet-600 transition-colors">Account</p>
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Profile Settings</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-zinc-800 border border-violet-100 dark:border-zinc-700 flex items-center justify-center text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-all shadow-sm">
+              <UserCircle size={20} />
+            </div>
           </button>
         </div>
       </div>

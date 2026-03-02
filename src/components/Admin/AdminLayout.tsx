@@ -27,9 +27,10 @@ interface AdminLayoutProps {
   activeModule: string;
   onModuleChange: (module: string) => void;
   onExit: () => void;
+  onProfileClick: () => void;
 }
 
-export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeModule, onModuleChange, onExit }) => {
+export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeModule, onModuleChange, onExit, onProfileClick }) => {
   const { user, logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -145,15 +146,18 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeModule
               <Bell size={20} />
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-zinc-900" />
             </button>
-            <div className="flex items-center gap-3 pl-6 border-l border-zinc-200 dark:border-zinc-800">
+            <button 
+              onClick={onProfileClick}
+              className="flex items-center gap-3 pl-6 border-l border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 p-2 rounded-2xl transition-all group"
+            >
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-zinc-900 dark:text-white">{user?.first_name} {user?.last_name}</p>
+                <p className="text-sm font-bold text-zinc-900 dark:text-white group-hover:text-violet-600 transition-colors">{user?.first_name} {user?.last_name}</p>
                 <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{user?.role_name}</p>
               </div>
-              <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+              <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 border border-zinc-200 dark:border-zinc-700 group-hover:bg-violet-600 group-hover:text-white transition-all">
                 <User size={20} />
               </div>
-            </div>
+            </button>
           </div>
         </header>
 
