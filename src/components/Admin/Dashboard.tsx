@@ -92,62 +92,62 @@ export const AdminDashboard: React.FC = () => {
             <button className="text-[10px] font-bold text-violet-600 uppercase tracking-widest hover:underline">View Matrix</button>
           </div>
           <div className="space-y-6">
-            {stats?.role_distribution?.map((role: any, idx: number) => (
-              <div key={idx} className="space-y-2">
-                <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
-                  <span className="text-zinc-600 dark:text-zinc-400">{role.role}</span>
-                  <span className="text-zinc-900 dark:text-white">{role.count}</span>
-                </div>
-                <div className="h-2.5 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(role.count / stats.total_users) * 100}%` }}
-                    transition={{ duration: 1, delay: idx * 0.1 }}
-                    className="h-full bg-violet-600 rounded-full shadow-[0_0_10px_rgba(124,58,237,0.3)]"
-                  />
-                </div>
+          {stats?.role_distribution?.map((role: any, idx: number) => (
+            <div key={idx} className="space-y-2">
+              <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
+                <span className="text-zinc-600 dark:text-zinc-400">{role.role}</span>
+                <span className="text-zinc-900 dark:text-white">{role.count}</span>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent Governance Activity */}
-        <div className="vintsy-card p-8">
-          <div className="flex items-center justify-between mb-8">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 flex items-center gap-2">
-              <History size={16} className="text-violet-500" />
-              Recent Governance Activity
-            </h4>
-            <button className="text-[10px] font-bold text-violet-600 uppercase tracking-widest hover:underline">View All Logs</button>
-          </div>
-          <div className="space-y-6">
-            {auditLogs.map((log, idx) => (
-              <div key={idx} className="flex gap-4 group">
-                <div className="relative">
-                  <div className="w-10 h-10 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 flex items-center justify-center text-zinc-400 group-hover:text-violet-500 transition-colors">
-                    <Activity size={18} />
-                  </div>
-                  {idx !== auditLogs.length - 1 && (
-                    <div className="absolute top-10 left-1/2 -translate-x-1/2 w-px h-6 bg-zinc-100 dark:bg-zinc-800" />
-                  )}
-                </div>
-                <div className="flex-1 pb-6">
-                  <p className="text-sm font-bold text-zinc-900 dark:text-white mb-1">
-                    <span className="text-violet-600">{log.user_name || 'System'}</span> {log.action}
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-bold">
-                      {new Date(log.timestamp).toLocaleTimeString()}
-                    </p>
-                    <span className="w-1 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{log.entity_type}</span>
-                  </div>
-                </div>
+              <div className="h-2.5 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(role.count / stats.total_users) * 100}%` }}
+                  transition={{ duration: 1, delay: idx * 0.1 }}
+                  className="h-full bg-violet-600 rounded-full shadow-[0_0_10px_rgba(124,58,237,0.3)]"
+                />
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
+
+      {/* Recent Governance Activity */}
+      <div className="vintsy-card p-8">
+        <div className="flex items-center justify-between mb-8">
+          <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 flex items-center gap-2">
+            <History size={16} className="text-violet-500" />
+            Recent Governance Activity
+          </h4>
+          <button className="text-[10px] font-bold text-violet-600 uppercase tracking-widest hover:underline">View All Logs</button>
+        </div>
+        <div className="space-y-6">
+          {auditLogs.map((log, idx) => (
+            <div key={idx} className="flex gap-4 group">
+              <div className="relative">
+                <div className="w-10 h-10 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 flex items-center justify-center text-zinc-400 group-hover:text-violet-500 transition-colors">
+                  <Activity size={18} />
+                </div>
+                {idx !== auditLogs.length - 1 && (
+                  <div className="absolute top-10 left-1/2 -translate-x-1/2 w-px h-6 bg-zinc-100 dark:bg-zinc-800" />
+                )}
+              </div>
+              <div className="flex-1 pb-6">
+                <p className="text-sm font-bold text-zinc-900 dark:text-white mb-1">
+                  <span className="text-violet-600">{log.user_name || 'System'}</span> {log.action}
+                </p>
+                <div className="flex items-center gap-3">
+                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-bold">
+                    {new Date(log.timestamp).toLocaleTimeString()}
+                  </p>
+                  <span className="w-1 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{log.entity_type}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
 
       {/* Security Alerts Summary */}
       <div className="vintsy-card p-8">

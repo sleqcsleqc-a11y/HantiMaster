@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Edit2,
-  Save
+  Save,
+  Bell
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/api';
@@ -30,6 +31,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ isOpen, onCl
   
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ phone: '', address: '' });
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   const handleEditToggle = () => {
     if (!isEditing) {
@@ -80,6 +82,23 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ isOpen, onCl
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && user) {
+      try {
+        setIsUploadingAvatar(true);
+        const { id } = await api.uploadAsset(file, user.id);
+        await api.updateGovernanceUser(user.id, { avatar_asset_id: id }, user.id);
+        await refreshUser();
+      } catch (error) {
+        console.error('Error uploading avatar:', error);
+        alert('Failed to upload profile picture.');
+      } finally {
+        setIsUploadingAvatar(false);
+      }
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -111,8 +130,33 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ isOpen, onCl
 
               {/* User Identity */}
               <div className="flex flex-col items-center text-center space-y-4 p-8 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800">
-                <div className="w-24 h-24 rounded-3xl bg-violet-600 flex items-center justify-center text-white text-3xl font-bold shadow-xl shadow-violet-600/20">
-                  {user?.first_name[0]}{user?.last_name[0]}
+                <div className="relative group">
+                  <div className="w-24 h-24 rounded-3xl bg-violet-600 flex items-center justify-center text-white text-3xl font-bold shadow-xl shadow-violet-600/20 overflow-hidden">
+                    {user?.avatar_url ? (
+                      <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <>{user?.first_name?.[0]}{user?.last_name?.[0]}</>
+                    )}
+                    {isUploadingAvatar && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                  <label 
+                    htmlFor="avatar-upload"
+                    className="absolute -bottom-2 -right-2 p-2 bg-white dark:bg-zinc-900 rounded-xl shadow-lg border border-zinc-100 dark:border-zinc-800 text-violet-600 cursor-pointer hover:scale-110 transition-transform"
+                  >
+                    <Edit2 size={14} />
+                    <input 
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                      disabled={isUploadingAvatar}
+                    />
+                  </label>
                 </div>
                 <div>
                   <h4 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">{user?.first_name} {user?.last_name}</h4>
@@ -189,6 +233,30 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ isOpen, onCl
                       {isSubmitting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Save size={14} /> Save Changes</>}
                     </button>
                   )}
+                </div>
+              </div>
+
+              {/* Notification Preferences */}
+              <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                <h5 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-2 flex items-center gap-2">
+                  <Bell size={14} />
+                  Notification Preferences
+                </h5>
+                <div className="vintsy-card p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-zinc-900 dark:text-white">Email Notifications</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" defaultChecked />
+                      <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-violet-300 dark:peer-focus:ring-violet-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-violet-600"></div>
+                    </label>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-zinc-900 dark:text-white">In-App Alerts</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" defaultChecked />
+                      <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-violet-300 dark:peer-focus:ring-violet-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-violet-600"></div>
+                    </label>
+                  </div>
                 </div>
               </div>
 

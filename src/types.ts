@@ -35,6 +35,7 @@ export interface OwnerDocument {
   owner_id: number;
   name: string;
   url: string;
+  asset_id?: string;
   type: string;
   uploaded_at: string;
 }
@@ -46,27 +47,45 @@ export interface OwnerActivity {
   date: string;
 }
 
+export interface PropertyDocument {
+  id: number;
+  property_id: number;
+  name: string;
+  url: string;
+  type: string;
+  asset_id?: string;
+  uploaded_at: string;
+  uploaded_by?: string;
+}
+
 export interface Property {
   id: number;
   name: string;
   address: string;
   type: string;
   image_url: string;
+  image_asset_id?: string;
   unit_count?: number;
   occupancy_rate?: number;
   property_value?: number;
   owner_id?: number;
   owner_name?: string;
+  owner_email?: string;
+  owner_phone?: string;
   tenant_name?: string;
   lease_end?: string;
   status?: string;
   amenities?: string;
+  is_furnished?: boolean;
+  description?: string;
+  documents?: PropertyDocument[];
 }
 
 export interface PropertyImage {
   id: number;
   property_id: number;
   image_url: string;
+  asset_id?: string;
 }
 
 export interface Unit {
@@ -76,6 +95,11 @@ export interface Unit {
   rent_amount: number;
   status: 'Occupied' | 'Vacant';
   property_name?: string;
+  tenant_id?: number;
+  tenant_name?: string;
+  lease_start?: string;
+  lease_end?: string;
+  notes?: string;
 }
 
 export interface TenantDocument {
@@ -83,6 +107,7 @@ export interface TenantDocument {
   tenant_id: number;
   name: string;
   url: string;
+  asset_id?: string;
   type: string;
   uploaded_at: string;
 }
@@ -96,6 +121,7 @@ export interface TenantActivity {
 
 export interface Tenant {
   id: number;
+  user_id?: string; // UUID from profiles table
   unit_id: number;
   first_name: string;
   last_name: string;
@@ -109,9 +135,10 @@ export interface Tenant {
   dob?: string;
   id_type?: string;
   id_number?: string;
-  id_expiry?: string;
+  id_expiry_date?: string;
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
+  emergency_contact_relation?: string;
   unit_number?: string;
   property_name?: string;
   property_address?: string;
@@ -120,6 +147,27 @@ export interface Tenant {
   maintenance?: MaintenanceRequest[];
   documents?: TenantDocument[];
   activities?: TenantActivity[];
+}
+
+export interface Owner {
+  id: number;
+  user_id?: string; // UUID from profiles table
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  address?: string;
+  nationality?: string;
+  dob?: string;
+  id_type?: string;
+  id_number?: string;
+  id_expiry?: string;
+  property_count?: number;
+  total_portfolio_value?: number;
+  properties?: Property[];
+  transactions?: Transaction[];
+  documents?: OwnerDocument[];
+  activities?: OwnerActivity[];
 }
 
 export interface MaintenanceRequest {
@@ -132,6 +180,8 @@ export interface MaintenanceRequest {
   status: 'Open' | 'In Progress' | 'Completed' | 'Closed';
   cost?: number;
   time_spent?: number;
+  image_url?: string;
+  image_asset_id?: string;
   created_at: string;
   unit_number?: string;
   first_name?: string;
@@ -140,9 +190,9 @@ export interface MaintenanceRequest {
 
 export interface Message {
   id: number;
-  sender_id: number;
+  sender_id: string;
   sender_type: string;
-  receiver_id: number;
+  receiver_id: string;
   receiver_type: string;
   content: string;
   timestamp: string;
@@ -161,7 +211,7 @@ export interface Task {
 }
 
 export interface User {
-  id: number;
+  id: string; // Changed from number to string (UUID)
   role_id: number;
   first_name: string;
   last_name: string;
@@ -171,6 +221,8 @@ export interface User {
   tenant_id?: number;
   owner_id?: number;
   status: 'Active' | 'Suspended' | 'Locked' | 'Terminated';
+  avatar_url?: string;
+  avatar_asset_id?: string;
   last_login?: string;
   mfa_enabled: boolean;
 }
@@ -195,13 +247,13 @@ export interface RolePermission {
 
 export interface PermissionRequest {
   id: number;
-  user_id: number;
+  user_id: string;
   user_name?: string;
   module: string;
   action: string;
   justification: string;
   status: 'Pending' | 'Approved' | 'Denied';
-  reviewed_by?: number;
+  reviewed_by?: string;
   reviewer_name?: string;
   expiration_date?: string;
   created_at: string;
@@ -210,16 +262,18 @@ export interface PermissionRequest {
 
 export interface PermissionOverride {
   id: number;
-  user_id: number;
+  user_id: string;
   permission_id: number;
   override_type: 'Grant' | 'Deny';
   expiration_date?: string;
   created_at: string;
+  module?: string;
+  action?: string;
 }
 
 export interface AuditLog {
   id: number;
-  user_id: number;
+  user_id: string;
   action: string;
   timestamp: string;
   entity_type: string;
@@ -232,4 +286,15 @@ export interface FinanceStats {
   total_revenue: number;
   pending_payments: number;
   active_tenants: number;
+}
+
+export interface MediaAsset {
+  id: string;
+  storage_path: string;
+  filename: string;
+  mime_type: string;
+  size: number;
+  metadata?: any;
+  created_at: string;
+  uploaded_by: string;
 }

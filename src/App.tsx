@@ -12,19 +12,25 @@ import { AdminControlCenter } from './components/Admin/AdminControlCenter';
 import { Owners } from './components/Owners';
 import { OwnerDetails } from './components/OwnerDetails';
 import { UserProfilePanel } from './components/UserProfilePanel';
+import { TenantDashboard } from './components/Tenant/TenantDashboard';
+import { TenantPayments } from './components/Tenant/TenantPayments';
+import { TenantMaintenance } from './components/Tenant/TenantMaintenance';
+import { TenantLease } from './components/Tenant/TenantLease';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { RoleSwitcher } from './components/RoleSwitcher';
-import { Building2 } from 'lucide-react';
+import { ToastProvider } from './contexts/ToastContext';
+import { Building2, AlertTriangle, ExternalLink, Copy, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { isSupabaseConfigured } from './lib/supabase';
 
 const AppContent: React.FC = () => {
-  const { user, loading, login } = useAuth();
+  const { user, loading, login, signup } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [selectedOwnerId, setSelectedOwnerId] = useState<number | null>(null);
   const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [loginError, setLoginError] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark';
@@ -44,13 +50,107 @@ const AppContent: React.FC = () => {
 
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
+  if (!isSupabaseConfigured) {
+    const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
+    const likelyStripe = rawKey.startsWith('sb_') || rawKey.startsWith('pk_');
+
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center p-6">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-2xl w-full bg-white dark:bg-zinc-900 rounded-[2.5rem] p-12 shadow-2xl border border-zinc-200 dark:border-zinc-800"
+        >
+          <div className="flex flex-col items-center text-center mb-10">
+            <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-3xl flex items-center justify-center text-amber-600 dark:text-amber-400 mb-8">
+              <AlertTriangle size={40} />
+            </div>
+            <h1 className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight mb-4">Configuration Required</h1>
+            <p className="text-zinc-500 dark:text-zinc-400 max-w-md leading-relaxed">
+              {likelyStripe 
+                ? "It looks like you've provided Stripe keys instead of Supabase keys. Please update your environment variables with the correct 'anon public' key from Supabase."
+                : "HantiMaster requires a Supabase connection to store your property data. Please set up your environment variables to continue."}
+            </p>
+          </div>
+
+          <div className="space-y-8">
+            <div className="p-8 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800">
+              <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-6">Setup Instructions</h3>
+              <ol className="space-y-6">
+                <li className="flex gap-4">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center">1</span>
+                  <div className="space-y-2">
+                    <p className="text-sm font-bold text-zinc-900 dark:text-white">Get your Supabase Credentials</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">Go to your Supabase Dashboard &gt; Project Settings &gt; API.</p>
+                    <a 
+                      href="https://supabase.com/dashboard" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-[10px] font-bold text-violet-600 uppercase tracking-widest hover:underline"
+                    >
+                      Open Dashboard <ExternalLink size={12} />
+                    </a>
+                  </div>
+                </li>
+                <li className="flex gap-4">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center">2</span>
+                  <div className="space-y-4">
+                    <p className="text-sm font-bold text-zinc-900 dark:text-white">Add Environment Variables</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">Add these keys to your platform's Environment Variables section:</p>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                        <code className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">VITE_SUPABASE_URL</code>
+                        <button className="text-zinc-400 hover:text-violet-600 transition-colors"><Copy size={14} /></button>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                        <code className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">VITE_SUPABASE_ANON_KEY</code>
+                        <button className="text-zinc-400 hover:text-violet-600 transition-colors"><Copy size={14} /></button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              </ol>
+            </div>
+
+            <div className="flex flex-col items-center gap-4">
+              <button 
+                onClick={() => window.location.reload()}
+                className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
+              >
+                I've added the keys, reload app
+              </button>
+              <p className="text-[10px] text-zinc-400 font-medium italic">
+                The app will automatically refresh once the variables are detected.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await login(loginForm);
-      setLoginError('');
+      if (isSignUp) {
+        await signup(loginForm);
+        setLoginError('Account created! You can now sign in.');
+        setIsSignUp(false);
+      } else {
+        await login(loginForm);
+        setLoginError('');
+      }
     } catch (err: any) {
-      setLoginError(err.message || 'Invalid email or password');
+      if (err.message === 'Failed to fetch') {
+        const isStripeKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').startsWith('sb_');
+        if (isStripeKey) {
+          setLoginError('Format error: You have provided Stripe keys instead of Supabase keys. Please use the "anon public" key from your Supabase dashboard.');
+        } else {
+          setLoginError('Network error: Please verify your Supabase URL in the .env file. Ensure it starts with https://');
+        }
+      } else {
+        setLoginError(err.message || 'Invalid email or password');
+      }
     }
   };
 
@@ -91,8 +191,8 @@ const AppContent: React.FC = () => {
                 required
                 value={loginForm.email}
                 onChange={e => setLoginForm({...loginForm, email: e.target.value})}
-                className="vintsy-input w-full"
-                placeholder="admin@hantimaster.com"
+                className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all text-sm font-medium"
+                placeholder="Enter your email"
               />
             </div>
             <div>
@@ -102,36 +202,43 @@ const AppContent: React.FC = () => {
                 required
                 value={loginForm.password}
                 onChange={e => setLoginForm({...loginForm, password: e.target.value})}
-                className="vintsy-input w-full"
+                className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all text-sm font-medium"
                 placeholder="••••••••"
               />
             </div>
-            <button type="submit" className="w-full vintsy-button-primary py-4 text-xs uppercase tracking-widest font-bold">
-              Sign In to Dashboard
+            <button type="submit" className="w-full bg-violet-600 hover:bg-violet-700 text-white py-4 rounded-xl text-xs uppercase tracking-widest font-bold transition-all shadow-lg shadow-violet-600/20 hover:shadow-violet-600/40">
+              {isSignUp ? 'Create Account' : 'Sign In to Dashboard'}
             </button>
-          </form>
-
-          <div className="mt-10 pt-10 border-t border-zinc-100 dark:border-zinc-800 text-center">
-            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Demo Credentials</p>
-            <div className="grid grid-cols-2 gap-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-              <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
-                <p className="text-violet-600 dark:text-violet-400">Admin</p>
-                <p className="mt-1">admin@hantimaster.com</p>
-                <p>admin123</p>
-              </div>
-              <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
-                <p className="text-violet-600 dark:text-violet-400">Staff</p>
-                <p className="mt-1">sarah@hantimaster.com</p>
-                <p>staff123</p>
-              </div>
+            <div className="text-center mt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setLoginError('');
+                }}
+                className="text-xs text-violet-600 dark:text-violet-400 hover:underline font-medium"
+              >
+                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+              </button>
             </div>
-          </div>
+          </form>
         </motion.div>
       </div>
     );
   }
 
   const renderContent = () => {
+    if (user?.role_name === 'Tenant') {
+      switch (activeTab) {
+        case 'dashboard': return <TenantDashboard setActiveTab={setActiveTab} />;
+        case 'payments': return <TenantPayments />;
+        case 'maintenance': return <TenantMaintenance />;
+        case 'lease': return <TenantLease />;
+        case 'communication': return <Communication />;
+        default: return <TenantDashboard setActiveTab={setActiveTab} />;
+      }
+    }
+
     if (activeTab === 'owners' && selectedOwnerId !== null) {
       return (
         <OwnerDetails 
@@ -190,13 +297,15 @@ const AppContent: React.FC = () => {
       return 'Property Details';
     }
     switch (activeTab) {
-      case 'dashboard': return 'Overview';
+      case 'dashboard': return user?.role_name === 'Tenant' ? 'Tenant Portal' : 'Overview';
       case 'properties': return 'Property Portfolio';
       case 'owners': return 'Owner Directory';
       case 'tenants': return 'Tenant Directory';
       case 'maintenance': return 'Maintenance & Service';
       case 'finance': return 'Financial Management';
-      case 'communication': return 'Tenant Portal';
+      case 'payments': return 'Rent & Payments';
+      case 'lease': return 'Lease & Documents';
+      case 'communication': return 'Communication';
       case 'tasks': return 'Task Management';
       case 'governance': return 'Admin Control Center';
       default: return 'Dashboard';
@@ -227,7 +336,6 @@ const AppContent: React.FC = () => {
           {renderContent()}
         </main>
       </div>
-      <RoleSwitcher />
       <UserProfilePanel isOpen={isProfilePanelOpen} onClose={() => setIsProfilePanelOpen(false)} />
     </div>
   );
@@ -236,7 +344,9 @@ const AppContent: React.FC = () => {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </AuthProvider>
   );
 }

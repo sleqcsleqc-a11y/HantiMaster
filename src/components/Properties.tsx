@@ -18,13 +18,31 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
   // Filter & Sort states
   const [filterType, setFilterType] = useState('All');
   const [sortBy, setSortBy] = useState<'name' | 'units' | 'occupancy' | 'value'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [searchQuery, setSearchQuery] = useState('');
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [occupancyStatus, setOccupancyStatus] = useState('All');
   const [showAddProperty, setShowAddProperty] = useState(false);
   const [owners, setOwners] = useState<Owner[]>([]);
-  const [propertyForm, setPropertyForm] = useState({ name: '', address: '', type: 'Residential', image_url: '', property_value: 0, owner_id: '' });
+  const [propertyForm, setPropertyForm] = useState({ 
+    name: '', 
+    address: '', 
+    type: 'Residential', 
+    image_url: '', 
+    image_asset_id: '',
+    property_value: 0, 
+    owner_id: '',
+    is_furnished: false,
+    description: '',
+    amenities: '[]'
+  });
+  const [uploading, setUploading] = useState(false);
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
+
+  const [statusFilter, setStatusFilter] = useState('All');
+
+  const availableAmenities = ['Pool', 'Gym', 'Parking', 'Elevator', 'Security', 'Laundry', 'Balcony', 'Pet Friendly', 'WiFi'];
 
   const loadProperties = () => {
     api.getProperties(user?.id).then(data => {
@@ -43,23 +61,49 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
 
   const handleAddProperty = async (e: React.FormEvent) => {
     e.preventDefault();
-    await api.createProperty({
-      ...propertyForm,
-      owner_id: propertyForm.owner_id ? Number(propertyForm.owner_id) : undefined
-    });
-    setShowAddProperty(false);
-    setPropertyForm({ name: '', address: '', type: 'Residential', image_url: '', property_value: 0, owner_id: '' });
-    loadProperties();
+    try {
+      await api.createProperty({
+        ...propertyForm,
+        owner_id: propertyForm.owner_id ? Number(propertyForm.owner_id) : undefined,
+        image_asset_id: propertyForm.image_asset_id || undefined
+      });
+      setShowAddProperty(false);
+      setPropertyForm({ 
+        name: '', 
+        address: '', 
+        type: 'Residential', 
+        image_url: '', 
+        image_asset_id: '',
+        property_value: 0, 
+        owner_id: '',
+        is_furnished: false,
+        description: '',
+        amenities: '[]'
+      });
+      setLocalPreview(null);
+      loadProperties();
+    } catch (error) {
+      console.error('Failed to add property:', error);
+      alert('Failed to add property. Please check your connection and permissions.');
+    }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPropertyForm({ ...propertyForm, image_url: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+    if (file && user) {
+      const objectUrl = URL.createObjectURL(file);
+      setLocalPreview(objectUrl);
+      try {
+        setUploading(true);
+        const { id, url } = await api.uploadAsset(file, user.id);
+        setPropertyForm({ ...propertyForm, image_url: url, image_asset_id: id });
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        alert('Failed to upload image. Please try again.');
+        setLocalPreview(null);
+      } finally {
+        setUploading(false);
+      }
     }
   };
 
@@ -93,19 +137,27 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
         result = result.filter(p => (p.occupancy_rate ?? 0) > 0 && (p.occupancy_rate ?? 0) < 100);
       } else if (occupancyStatus === 'Vacant') {
         result = result.filter(p => (p.occupancy_rate ?? 0) === 0);
+      } else if (occupancyStatus === 'Has Vacancies') {
+        result = result.filter(p => (p.occupancy_rate ?? 0) < 100);
       }
     }
 
+    if (statusFilter !== 'All') {
+      result = result.filter(p => p.status === statusFilter);
+    }
+
     result.sort((a, b) => {
-      if (sortBy === 'name') return a.name.localeCompare(b.name);
-      if (sortBy === 'units') return (b.unit_count ?? 0) - (a.unit_count ?? 0);
-      if (sortBy === 'occupancy') return (b.occupancy_rate ?? 0) - (a.occupancy_rate ?? 0);
-      if (sortBy === 'value') return (b.property_value ?? 0) - (a.property_value ?? 0);
-      return 0;
+      let comparison = 0;
+      if (sortBy === 'name') comparison = a.name.localeCompare(b.name);
+      else if (sortBy === 'units') comparison = (a.unit_count ?? 0) - (b.unit_count ?? 0);
+      else if (sortBy === 'occupancy') comparison = (a.occupancy_rate ?? 0) - (b.occupancy_rate ?? 0);
+      else if (sortBy === 'value') comparison = (a.property_value ?? 0) - (b.property_value ?? 0);
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
     });
 
     setFilteredProperties(result);
-  }, [filterType, sortBy, searchQuery, minPrice, maxPrice, occupancyStatus, properties]);
+  }, [filterType, sortBy, sortDirection, searchQuery, minPrice, maxPrice, occupancyStatus, statusFilter, properties]);
 
   const propertyTypes = ['All', ...new Set(properties.map(p => p.type))];
 
@@ -204,17 +256,74 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
                   </select>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2 mt-6">
+                  <input 
+                    type="checkbox" 
+                    id="is_furnished"
+                    checked={propertyForm.is_furnished}
+                    onChange={e => setPropertyForm({...propertyForm, is_furnished: e.target.checked})}
+                    className="w-4 h-4 text-violet-600 rounded border-zinc-300 focus:ring-violet-600"
+                  />
+                  <label htmlFor="is_furnished" className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Is Furnished?</label>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Description</label>
+                  <textarea 
+                    value={propertyForm.description}
+                    onChange={e => setPropertyForm({...propertyForm, description: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                    rows={2}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Amenities</label>
+                <div className="flex flex-wrap gap-2">
+                  {availableAmenities.map(amenity => {
+                    const currentAmenities = JSON.parse(propertyForm.amenities || '[]');
+                    const isSelected = currentAmenities.includes(amenity);
+                    return (
+                      <button
+                        key={amenity}
+                        type="button"
+                        onClick={() => {
+                          const newAmenities = isSelected 
+                            ? currentAmenities.filter((a: string) => a !== amenity)
+                            : [...currentAmenities, amenity];
+                          setPropertyForm({...propertyForm, amenities: JSON.stringify(newAmenities)});
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          isSelected 
+                            ? 'bg-violet-600 text-white shadow-md' 
+                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                        }`}
+                      >
+                        {amenity}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <div>
                 <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Property Image</label>
-                <div className="flex items-center gap-4">
-                  <div className="w-24 h-24 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center overflow-hidden bg-zinc-50 dark:bg-zinc-800/50">
-                    {propertyForm.image_url ? (
-                      <img src={propertyForm.image_url} alt="Preview" className="w-full h-full object-cover" />
+                <div className="space-y-4">
+                  <div className="w-full h-48 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center overflow-hidden bg-zinc-50 dark:bg-zinc-800/50 relative group">
+                    {(localPreview || propertyForm.image_url) ? (
+                      <>
+                        <img src={localPreview || propertyForm.image_url} alt="Preview" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                           <p className="text-white text-xs font-bold uppercase tracking-widest">Change Image</p>
+                        </div>
+                      </>
                     ) : (
-                      <Building2 className="text-zinc-300" size={32} />
+                      <div className="flex flex-col items-center gap-2 text-zinc-400">
+                        <Building2 size={32} />
+                        <span className="text-[10px] uppercase tracking-widest font-bold">No Image Selected</span>
+                      </div>
                     )}
                   </div>
-                  <div className="flex-1">
+                  <div className="flex items-center justify-center">
                     <input 
                       type="file" 
                       accept="image/*"
@@ -224,12 +333,12 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
                     />
                     <label 
                       htmlFor="property-image-upload"
-                      className="inline-block px-4 py-2 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-all"
+                      className={`inline-block px-6 py-3 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-all ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      Choose Image
+                      {uploading ? 'Uploading...' : 'Choose Image'}
                     </label>
-                    <p className="text-[9px] text-zinc-400 mt-2 uppercase tracking-widest font-bold">PNG, JPG up to 5MB. Auto-resized to fit.</p>
                   </div>
+                  <p className="text-center text-[9px] text-zinc-400 uppercase tracking-widest font-bold">PNG, JPG up to 5MB. Auto-resized to fit.</p>
                 </div>
               </div>
               <button type="submit" className="w-full vintsy-button-primary py-3 mt-6">
@@ -250,7 +359,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={14} />
             <input 
               type="text" 
-              placeholder="Search by name or location..." 
+              placeholder="Search by name or address..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400"
@@ -281,6 +390,17 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
             <option value="Fully Occupied">Fully Occupied</option>
             <option value="Partially Occupied">Partially Occupied</option>
             <option value="Vacant">Vacant</option>
+            <option value="Has Vacancies">Has Vacancies</option>
+          </select>
+          <select 
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full px-4 py-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all appearance-none cursor-pointer"
+          >
+            <option value="All">All Status</option>
+            <option value="Active">Active</option>
+            <option value="Maintenance">Maintenance</option>
+            <option value="Sold">Sold</option>
           </select>
           <div className="flex gap-2">
             <select 
@@ -300,6 +420,13 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
               <option value="occupancy">Sort: Occupancy</option>
               <option value="value">Sort: Value</option>
             </select>
+            <button 
+              onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+              className="p-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-zinc-500 dark:text-zinc-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+              title={`Sort ${sortDirection === 'asc' ? 'Ascending' : 'Descending'}`}
+            >
+              <ArrowUpDown size={16} className={sortDirection === 'desc' ? 'rotate-180 transition-transform' : 'transition-transform'} />
+            </button>
           </div>
         </div>
       </div>
@@ -323,9 +450,16 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
               <div className="absolute bottom-6 left-6 right-6">
-                <span className="px-2.5 py-1 bg-violet-700 text-white text-[9px] font-bold rounded-lg uppercase tracking-widest shadow-xl">
-                  {property.type}
-                </span>
+                <div className="flex gap-2">
+                  <span className="px-2.5 py-1 bg-violet-700 text-white text-[9px] font-bold rounded-lg uppercase tracking-widest shadow-xl">
+                    {property.type}
+                  </span>
+                  {property.is_furnished && (
+                    <span className="px-2.5 py-1 bg-emerald-600 text-white text-[9px] font-bold rounded-lg uppercase tracking-widest shadow-xl">
+                      Furnished
+                    </span>
+                  )}
+                </div>
                 <h4 className="text-2xl font-bold text-white mt-3 tracking-tight drop-shadow-md">{property.name}</h4>
               </div>
             </div>

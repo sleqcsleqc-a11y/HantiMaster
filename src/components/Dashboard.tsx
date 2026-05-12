@@ -9,7 +9,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   ChevronRight,
-  Lock
+  Lock,
+  Building2
 } from 'lucide-react';
 import { api } from '../services/api';
 import { FinanceStats } from '../types';
@@ -21,28 +22,32 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     if (hasPermission('FINANCE', 'view')) {
-      api.getFinanceStats().then(data => {
+      api.getFinanceStats(user?.id).then(data => {
         setStats(data);
         setLoading(false);
       });
     } else {
       setLoading(false);
     }
-  }, [hasPermission]);
+  }, [hasPermission, user]);
 
   const kpis = [
     { 
-      label: 'Total Revenue', 
-      value: stats ? `$${(stats.total_revenue ?? 0).toLocaleString()}` : '$0', 
+      label: user?.role_name === 'Property Owner' ? 'Portfolio Value' : 'Total Revenue', 
+      value: user?.role_name === 'Property Owner' 
+        ? `$${((stats?.total_revenue ?? 0) * 12 * 15).toLocaleString()}` // Mock valuation based on revenue
+        : `$${(stats?.total_revenue ?? 0).toLocaleString()}`, 
       change: '+12.5%', 
       trend: 'up',
-      icon: TrendingUp,
+      icon: user?.role_name === 'Property Owner' ? Building2 : TrendingUp,
       permission: 'FINANCE'
     },
     { 
-      label: 'Active Tenants', 
-      value: stats ? stats.active_tenants.toString() : '0', 
-      change: '+3', 
+      label: user?.role_name === 'Property Owner' ? 'Occupancy Rate' : 'Active Tenants', 
+      value: user?.role_name === 'Property Owner' 
+        ? `${Math.round(((stats?.active_tenants ?? 0) / ((stats?.active_tenants ?? 1) + 2)) * 100)}%` // Mock occupancy
+        : (stats?.active_tenants.toString() ?? '0'), 
+      change: '+3%', 
       trend: 'up',
       icon: Users,
       permission: 'TENANT_MANAGEMENT'

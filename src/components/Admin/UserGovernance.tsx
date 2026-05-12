@@ -23,10 +23,12 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { User, Role } from '../../types';
 
 export const UserGovernance: React.FC = () => {
   const { user: currentUser } = useAuth();
+  const { addToast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,12 +70,13 @@ export const UserGovernance: React.FC = () => {
     loadData();
   }, []);
 
-  const handleUserStatus = async (userId: number, status: string) => {
+  const handleUserStatus = async (userId: string, status: string) => {
     await api.updateGovernanceUser(userId, { status }, currentUser?.id);
     loadData();
     if (selectedUser?.id === userId) {
       setSelectedUser(prev => prev ? { ...prev, status } : null);
     }
+    addToast(`User status updated to ${status}`, 'success');
   };
 
   const handleSelectUser = async (user: User) => {
@@ -97,8 +100,10 @@ export const UserGovernance: React.FC = () => {
       loadData();
       const details = await api.getGovernanceUserDetails(selectedUser.id);
       setSelectedUser(details);
+      addToast('User updated successfully', 'success');
     } catch (error) {
       console.error("Failed to update user", error);
+      addToast('Failed to update user', 'error');
     }
   };
 
@@ -116,8 +121,10 @@ export const UserGovernance: React.FC = () => {
         property_scope: 'Assigned'
       });
       loadData();
+      addToast('User created successfully', 'success');
     } catch (error) {
       console.error("Failed to add user", error);
+      addToast('Failed to create user', 'error');
     }
   };
 
@@ -143,8 +150,8 @@ export const UserGovernance: React.FC = () => {
         valA = `${a.first_name} ${a.last_name}`.toLowerCase();
         valB = `${b.first_name} ${b.last_name}`.toLowerCase();
       } else if (sortConfig.key === 'role') {
-        valA = a.role_name.toLowerCase();
-        valB = b.role_name.toLowerCase();
+        valA = (a.role_name || '').toLowerCase();
+        valB = (b.role_name || '').toLowerCase();
       } else if (sortConfig.key === 'status') {
         valA = a.status;
         valB = b.status;
@@ -236,7 +243,7 @@ export const UserGovernance: React.FC = () => {
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-2xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-700 dark:text-violet-400 font-bold text-sm shadow-sm">
-                        {u.first_name[0]}{u.last_name[0]}
+                        {u.first_name?.[0]}{u.last_name?.[0]}
                       </div>
                       <div>
                         <p className="text-sm font-bold text-zinc-900 dark:text-white group-hover:text-violet-600 transition-colors">{u.first_name} {u.last_name}</p>
@@ -431,7 +438,7 @@ export const UserGovernance: React.FC = () => {
                 {/* Header Info */}
                 <div className="flex items-center gap-6 p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800">
                   <div className="w-20 h-20 rounded-3xl bg-violet-600 flex items-center justify-center text-white text-2xl font-bold shadow-xl shadow-violet-600/20">
-                    {selectedUser.first_name[0]}{selectedUser.last_name[0]}
+                    {selectedUser.first_name?.[0]}{selectedUser.last_name?.[0]}
                   </div>
                   <div className="flex-1">
                     <h4 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">{selectedUser.first_name} {selectedUser.last_name}</h4>

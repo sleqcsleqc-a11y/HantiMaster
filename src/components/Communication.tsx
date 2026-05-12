@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion } from 'motion/react';
-import { Search, Send, Paperclip, MoreVertical, CheckCircle2, Circle, Bell, Users, Building2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Search, Send, Paperclip, MoreVertical, CheckCircle2, Circle, Bell, Users, Building2, X } from 'lucide-react';
 import { api } from '../services/api';
 import { Message, Tenant, Owner } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 export const Communication: React.FC = () => {
-  const [activeChat, setActiveChat] = useState<{ id: number, type: string } | null>(null);
+  const { user } = useAuth();
+  const [activeChat, setActiveChat] = useState<{ id: string, type: string } | null>(null);
   const [message, setMessage] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -13,6 +15,9 @@ export const Communication: React.FC = () => {
   const [owners, setOwners] = useState<Owner[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'Tenants' | 'Owners'>('Tenants');
+  const [showNewMessageModal, setShowNewMessageModal] = useState(false);
+  const [newMessageRecipient, setNewMessageRecipient] = useState('');
+  const [newMessageContent, setNewMessageContent] = useState('');
 
   useEffect(() => {
     loadData();
@@ -55,35 +60,36 @@ export const Communication: React.FC = () => {
   };
 
   const simulateIncomingMessage = async () => {
-    if (notificationsEnabled) {
-      // Simulate a message from a random tenant if available
-      if (tenants.length > 0) {
-        const randomTenant = tenants[Math.floor(Math.random() * tenants.length)];
-        await api.sendMessage({
-          sender_id: randomTenant.id,
-          sender_type: 'Tenant',
-          receiver_id: 0,
-          receiver_type: 'Admin',
-          content: 'Hello, I have a question about my lease.',
-          read: false
-        });
-        loadMessages();
+    // Simulate a message from a random tenant if available
+    const availableTenants = tenants.filter(t => t.user_id);
+    if (availableTenants.length > 0) {
+      const randomTenant = availableTenants[Math.floor(Math.random() * availableTenants.length)];
+      await api.sendMessage({
+        sender_id: randomTenant.user_id!,
+        sender_type: 'Tenant',
+        receiver_id: user?.id,
+        receiver_type: 'User',
+        content: 'Hello, I have a question about my lease.',
+        read: false
+      });
+      loadMessages();
+      if (notificationsEnabled) {
         new Notification('New Message', {
           body: `${randomTenant.first_name} ${randomTenant.last_name}: Hello, I have a question about my lease.`,
         });
       }
     } else {
-      alert('Please enable notifications first.');
+      alert('No tenants with user accounts found to simulate message.');
     }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !activeChat) return;
+    if (!message.trim() || !activeChat || !user) return;
 
     await api.sendMessage({
-      sender_id: 0,
-      sender_type: 'Admin',
+      sender_id: user.id,
+      sender_type: 'User',
       receiver_id: activeChat.id,
       receiver_type: activeChat.type,
       content: message,
@@ -94,19 +100,61 @@ export const Communication: React.FC = () => {
     loadMessages();
   };
 
-  const conversations = useMemo(() => {
-    const list = activeTab === 'Tenants' 
-      ? tenants.map(t => ({ id: t.id, type: 'Tenant', name: `${t.first_name} ${t.last_name}`, subtext: `Unit ${t.unit_number || 'N/A'}` }))
-      : owners.map(o => ({ id: o.id, type: 'Owner', name: `${o.first_name} ${o.last_name}`, subtext: `${o.property_count || 0} Properties` }));
+  const handleSendNewMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessageContent.trim() || !newMessageRecipient || !user) return;
 
-    return list.map(item => {
+    const [type, id] = newMessageRecipient.split('_');
+
+    await api.sendMessage({
+      sender_id: user.id,
+      sender_type: 'User',
+      receiver_id: id,
+      receiver_type: type,
+      content: newMessageContent,
+      read: true
+    });
+    
+    setNewMessageContent('');
+    setNewMessageRecipient('');
+    setShowNewMessageModal(false);
+    setActiveChat({ id, type });
+    loadMessages();
+  };
+
+  const conversations = useMemo(() => {
+    if (user?.role_name === 'Tenant') {
       const chatMessages = messages.filter(m => 
-        (m.sender_id === item.id && m.sender_type === item.type) || 
-        (m.receiver_id === item.id && m.receiver_type === item.type)
+        m.sender_id === user.id || m.receiver_id === user.id
       ).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
       const lastMessage = chatMessages[0];
-      const unreadCount = chatMessages.filter(m => m.sender_id !== 0 && !m.read).length;
+      const unreadCount = chatMessages.filter(m => m.sender_id !== user?.id && !m.read).length;
+
+      return [{ 
+        id: 'management', 
+        type: 'System', 
+        name: 'Property Management', 
+        subtext: 'Support Team',
+        lastMessage: lastMessage ? lastMessage.content : 'No messages yet',
+        time: lastMessage ? new Date(lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+        unread: unreadCount,
+        timestamp: lastMessage ? new Date(lastMessage.timestamp).getTime() : 0
+      }];
+    }
+
+    const list = activeTab === 'Tenants' 
+      ? tenants.filter(t => t.user_id).map(t => ({ id: t.user_id!, type: 'Tenant', name: `${t.first_name} ${t.last_name}`, subtext: `Unit ${t.unit_number || 'N/A'}` }))
+      : owners.filter(o => o.user_id).map(o => ({ id: o.user_id!, type: 'Owner', name: `${o.first_name} ${o.last_name}`, subtext: `${o.property_count || 0} Properties` }));
+
+    return list.map(item => {
+      const chatMessages = messages.filter(m => 
+        (m.sender_id === item.id) || 
+        (m.receiver_id === item.id)
+      ).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      const lastMessage = chatMessages[0];
+      const unreadCount = chatMessages.filter(m => m.sender_id !== user?.id && !m.read).length;
 
       return {
         ...item,
@@ -117,31 +165,52 @@ export const Communication: React.FC = () => {
       };
     }).filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
       .sort((a, b) => b.timestamp - a.timestamp);
-  }, [tenants, owners, messages, activeTab, searchQuery]);
+  }, [tenants, owners, messages, activeTab, searchQuery, user]);
 
   const activeChatMessages = useMemo(() => {
     if (!activeChat) return [];
+    
+    if (user?.role_name === 'Tenant') {
+      // Tenants only see messages involving them
+      return messages.filter(m => 
+        m.sender_id === user.id || m.receiver_id === user.id
+      ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    }
+
     return messages.filter(m => 
-      (m.sender_id === activeChat.id && m.sender_type === activeChat.type) || 
-      (m.receiver_id === activeChat.id && m.receiver_type === activeChat.type)
+      (m.sender_id === activeChat.id) || 
+      (m.receiver_id === activeChat.id)
     ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-  }, [messages, activeChat]);
+  }, [messages, activeChat, user]);
 
   const activeChatDetails = useMemo(() => {
     if (!activeChat) return null;
+    if (activeChat.type === 'System') {
+      return { name: 'Property Management', subtext: 'Support Team', initials: 'PM' };
+    }
     if (activeChat.type === 'Tenant') {
-      const t = tenants.find(t => t.id === activeChat.id);
-      return t ? { name: `${t.first_name} ${t.last_name}`, subtext: `Unit ${t.unit_number || 'N/A'}`, initials: `${t.first_name[0]}${t.last_name[0]}` } : null;
+      const t = tenants.find(t => t.user_id === activeChat.id);
+      return t ? { name: `${t.first_name} ${t.last_name}`, subtext: `Unit ${t.unit_number || 'N/A'}`, initials: `${t.first_name?.[0]}${t.last_name?.[0]}` } : null;
     } else {
-      const o = owners.find(o => o.id === activeChat.id);
-      return o ? { name: `${o.first_name} ${o.last_name}`, subtext: `${o.property_count || 0} Properties`, initials: `${o.first_name[0]}${o.last_name[0]}` } : null;
+      const o = owners.find(o => o.user_id === activeChat.id);
+      return o ? { name: `${o.first_name} ${o.last_name}`, subtext: `${o.property_count || 0} Properties`, initials: `${o.first_name?.[0]}${o.last_name?.[0]}` } : null;
     }
   }, [activeChat, tenants, owners]);
 
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   useEffect(() => {
-    if (activeChat) {
+    scrollToBottom();
+  }, [activeChatMessages]);
+
+  useEffect(() => {
+    if (activeChat && user) {
       // Mark messages as read
-      const unreadMessages = activeChatMessages.filter(m => m.sender_id !== 0 && !m.read);
+      const unreadMessages = activeChatMessages.filter(m => m.sender_id !== user.id && !m.read);
       unreadMessages.forEach(m => {
         api.markMessageRead(m.id);
       });
@@ -149,7 +218,7 @@ export const Communication: React.FC = () => {
         loadMessages();
       }
     }
-  }, [activeChat, activeChatMessages]);
+  }, [activeChat, activeChatMessages, user]);
 
   return (
     <div className="p-8 max-w-7xl mx-auto h-[calc(100vh-5rem)] flex flex-col">
@@ -166,15 +235,22 @@ export const Communication: React.FC = () => {
           >
             <Bell size={16} />
           </button>
-          <button 
-            onClick={simulateIncomingMessage}
-            className="vintsy-button-secondary flex items-center gap-2 text-[10px] uppercase tracking-widest"
-          >
-            Simulate Message
-          </button>
-          <button className="vintsy-button-primary flex items-center gap-2 text-[10px] uppercase tracking-widest">
-            New Message
-          </button>
+          {user?.role_name !== 'Tenant' && (
+            <>
+              <button 
+                onClick={simulateIncomingMessage}
+                className="vintsy-button-secondary flex items-center gap-2 text-[10px] uppercase tracking-widest"
+              >
+                Simulate Message
+              </button>
+              <button 
+                onClick={() => setShowNewMessageModal(true)}
+                className="vintsy-button-primary flex items-center gap-2 text-[10px] uppercase tracking-widest"
+              >
+                New Message
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -182,22 +258,24 @@ export const Communication: React.FC = () => {
         {/* Sidebar */}
         <div className="w-80 border-r border-violet-50 dark:border-zinc-800 flex flex-col bg-white/50 dark:bg-zinc-900/50">
           <div className="p-4 border-b border-violet-50 dark:border-zinc-800 space-y-4">
-            <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
-              <button 
-                onClick={() => { setActiveTab('Tenants'); setActiveChat(null); }}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors ${activeTab === 'Tenants' ? 'bg-white dark:bg-zinc-700 text-violet-600 dark:text-violet-400 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
-              >
-                <Users size={14} />
-                Tenants
-              </button>
-              <button 
-                onClick={() => { setActiveTab('Owners'); setActiveChat(null); }}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors ${activeTab === 'Owners' ? 'bg-white dark:bg-zinc-700 text-violet-600 dark:text-violet-400 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
-              >
-                <Building2 size={14} />
-                Owners
-              </button>
-            </div>
+            {user?.role_name !== 'Tenant' && (
+              <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
+                <button 
+                  onClick={() => { setActiveTab('Tenants'); setActiveChat(null); }}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors ${activeTab === 'Tenants' ? 'bg-white dark:bg-zinc-700 text-violet-600 dark:text-violet-400 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                >
+                  <Users size={14} />
+                  Tenants
+                </button>
+                <button 
+                  onClick={() => { setActiveTab('Owners'); setActiveChat(null); }}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors ${activeTab === 'Owners' ? 'bg-white dark:bg-zinc-700 text-violet-600 dark:text-violet-400 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                >
+                  <Building2 size={14} />
+                  Owners
+                </button>
+              </div>
+            )}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={14} />
               <input 
@@ -244,7 +322,7 @@ export const Communication: React.FC = () => {
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col bg-white/30 dark:bg-zinc-950/30">
+        <div className="flex-1 flex flex-col bg-white/30 dark:bg-zinc-800/30">
           {activeChat && activeChatDetails ? (
             <>
               <div className="p-6 border-b border-violet-50 dark:border-zinc-800 flex justify-between items-center bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md">
@@ -265,7 +343,7 @@ export const Communication: React.FC = () => {
               <div className="flex-1 overflow-y-auto p-6 space-y-6 flex flex-col-reverse">
                 <div className="space-y-6 flex flex-col">
                   {activeChatMessages.map((msg) => {
-                    const isMe = msg.sender_id === 0;
+                    const isMe = msg.sender_id === user?.id;
                     return (
                       <motion.div 
                         key={msg.id}
@@ -291,6 +369,7 @@ export const Communication: React.FC = () => {
                       No messages yet. Send a message to start the conversation.
                     </div>
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
               </div>
 
@@ -323,6 +402,83 @@ export const Communication: React.FC = () => {
           )}
         </div>
       </div>
+
+      <AnimatePresence>
+        {showNewMessageModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-zinc-900 rounded-2xl p-8 max-w-lg w-full shadow-2xl border border-violet-100 dark:border-zinc-800"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">New Message</h3>
+                <button 
+                  onClick={() => setShowNewMessageModal(false)}
+                  className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <form onSubmit={handleSendNewMessage} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Recipient</label>
+                  <select 
+                    value={newMessageRecipient}
+                    onChange={e => setNewMessageRecipient(e.target.value)}
+                    required
+                    className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                  >
+                    <option value="">Select a recipient...</option>
+                    <optgroup label="Tenants">
+                      {tenants.filter(t => t.user_id).map(t => (
+                        <option key={`Tenant_${t.user_id}`} value={`Tenant_${t.user_id}`}>
+                          {t.first_name} {t.last_name} (Unit {t.unit_number})
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Owners">
+                      {owners.filter(o => o.user_id).map(o => (
+                        <option key={`Owner_${o.user_id}`} value={`Owner_${o.user_id}`}>
+                          {o.first_name} {o.last_name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Message</label>
+                  <textarea 
+                    value={newMessageContent}
+                    onChange={e => setNewMessageContent(e.target.value)}
+                    required
+                    rows={4}
+                    className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all resize-none"
+                    placeholder="Type your message here..."
+                  />
+                </div>
+                <div className="flex justify-end gap-3 mt-6">
+                  <button 
+                    type="button"
+                    onClick={() => setShowNewMessageModal(false)}
+                    className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={!newMessageRecipient || !newMessageContent.trim()}
+                    className="vintsy-button-primary text-xs uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Send Message
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

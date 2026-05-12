@@ -73,16 +73,21 @@ export const Maintenance: React.FC = () => {
 
   const handleAddRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    await api.createMaintenance(requestForm);
-    setShowAddModal(false);
-    setRequestForm({
-      title: '',
-      description: '',
-      priority: 'Medium',
-      unit_id: 0,
-      tenant_id: 0
-    });
-    loadData();
+    try {
+      await api.createMaintenance(requestForm);
+      setShowAddModal(false);
+      setRequestForm({
+        title: '',
+        description: '',
+        priority: 'Medium',
+        unit_id: 0,
+        tenant_id: 0
+      });
+      loadData();
+    } catch (error) {
+      console.error('Failed to add maintenance request:', error);
+      alert('Failed to add maintenance request. Please check your connection and permissions.');
+    }
   };
 
   const priorityColors = {
@@ -117,8 +122,12 @@ export const Maintenance: React.FC = () => {
             transition={{ delay: index * 0.05 }}
             className="vintsy-card p-8 flex items-center gap-8 group"
           >
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border shadow-md ${priorityColors[request.priority as keyof typeof priorityColors]}`}>
-              <Wrench size={24} />
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border shadow-md overflow-hidden ${priorityColors[request.priority as keyof typeof priorityColors]}`}>
+              {request.image_url ? (
+                <img src={request.image_url} alt="Request Media" className="w-full h-full object-cover" />
+              ) : (
+                <Wrench size={24} />
+              )}
             </div>
             
             <div className="flex-1">
@@ -230,6 +239,33 @@ export const Maintenance: React.FC = () => {
                     <option value="High">High</option>
                     <option value="Emergency">Emergency</option>
                   </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Photo / Video (Optional)</label>
+                <div className="flex items-center gap-4">
+                  {requestForm.image_url && (
+                    <div className="w-16 h-16 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700">
+                      <img src={requestForm.image_url} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <input 
+                    type="file" 
+                    accept="image/*,video/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file && user) {
+                        try {
+                          const { id, url } = await api.uploadAsset(file, user.id);
+                          setRequestForm({ ...requestForm, image_url: url, image_asset_id: id });
+                        } catch (error) {
+                          console.error('Error uploading media:', error);
+                          alert('Failed to upload media. Please try again.');
+                        }
+                      }
+                    }}
+                    className="vintsy-input w-full"
+                  />
                 </div>
               </div>
               <button type="submit" className="w-full vintsy-button-primary py-3 mt-6">

@@ -24,10 +24,12 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { Role } from '../../types';
 
 export const SystemRules: React.FC = () => {
   const { user } = useAuth();
+  const { addToast } = useToast();
   const [rules, setRules] = useState<any>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,21 +68,27 @@ export const SystemRules: React.FC = () => {
     try {
       await api.createHierarchyRule({
         ...newRule,
+        role_a_id: parseInt(newRule.role_a_id),
+        role_b_id: parseInt(newRule.role_b_id),
         admin_id: user?.id
       });
       setNewRule({ type: 'Inheritance', role_a_id: '', role_b_id: '', description: '' });
       loadData();
+      addToast('Rule added successfully', 'success');
     } catch (error) {
       console.error("Failed to add rule", error);
+      addToast('Failed to add rule', 'error');
     }
   };
 
   const handleDeleteRule = async (id: number) => {
     try {
-      await api.deleteHierarchyRule(id, user?.id || 0);
+      await api.deleteHierarchyRule(id, user?.id || '');
       loadData();
+      addToast('Rule deleted successfully', 'success');
     } catch (error) {
       console.error("Failed to delete rule", error);
+      addToast('Failed to delete rule', 'error');
     }
   };
 
@@ -120,9 +128,9 @@ export const SystemRules: React.FC = () => {
                 <p className="text-sm font-bold text-zinc-900 dark:text-white">Complexity Requirements</p>
                 <p className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-widest font-bold">Special chars, numbers, uppercase</p>
               </div>
-              <select className="px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-violet-500/20">
+              <select defaultValue="High" className="px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-violet-500/20">
                 <option>Low</option>
-                <option selected>High</option>
+                <option>High</option>
                 <option>Critical</option>
               </select>
             </div>
@@ -217,7 +225,7 @@ export const SystemRules: React.FC = () => {
                 <p className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-widest font-bold">Force logout on timeout</p>
               </div>
               <div className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked={rules?.session_settings?.auto_logout} className="sr-only peer" />
+                <input type="checkbox" checked={rules?.session_settings?.auto_logout || false} readOnly className="sr-only peer" />
                 <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-violet-300 dark:peer-focus:ring-violet-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-violet-600"></div>
               </div>
             </div>
@@ -346,7 +354,10 @@ export const SystemRules: React.FC = () => {
         <button 
           onClick={() => {
             setSaving(true);
-            setTimeout(() => setSaving(false), 1500);
+            setTimeout(() => {
+              setSaving(false);
+              addToast('System rules saved successfully', 'success');
+            }, 1500);
           }}
           className="flex items-center gap-2 px-12 py-4 bg-violet-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-violet-700 transition-all shadow-xl shadow-violet-600/30 active:scale-95"
         >

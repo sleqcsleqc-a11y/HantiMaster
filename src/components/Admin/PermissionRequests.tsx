@@ -20,10 +20,12 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { PermissionRequest } from '../../types';
 
 export const PermissionRequests: React.FC = () => {
   const { user: currentUser } = useAuth();
+  const { addToast } = useToast();
   const [requests, setRequests] = useState<PermissionRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'Pending' | 'Approved' | 'Denied' | 'Expired'>('Pending');
@@ -46,14 +48,18 @@ export const PermissionRequests: React.FC = () => {
     loadData();
   }, []);
 
-  const handleReview = async (requestId: number, status: 'Approved' | 'Denied', expirationDate?: string) => {
+  const [expirationDate, setExpirationDate] = useState<string>('');
+
+  const handleReview = async (requestId: number, status: 'Approved' | 'Denied') => {
     await api.reviewPermissionRequest(requestId, { 
       status, 
       reviewed_by: currentUser?.id,
-      expiration_date: expirationDate
+      expiration_date: expirationDate || null
     });
     loadData();
     setIsReviewOpen(false);
+    setExpirationDate('');
+    addToast(`Request ${status.toLowerCase()} successfully`, 'success');
   };
 
   const filteredRequests = requests.filter(r => r.status === activeTab);
@@ -245,6 +251,15 @@ export const PermissionRequests: React.FC = () => {
                       <div className="flex justify-between items-center py-3 border-b border-zinc-100 dark:border-zinc-800">
                         <span className="text-sm text-zinc-500 dark:text-zinc-400">Submitted</span>
                         <span className="text-sm font-bold text-zinc-900 dark:text-white">{new Date(selectedRequest.created_at).toLocaleString()}</span>
+                      </div>
+                      <div className="space-y-2 pt-2">
+                        <span className="text-sm text-zinc-500 dark:text-zinc-400">Expiration Date (Optional)</span>
+                        <input 
+                          type="date"
+                          value={expirationDate}
+                          onChange={e => setExpirationDate(e.target.value)}
+                          className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                        />
                       </div>
                       <div className="space-y-2 pt-2">
                         <span className="text-sm text-zinc-500 dark:text-zinc-400">Justification</span>

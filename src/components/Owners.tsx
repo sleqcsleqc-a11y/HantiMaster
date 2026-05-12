@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Users, Building2, CircleDollarSign, ChevronRight, Search, Plus, X } from 'lucide-react';
 import { api } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import { Owner } from '../types';
 
 interface OwnersProps {
@@ -9,6 +10,7 @@ interface OwnersProps {
 }
 
 export const Owners: React.FC<OwnersProps> = ({ onSelectOwner }) => {
+  const { user } = useAuth();
   const [owners, setOwners] = useState<Owner[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,6 +24,9 @@ export const Owners: React.FC<OwnersProps> = ({ onSelectOwner }) => {
     address: '',
     property_ids: [] as number[]
   });
+
+  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'property_count' | 'portfolio_value'; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+  const [filterConfig, setFilterConfig] = useState({ minProperties: 0, minPortfolioValue: 0 });
 
   const loadOwners = () => {
     api.getOwners().then(data => {
@@ -37,8 +42,12 @@ export const Owners: React.FC<OwnersProps> = ({ onSelectOwner }) => {
 
   const handleAddOwner = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!ownerForm.email.includes('@')) {
+      alert('Please enter a valid email address.');
+      return;
+    }
     const { property_ids, ...data } = ownerForm;
-    const { id } = await api.createOwner(data);
+    const { id } = await api.createOwner({ ...data, admin_id: user?.id });
     
     // Link properties if any
     if (property_ids.length > 0) {
@@ -52,10 +61,32 @@ export const Owners: React.FC<OwnersProps> = ({ onSelectOwner }) => {
     loadOwners();
   };
 
-  const filteredOwners = owners.filter(o => 
-    `${o.first_name} ${o.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    o.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredOwners = owners
+    .filter(o => 
+      (`${o.first_name} ${o.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      o.email.toLowerCase().includes(searchQuery.toLowerCase())) &&
+      (o.property_count || 0) >= filterConfig.minProperties &&
+      (o.total_portfolio_value || 0) >= filterConfig.minPortfolioValue
+    )
+    .sort((a, b) => {
+      let valA: any = a[sortConfig.key as keyof Owner];
+      let valB: any = b[sortConfig.key as keyof Owner];
+
+      if (sortConfig.key === 'name') {
+        valA = `${a.first_name} ${a.last_name}`.toLowerCase();
+        valB = `${b.first_name} ${b.last_name}`.toLowerCase();
+      } else if (sortConfig.key === 'portfolio_value') {
+        valA = a.total_portfolio_value || 0;
+        valB = b.total_portfolio_value || 0;
+      } else if (sortConfig.key === 'property_count') {
+        valA = a.property_count || 0;
+        valB = b.property_count || 0;
+      }
+
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -64,7 +95,7 @@ export const Owners: React.FC<OwnersProps> = ({ onSelectOwner }) => {
           <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">Directory</h3>
           <p className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Property Owners</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={14} />
             <input 
@@ -75,6 +106,24 @@ export const Owners: React.FC<OwnersProps> = ({ onSelectOwner }) => {
               className="pl-9 pr-4 py-2 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs w-64 text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400"
             />
           </div>
+          
+          <select
+            value={sortConfig.key}
+            onChange={(e) => setSortConfig({ ...sortConfig, key: e.target.value as any })}
+            className="px-4 py-2 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs font-bold focus:outline-none"
+          >
+            <option value="name">Sort by Name</option>
+            <option value="property_count">Sort by Properties</option>
+            <option value="portfolio_value">Sort by Value</option>
+          </select>
+
+          <button
+            onClick={() => setSortConfig({ ...sortConfig, direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}
+            className="p-2 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-zinc-500 hover:text-violet-600 transition-colors"
+          >
+            {sortConfig.direction === 'asc' ? '↑' : '↓'}
+          </button>
+
           <button 
             onClick={() => setShowAddOwner(true)}
             className="vintsy-button-primary flex items-center gap-2 text-[10px] uppercase tracking-widest"
@@ -189,7 +238,7 @@ export const Owners: React.FC<OwnersProps> = ({ onSelectOwner }) => {
           >
             <div className="flex items-center gap-4 mb-6">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 to-violet-800 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-violet-600/20 group-hover:scale-110 transition-transform duration-300">
-                {owner.first_name[0]}{owner.last_name[0]}
+                {owner.first_name?.[0]}{owner.last_name?.[0]}
               </div>
               <div>
                 <h4 className="text-lg font-bold text-zinc-900 dark:text-white">{owner.first_name} {owner.last_name}</h4>

@@ -1,30 +1,37 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion } from 'motion/react';
-import { Plus, CheckSquare, Clock, Calendar, MoreVertical, CheckCircle2, Circle, LayoutGrid, List, DollarSign, Timer, Filter, X, AlertCircle, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Plus, CheckSquare, Clock, Calendar, MoreVertical, CheckCircle2, Circle, LayoutGrid, List, DollarSign, Timer, Filter, X, AlertCircle, PieChart as PieChartIcon, BarChart3, Bell } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { api } from '../services/api';
 import { Task } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 const priorityColors = {
   Emergency: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-100 dark:border-red-800',
   High: 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border-orange-100 dark:border-orange-800',
-  Medium: 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border-violet-100 dark:border-violet-800',
+  Medium: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800',
   Low: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-100 dark:border-zinc-700',
 };
 
 const columns = ['Pending', 'In Progress', 'Completed'] as const;
 
 export const Tasks: React.FC = () => {
+  const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [view, setView] = useState<'board' | 'list' | 'report'>('board');
   const [isBrowser, setIsBrowser] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [showNotification, setShowNotification] = useState<{title: string, message: string} | null>(null);
   
   // Filters
   const [statusFilter, setStatusFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [assigneeFilter, setAssigneeFilter] = useState('All');
+  const [minCostFilter, setMinCostFilter] = useState<number | ''>('');
+  const [maxCostFilter, setMaxCostFilter] = useState<number | ''>('');
   const [sortField, setSortField] = useState<'due_date' | 'priority' | 'status'>('due_date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -38,29 +45,81 @@ export const Tasks: React.FC = () => {
     time_spent: 0
   });
 
-  const loadTasks = () => {
-    api.getTasks().then(setTasks);
+  const loadData = async () => {
+    try {
+      const [tasksData, usersData] = await Promise.all([
+        api.getTasks(),
+        api.getUsers()
+      ]);
+      setTasks(tasksData);
+      setUsers(usersData);
+    } catch (error) {
+      console.error('Failed to load tasks data:', error);
+    }
   };
 
   useEffect(() => {
     setIsBrowser(true);
-    loadTasks();
+    loadData();
   }, []);
+
+  useEffect(() => {
+    if (tasks.length > 0) {
+      const overdue = reminders.filter(r => r.reminderType === 'overdue');
+      const upcoming = reminders.filter(r => r.reminderType === 'today' || r.reminderType === 'soon');
+      
+      if (overdue.length > 0) {
+        setShowNotification({
+          title: 'Overdue Tasks Alert',
+          message: `You have ${overdue.length} overdue tasks and ${upcoming.length} upcoming deadlines.`
+        });
+      } else if (upcoming.length > 0) {
+        setShowNotification({
+          title: 'Upcoming Deadlines',
+          message: `You have ${upcoming.length} tasks due soon.`
+        });
+      }
+    }
+  }, [tasks.length]);
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    await api.createTask(taskForm);
-    setShowAddTask(false);
+    try {
+      if (editingTask) {
+        await api.updateTask(editingTask.id, taskForm);
+      } else {
+        await api.createTask(taskForm);
+      }
+      setShowAddTask(false);
+      setEditingTask(null);
+      setTaskForm({
+        title: '',
+        assignee: '',
+        due_date: new Date().toISOString().split('T')[0],
+        priority: 'Medium',
+        status: 'Pending',
+        cost: 0,
+        time_spent: 0
+      });
+      loadData();
+    } catch (error) {
+      console.error('Failed to save task:', error);
+      alert('Failed to save task. Please check your connection and permissions.');
+    }
+  };
+
+  const openEditTask = (task: Task) => {
+    setEditingTask(task);
     setTaskForm({
-      title: '',
-      assignee: '',
-      due_date: new Date().toISOString().split('T')[0],
-      priority: 'Medium',
-      status: 'Pending',
-      cost: 0,
-      time_spent: 0
+      title: task.title,
+      assignee: task.assignee,
+      due_date: task.due_date,
+      priority: task.priority,
+      status: task.status,
+      cost: task.cost || 0,
+      time_spent: task.time_spent || 0
     });
-    loadTasks();
+    setShowAddTask(true);
   };
 
   const onDragEnd = async (result: DropResult) => {
@@ -76,8 +135,43 @@ export const Tasks: React.FC = () => {
         newTasks[taskIndex] = updatedTask;
         setTasks(newTasks); // Optimistic update
         await api.updateTask(updatedTask.id, { status: updatedTask.status });
-        loadTasks();
+        loadData();
       }
+    }
+  };
+
+  const handleSendReminder = async (task: Task) => {
+    const assigneeUser = users.find(u => `${u.first_name} ${u.last_name}` === task.assignee);
+    
+    if (assigneeUser && user) {
+      try {
+        await api.sendMessage({
+          sender_id: user.id,
+          sender_type: 'System',
+          receiver_id: assigneeUser.id,
+          receiver_type: 'User',
+          content: `Reminder: Task "${task.title}" is due on ${task.due_date}. Priority: ${task.priority}.`,
+          timestamp: new Date().toISOString(),
+          read: false
+        });
+        
+        setShowNotification({
+          title: 'Reminder Sent',
+          message: `System notification sent to ${task.assignee}.`
+        });
+      } catch (error) {
+        console.error('Failed to send reminder:', error);
+        setShowNotification({
+          title: 'Error',
+          message: 'Failed to send reminder notification.'
+        });
+      }
+    } else {
+      // Fallback simulation for external assignees or if user not found
+      setShowNotification({
+        title: 'Reminder Sent',
+        message: `Email reminder sent to ${task.assignee} (Simulation).`
+      });
     }
   };
 
@@ -89,6 +183,8 @@ export const Tasks: React.FC = () => {
       if (statusFilter !== 'All' && t.status !== statusFilter) return false;
       if (priorityFilter !== 'All' && t.priority !== priorityFilter) return false;
       if (assigneeFilter !== 'All' && t.assignee !== assigneeFilter) return false;
+      if (minCostFilter !== '' && (t.cost || 0) < minCostFilter) return false;
+      if (maxCostFilter !== '' && (t.cost || 0) > maxCostFilter) return false;
       return true;
     });
 
@@ -107,7 +203,11 @@ export const Tasks: React.FC = () => {
     return result;
   }, [tasks, statusFilter, priorityFilter, assigneeFilter, sortField, sortDirection]);
 
-  const uniqueAssignees = Array.from(new Set(tasks.map(t => t.assignee))).filter((a): a is string => !!a);
+  const uniqueAssignees = useMemo(() => {
+    const fromTasks = Array.from(new Set(tasks.map(t => t.assignee))).filter((a): a is string => !!a);
+    const fromUsers = users.map(u => `${u.first_name} ${u.last_name}`);
+    return Array.from(new Set([...fromTasks, ...fromUsers]));
+  }, [tasks, users]);
 
   const totalCost = processedTasks.reduce((sum, t) => sum + (t.cost || 0), 0);
   const totalTime = processedTasks.reduce((sum, t) => sum + (t.time_spent || 0), 0);
@@ -144,8 +244,57 @@ export const Tasks: React.FC = () => {
     return null;
   };
 
+  const reminders = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return tasks.filter(t => t.status !== 'Completed').map(t => {
+      const due = new Date(t.due_date);
+      due.setHours(0, 0, 0, 0);
+      const diffTime = due.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 0) return { ...t, reminderType: 'overdue', days: Math.abs(diffDays) };
+      if (diffDays === 0) return { ...t, reminderType: 'today', days: 0 };
+      if (diffDays <= 2) return { ...t, reminderType: 'soon', days: diffDays };
+      return null;
+    }).filter((t): t is (Task & { reminderType: string, days: number }) => t !== null)
+      .sort((a, b) => {
+        if (a.reminderType === 'overdue' && b.reminderType !== 'overdue') return -1;
+        if (a.reminderType !== 'overdue' && b.reminderType === 'overdue') return 1;
+        return a.days - b.days;
+      });
+  }, [tasks]);
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
+      <AnimatePresence>
+        {showNotification && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="mb-8 p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-2xl flex items-center justify-between shadow-lg shadow-red-500/10"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 flex items-center justify-center">
+                <Bell size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-zinc-900 dark:text-white">{showNotification.title}</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">{showNotification.message}</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setShowNotification(null)}
+              className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div>
           <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">Operations</h3>
@@ -182,6 +331,50 @@ export const Tasks: React.FC = () => {
         </div>
       </div>
 
+      {reminders.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-4">
+            <AlertCircle size={16} className="text-orange-500" />
+            Reminders & Alerts
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {reminders.slice(0, 3).map(reminder => (
+              <motion.div 
+                key={reminder.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className={`p-4 rounded-2xl border flex items-center gap-4 ${
+                  reminder.reminderType === 'overdue' 
+                    ? 'bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30' 
+                    : 'bg-orange-50/50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/30'
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  reminder.reminderType === 'overdue' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
+                }`}>
+                  {reminder.reminderType === 'overdue' ? <AlertCircle size={20} /> : <Clock size={20} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">{reminder.title}</p>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest ${
+                    reminder.reminderType === 'overdue' ? 'text-red-600' : 'text-orange-600'
+                  }`}>
+                    {reminder.reminderType === 'overdue' ? `Overdue by ${reminder.days} days` : reminder.reminderType === 'today' ? 'Due Today' : `Due in ${reminder.days} days`}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => handleSendReminder(reminder)}
+                  className="p-2 bg-white dark:bg-zinc-800 rounded-lg shadow-sm text-zinc-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+                  title="Send Reminder"
+                >
+                  <Bell size={16} />
+                </button>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="vintsy-card p-6 mb-8 space-y-4">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
@@ -193,6 +386,8 @@ export const Tasks: React.FC = () => {
               setStatusFilter('All');
               setPriorityFilter('All');
               setAssigneeFilter('All');
+              setMinCostFilter('');
+              setMaxCostFilter('');
               setSortField('due_date');
               setSortDirection('asc');
             }}
@@ -243,6 +438,25 @@ export const Tasks: React.FC = () => {
             </select>
           </div>
           <div>
+            <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Estimated Cost Range</label>
+            <div className="flex gap-2">
+              <input 
+                type="number" 
+                placeholder="Min"
+                value={minCostFilter}
+                onChange={(e) => setMinCostFilter(e.target.value ? Number(e.target.value) : '')}
+                className="vintsy-input w-full"
+              />
+              <input 
+                type="number" 
+                placeholder="Max"
+                value={maxCostFilter}
+                onChange={(e) => setMaxCostFilter(e.target.value ? Number(e.target.value) : '')}
+                className="vintsy-input w-full"
+              />
+            </div>
+          </div>
+          <div>
             <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Sort By</label>
             <select 
               value={sortField}
@@ -276,9 +490,12 @@ export const Tasks: React.FC = () => {
             className="bg-white dark:bg-zinc-900 rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-violet-100 dark:border-zinc-800 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Create New Task</h3>
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{editingTask ? 'Task Details & Edit' : 'Create New Task'}</h3>
               <button 
-                onClick={() => setShowAddTask(false)}
+                onClick={() => {
+                  setShowAddTask(false);
+                  setEditingTask(null);
+                }}
                 className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
               >
                 <X size={20} />
@@ -305,13 +522,19 @@ export const Tasks: React.FC = () => {
                     className="vintsy-input w-full appearance-none"
                   >
                     <option value="">Select Assignee</option>
-                    <option value="Maintenance Team">Maintenance Team</option>
-                    <option value="Property Manager">Property Manager</option>
-                    <option value="Admin">Admin</option>
-                    <option value="External Contractor">External Contractor</option>
-                    {uniqueAssignees.filter(a => !['Maintenance Team', 'Property Manager', 'Admin', 'External Contractor'].includes(a)).map(a => (
-                      <option key={a} value={a}>{a}</option>
-                    ))}
+                    <optgroup label="System Users">
+                      {users.map(u => (
+                        <option key={u.id} value={`${u.first_name} ${u.last_name}`}>
+                          {u.first_name} {u.last_name} ({u.role_name})
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Common Teams">
+                      <option value="Maintenance Team">Maintenance Team</option>
+                      <option value="Property Manager">Property Manager</option>
+                      <option value="Admin">Admin</option>
+                      <option value="External Contractor">External Contractor</option>
+                    </optgroup>
                     <option value="Other">Other...</option>
                   </select>
                   {taskForm.assignee === 'Other' && (
@@ -363,7 +586,7 @@ export const Tasks: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Cost ($)</label>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Estimated Cost ($)</label>
                   <input 
                     type="number" 
                     value={taskForm.cost}
@@ -410,7 +633,7 @@ export const Tasks: React.FC = () => {
               <h4 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{processedTasks.filter(t => t.status === 'Completed').length}</h4>
             </div>
             <div className="vintsy-card p-4">
-              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Total Cost</p>
+              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Total Estimated Cost</p>
               <div className="flex items-center gap-2">
                 <DollarSign size={16} className="text-violet-600 dark:text-violet-400" />
                 <h4 className="text-2xl font-bold text-zinc-900 dark:text-white">{totalCost.toLocaleString()}</h4>
@@ -460,7 +683,7 @@ export const Tasks: React.FC = () => {
             <div className="vintsy-card p-6">
               <h4 className="text-sm font-bold text-zinc-900 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
                 <BarChart3 size={16} />
-                Cost & Time Analysis
+                Estimated Cost & Time Analysis
               </h4>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -473,7 +696,7 @@ export const Tasks: React.FC = () => {
                       contentStyle={{ backgroundColor: '#18181b', border: 'none', borderRadius: '8px', color: '#fff' }}
                     />
                     <Legend />
-                    <Bar dataKey="cost" name="Cost ($)" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="cost" name="Estimated Cost ($)" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="time" name="Time (h)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -489,7 +712,7 @@ export const Tasks: React.FC = () => {
                   <tr className="bg-violet-50/20 dark:bg-zinc-800/20 border-b border-violet-100 dark:border-zinc-800">
                     <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Task</th>
                     <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Status</th>
-                    <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Cost</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Estimated Cost</th>
                     <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Time Spent</th>
                   </tr>
                 </thead>
@@ -565,19 +788,50 @@ export const Tasks: React.FC = () => {
                                 <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest border ${priorityColors[task.priority]}`}>
                                   {task.priority}
                                 </span>
+                                <button 
+                                  onClick={() => openEditTask(task)}
+                                  className="p-1 text-zinc-400 hover:text-violet-600 transition-colors"
+                                >
+                                  <MoreVertical size={14} />
+                                </button>
                               </div>
                               <h5 className="text-sm font-bold text-zinc-900 dark:text-white mb-4 leading-snug pr-6">{task.title}</h5>
                               <div className="flex items-center justify-between pt-4 border-t border-violet-50 dark:border-zinc-800">
                                 <div className="flex items-center gap-2">
                                   <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 flex items-center justify-center font-bold text-[10px]" title={task.assignee}>
-                                    {task.assignee.charAt(0)}
+                                    {task.assignee?.charAt(0)}
                                   </div>
+                                  {task.status !== 'Completed' && (
+                                    <button 
+                                      onClick={() => handleSendReminder(task)}
+                                      className="p-1 text-zinc-400 hover:text-violet-600 transition-colors"
+                                      title="Send Reminder"
+                                    >
+                                      <Bell size={12} />
+                                    </button>
+                                  )}
                                 </div>
                                 <div className={`flex items-center gap-1.5 text-[10px] font-medium ${dueStatus === 'overdue' ? 'text-red-600 dark:text-red-400 font-bold' : dueStatus === 'soon' ? 'text-orange-600 dark:text-orange-400 font-bold' : 'text-zinc-500'}`}>
                                   <Calendar size={12} />
                                   <span>{new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                                 </div>
                               </div>
+                              {(task.cost > 0 || task.time_spent > 0) && (
+                                <div className="mt-3 pt-3 border-t border-violet-50/50 dark:border-zinc-800/50 flex items-center gap-4 text-[9px] font-bold uppercase tracking-widest text-zinc-400">
+                                  {task.cost > 0 && (
+                                    <div className="flex items-center gap-1" title="Estimated Cost">
+                                      <DollarSign size={10} className="text-violet-600/50" />
+                                      <span>Est: ${task.cost}</span>
+                                    </div>
+                                  )}
+                                  {task.time_spent > 0 && (
+                                    <div className="flex items-center gap-1">
+                                      <Timer size={10} className="text-orange-600/50" />
+                                      <span>{task.time_spent}h</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           )}
                         </Draggable>
@@ -602,6 +856,7 @@ export const Tasks: React.FC = () => {
                   <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.15em]">Assignee</th>
                   <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.15em]">Due Date</th>
                   <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.15em]">Priority</th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.15em]">Metrics</th>
                   <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.15em]">Status</th>
                 </tr>
               </thead>
@@ -614,6 +869,7 @@ export const Tasks: React.FC = () => {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
+                    onClick={() => openEditTask(task)}
                     className={`hover:bg-violet-50/20 dark:hover:bg-zinc-800/30 transition-all duration-300 group cursor-pointer ${dueStatus === 'overdue' ? 'bg-red-50/30 dark:bg-red-900/10' : dueStatus === 'soon' ? 'bg-orange-50/30 dark:bg-orange-900/10' : ''}`}
                   >
                     <td className="px-8 py-6">
@@ -633,9 +889,18 @@ export const Tasks: React.FC = () => {
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 flex items-center justify-center font-bold text-[10px] border border-violet-200 dark:border-violet-800 shadow-sm" title={task.assignee}>
-                          {task.assignee.charAt(0)}
+                          {task.assignee?.charAt(0)}
                         </div>
                         <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{task.assignee}</span>
+                        {task.status !== 'Completed' && (
+                          <button 
+                            onClick={() => handleSendReminder(task)}
+                            className="p-1 text-zinc-400 hover:text-violet-600 transition-colors ml-auto opacity-0 group-hover:opacity-100"
+                            title="Send Reminder"
+                          >
+                            <Bell size={12} />
+                          </button>
+                        )}
                       </div>
                     </td>
                     <td className="px-8 py-6">
@@ -648,6 +913,23 @@ export const Tasks: React.FC = () => {
                       <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${priorityColors[task.priority]}`}>
                         {task.priority}
                       </span>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-4 text-[10px] font-bold text-zinc-500">
+                        {task.cost > 0 && (
+                          <div className="flex items-center gap-1" title="Estimated Cost">
+                            <DollarSign size={12} className="text-violet-600" />
+                            <span>Est: ${task.cost}</span>
+                          </div>
+                        )}
+                        {task.time_spent > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Timer size={12} className="text-orange-600" />
+                            <span>{task.time_spent}h</span>
+                          </div>
+                        )}
+                        {!task.cost && !task.time_spent && <span className="text-zinc-300">-</span>}
+                      </div>
                     </td>
                     <td className="px-8 py-6">
                       <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${

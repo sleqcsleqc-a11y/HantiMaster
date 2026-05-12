@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Building2, CircleDollarSign, Users, Wrench, Download, User, Calendar, FileText, Mail, Phone, Globe, Shield, ChevronRight, Plus, X } from 'lucide-react';
 import { api } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import { Owner, Property } from '../types';
 
 interface OwnerDetailsProps {
@@ -11,6 +12,7 @@ interface OwnerDetailsProps {
 }
 
 export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onSelectProperty }) => {
+  const { user } = useAuth();
   const [owner, setOwner] = useState<Owner | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'portfolio' | 'transactions' | 'documents'>('overview');
@@ -23,6 +25,10 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
     api.getOwner(ownerId).then(data => {
       setOwner(data);
       setPersonalForm({
+        first_name: data.first_name || '',
+        last_name: data.last_name || '',
+        email: data.email || '',
+        phone: data.phone || '',
         address: data.address || '',
         nationality: data.nationality || '',
         dob: data.dob || '',
@@ -35,7 +41,11 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
   }, [ownerId]);
 
   const handleSavePersonal = async () => {
-    await api.updateOwner(ownerId, personalForm);
+    if (personalForm.email && !personalForm.email.includes('@')) {
+      alert('Please enter a valid email address.');
+      return;
+    }
+    await api.updateOwner(ownerId, { ...personalForm, admin_id: user?.id });
     setIsEditingPersonal(false);
     api.getOwner(ownerId).then(setOwner);
   };
@@ -94,7 +104,7 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
       <div className="vintsy-card p-8">
         <div className="flex flex-col md:flex-row items-center gap-8">
           <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-violet-600 to-violet-800 text-white flex items-center justify-center font-bold text-3xl shadow-xl shadow-violet-600/20">
-            {owner.first_name[0]}{owner.last_name[0]}
+            {owner.first_name?.[0]}{owner.last_name?.[0]}
           </div>
           <div className="text-center md:text-left flex-1">
             <div className="flex flex-wrap items-center gap-6 text-sm text-zinc-500 justify-center md:justify-start mt-2">
@@ -158,6 +168,42 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
 
                 {isEditingPersonal ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">First Name</label>
+                      <input 
+                        type="text" 
+                        value={personalForm.first_name}
+                        onChange={e => setPersonalForm({...personalForm, first_name: e.target.value})}
+                        className="vintsy-input w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Last Name</label>
+                      <input 
+                        type="text" 
+                        value={personalForm.last_name}
+                        onChange={e => setPersonalForm({...personalForm, last_name: e.target.value})}
+                        className="vintsy-input w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Email</label>
+                      <input 
+                        type="email" 
+                        value={personalForm.email}
+                        onChange={e => setPersonalForm({...personalForm, email: e.target.value})}
+                        className="vintsy-input w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Phone</label>
+                      <input 
+                        type="tel" 
+                        value={personalForm.phone}
+                        onChange={e => setPersonalForm({...personalForm, phone: e.target.value})}
+                        className="vintsy-input w-full"
+                      />
+                    </div>
                     <div className="md:col-span-2">
                       <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Residential Address</label>
                       <input 
@@ -415,15 +461,30 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
           <div className="vintsy-card p-8">
             <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-6">Recent Activity</h3>
             <div className="space-y-6">
-              {owner.activities?.map((activity, idx) => (
+              {owner.activities?.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((activity, idx) => (
                 <div key={activity.id} className="flex gap-4 relative">
                   {idx !== (owner.activities?.length || 0) - 1 && (
                     <div className="absolute left-2 top-6 bottom-0 w-px bg-violet-100 dark:bg-zinc-800" />
                   )}
-                  <div className="w-4 h-4 rounded-full bg-violet-100 dark:bg-violet-900/40 border-2 border-white dark:border-zinc-900 z-10 mt-1" />
+                  <div className={`w-4 h-4 rounded-full border-2 border-white dark:border-zinc-900 z-10 mt-1 flex items-center justify-center ${
+                    activity.type === 'Payment' ? 'bg-emerald-500' :
+                    activity.type === 'Property' ? 'bg-violet-500' :
+                    activity.type === 'Document' ? 'bg-blue-500' :
+                    'bg-zinc-400'
+                  }`} />
                   <div>
                     <p className="text-sm text-zinc-900 dark:text-white font-medium">{activity.description}</p>
-                    <p className="text-[10px] text-zinc-400 uppercase tracking-widest mt-1">{new Date(activity.date).toLocaleDateString()}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${
+                        activity.type === 'Payment' ? 'bg-emerald-100 text-emerald-700' :
+                        activity.type === 'Property' ? 'bg-violet-100 text-violet-700' :
+                        activity.type === 'Document' ? 'bg-blue-100 text-blue-700' :
+                        'bg-zinc-100 text-zinc-600'
+                      }`}>
+                        {activity.type}
+                      </span>
+                      <p className="text-[10px] text-zinc-400 uppercase tracking-widest">{new Date(activity.date).toLocaleDateString()} • {new Date(activity.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                    </div>
                   </div>
                 </div>
               ))}

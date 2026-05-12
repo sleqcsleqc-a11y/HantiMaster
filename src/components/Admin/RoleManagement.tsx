@@ -23,14 +23,19 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { Role } from '../../types';
+import { useToast } from '../../contexts/ToastContext';
 
 export const RoleManagement: React.FC = () => {
+  const { addToast } = useToast();
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<any[]>([]);
   const [rolePermissions, setRolePermissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [roleForm, setRoleForm] = useState({ name: '', description: '' });
+  const [isEditingRole, setIsEditingRole] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -44,6 +49,7 @@ export const RoleManagement: React.FC = () => {
       setRolePermissions(matrixData.rolePermissions);
     } catch (error) {
       console.error("Failed to load roles", error);
+      addToast('Failed to load roles', 'error');
     } finally {
       setLoading(false);
     }
@@ -53,13 +59,62 @@ export const RoleManagement: React.FC = () => {
     loadData();
   }, []);
 
+  const handleCreateRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.createRole(roleForm);
+      setIsCreateModalOpen(false);
+      setRoleForm({ name: '', description: '' });
+      loadData();
+      addToast('Role created successfully', 'success');
+    } catch (error) {
+      console.error("Failed to create role", error);
+      addToast('Failed to create role', 'error');
+    }
+  };
+
+  const handleUpdateRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRole) return;
+    try {
+      await api.updateRole(selectedRole.id, roleForm);
+      setIsEditingRole(false);
+      loadData();
+      // Update selected role locally to reflect changes in UI
+      setSelectedRole({ ...selectedRole, ...roleForm });
+      addToast('Role updated successfully', 'success');
+    } catch (error) {
+      console.error("Failed to update role", error);
+      addToast('Failed to update role', 'error');
+    }
+  };
+
+  const handleDeleteRole = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this role? This action cannot be undone.')) return;
+    try {
+      await api.deleteRole(id);
+      setIsEditorOpen(false);
+      loadData();
+      addToast('Role deleted successfully', 'success');
+    } catch (error) {
+      console.error("Failed to delete role", error);
+      addToast('Failed to delete role', 'error');
+    }
+  };
+
   const handleTogglePermission = async (roleId: number, permissionId: number, isGranted: boolean) => {
-    await api.updatePermissionMatrix({
-      role_id: roleId,
-      permission_id: permissionId,
-      action: isGranted ? 'revoke' : 'grant'
-    });
-    loadData();
+    try {
+      await api.updatePermissionMatrix({
+        role_id: roleId,
+        permission_id: permissionId,
+        action: isGranted ? 'revoke' : 'grant'
+      });
+      loadData();
+      addToast(`Permission ${isGranted ? 'revoked' : 'granted'} successfully`, 'success');
+    } catch (error) {
+      console.error("Failed to update permission", error);
+      addToast('Failed to update permission', 'error');
+    }
   };
 
   const modules = Array.from(new Set(permissions.map(p => p.module as string)));
@@ -82,7 +137,13 @@ export const RoleManagement: React.FC = () => {
             <Copy size={14} />
             Clone Role
           </button>
-          <button className="flex items-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-violet-700 transition-all shadow-lg shadow-violet-600/20">
+          <button 
+            onClick={() => {
+              setRoleForm({ name: '', description: '' });
+              setIsCreateModalOpen(true);
+            }}
+            className="flex items-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-violet-700 transition-all shadow-lg shadow-violet-600/20"
+          >
             <Plus size={14} />
             Create Role
           </button>
@@ -108,6 +169,8 @@ export const RoleManagement: React.FC = () => {
                 className="group hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer"
                 onClick={() => {
                   setSelectedRole(role);
+                  setRoleForm({ name: role.name, description: role.description || '' });
+                  setIsEditingRole(false);
                   setIsEditorOpen(true);
                 }}
               >
@@ -149,6 +212,67 @@ export const RoleManagement: React.FC = () => {
         </table>
       </div>
 
+      {/* Create Role Modal */}
+      <AnimatePresence>
+        {isCreateModalOpen && (
+          <div className="fixed inset-0 flex items-center justify-center z-[100] p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsCreateModalOpen(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-zinc-900 rounded-[32px] w-full max-w-md p-8 shadow-2xl relative z-10"
+            >
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-6">Create New Role</h3>
+              <form onSubmit={handleCreateRole} className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Role Name</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={roleForm.name}
+                    onChange={e => setRoleForm({...roleForm, name: e.target.value})}
+                    className="vintsy-input w-full"
+                    placeholder="e.g. Regional Manager"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Description</label>
+                  <textarea 
+                    required
+                    value={roleForm.description}
+                    onChange={e => setRoleForm({...roleForm, description: e.target.value})}
+                    className="vintsy-input w-full min-h-[100px]"
+                    placeholder="Describe the responsibilities of this role..."
+                  />
+                </div>
+                <div className="flex gap-4 pt-4">
+                  <button 
+                    type="button"
+                    onClick={() => setIsCreateModalOpen(false)}
+                    className="flex-1 px-6 py-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-[10px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 px-6 py-3 rounded-2xl bg-violet-600 text-white text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-violet-600/20"
+                  >
+                    Create Role
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Role Editor Slide-over */}
       <AnimatePresence>
         {isEditorOpen && selectedRole && (
@@ -174,66 +298,129 @@ export const RoleManagement: React.FC = () => {
                     <Shield size={24} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">Role Editor: {selectedRole.name}</h3>
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">
+                      {isEditingRole ? 'Edit Role Details' : `Role Editor: ${selectedRole.name}`}
+                    </h3>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Configure granular permissions for this role</p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setIsEditorOpen(false)}
-                  className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-400 transition-colors"
-                >
-                  <X size={24} />
-                </button>
+                <div className="flex items-center gap-2">
+                  {!selectedRole.is_locked && !isEditingRole && (
+                    <>
+                      <button 
+                        onClick={() => setIsEditingRole(true)}
+                        className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-violet-600 transition-colors"
+                        title="Edit Role Name/Description"
+                      >
+                        <Edit size={20} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteRole(selectedRole.id)}
+                        className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-red-600 transition-colors"
+                        title="Delete Role"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </>
+                  )}
+                  <button 
+                    onClick={() => setIsEditorOpen(false)}
+                    className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-400 transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
               </div>
 
               {/* Content */}
               <div className="flex-1 overflow-y-auto p-8 space-y-8">
-                {selectedRole.is_locked && (
-                  <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-2xl flex items-center gap-4">
-                    <AlertTriangle className="text-amber-600" size={20} />
-                    <p className="text-xs font-bold text-amber-900 dark:text-amber-400 uppercase tracking-widest">
-                      This role is locked for governance compliance. Permissions cannot be modified.
-                    </p>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 gap-8">
-                  {modules.map(module => (
-                    <div key={module} className="vintsy-card p-6 space-y-6">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-900 dark:text-white flex items-center gap-2">
-                          <Database size={16} className="text-violet-500" />
-                          {(module as string).replace('_', ' ')} Module
-                        </h4>
-                        <div className="h-px flex-1 mx-6 bg-zinc-100 dark:bg-zinc-800" />
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {permissions.filter(p => p.module === module).map(perm => {
-                          const isGranted = rolePermissions.some(rp => rp.role_id === selectedRole.id && rp.permission_id === perm.id);
-                          return (
-                            <button
-                              key={perm.id}
-                              disabled={selectedRole.is_locked}
-                              onClick={() => handleTogglePermission(selectedRole.id, perm.id, isGranted)}
-                              className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                                isGranted 
-                                  ? 'bg-violet-50 dark:bg-violet-900/10 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-400' 
-                                  : 'bg-zinc-50 dark:bg-zinc-800/50 border-zinc-100 dark:border-zinc-800 text-zinc-400'
-                              } ${selectedRole.is_locked ? 'cursor-not-allowed opacity-80' : 'hover:scale-[1.02] active:scale-[0.98]'}`}
-                            >
-                              <div className="flex items-center gap-3">
-                                {isGranted ? <CheckSquare size={18} /> : <Square size={18} />}
-                                <span className="text-[10px] font-bold uppercase tracking-widest">{perm.action}</span>
-                              </div>
-                              {isGranted && <Check size={14} />}
-                            </button>
-                          );
-                        })}
-                      </div>
+                {isEditingRole ? (
+                  <form onSubmit={handleUpdateRole} className="space-y-6 max-w-md">
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Role Name</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={roleForm.name}
+                        onChange={e => setRoleForm({...roleForm, name: e.target.value})}
+                        className="vintsy-input w-full"
+                      />
                     </div>
-                  ))}
-                </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Description</label>
+                      <textarea 
+                        required
+                        value={roleForm.description}
+                        onChange={e => setRoleForm({...roleForm, description: e.target.value})}
+                        className="vintsy-input w-full min-h-[100px]"
+                      />
+                    </div>
+                    <div className="flex gap-4">
+                      <button 
+                        type="button"
+                        onClick={() => setIsEditingRole(false)}
+                        className="flex-1 px-6 py-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-[10px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        type="submit"
+                        className="flex-1 px-6 py-3 rounded-2xl bg-violet-600 text-white text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-violet-600/20"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    {selectedRole.is_locked && (
+                      <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-2xl flex items-center gap-4">
+                        <AlertTriangle className="text-amber-600" size={20} />
+                        <p className="text-xs font-bold text-amber-900 dark:text-amber-400 uppercase tracking-widest">
+                          This role is locked for governance compliance. Permissions cannot be modified.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-8">
+                      {modules.map(module => (
+                        <div key={module} className="vintsy-card p-6 space-y-6">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-900 dark:text-white flex items-center gap-2">
+                              <Database size={16} className="text-violet-500" />
+                              {(module as string).replace('_', ' ')} Module
+                            </h4>
+                            <div className="h-px flex-1 mx-6 bg-zinc-100 dark:bg-zinc-800" />
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {permissions.filter(p => p.module === module).map(perm => {
+                              const isGranted = rolePermissions.some(rp => rp.role_id === selectedRole.id && rp.permission_id === perm.id);
+                              return (
+                                <button
+                                  key={perm.id}
+                                  disabled={selectedRole.is_locked}
+                                  onClick={() => handleTogglePermission(selectedRole.id, perm.id, isGranted)}
+                                  className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                                    isGranted 
+                                      ? 'bg-violet-50 dark:bg-violet-900/10 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-400' 
+                                      : 'bg-zinc-50 dark:bg-zinc-800/50 border-zinc-100 dark:border-zinc-800 text-zinc-400'
+                                  } ${selectedRole.is_locked ? 'cursor-not-allowed opacity-80' : 'hover:scale-[1.02] active:scale-[0.98]'}`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    {isGranted ? <CheckSquare size={18} /> : <Square size={18} />}
+                                    <span className="text-[10px] font-bold uppercase tracking-widest">{perm.action}</span>
+                                  </div>
+                                  {isGranted && <Check size={14} />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Footer */}
@@ -244,11 +431,6 @@ export const RoleManagement: React.FC = () => {
                 >
                   Close Editor
                 </button>
-                {!selectedRole.is_locked && (
-                  <button className="px-8 py-3 rounded-2xl bg-violet-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-violet-700 transition-all shadow-lg shadow-violet-600/20">
-                    Save Changes
-                  </button>
-                )}
               </div>
             </motion.div>
           </>

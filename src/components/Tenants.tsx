@@ -1,17 +1,21 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Mail, Phone, Calendar, Search, Filter, ChevronRight, Plus, X, ArrowUpDown, Building2, Wrench, DollarSign, FileText, Printer, User } from 'lucide-react';
+import { Mail, Phone, Calendar, Search, Filter, ChevronRight, Plus, X, ArrowUpDown, Building2, Wrench, DollarSign, FileText, Printer, User, LogOut, MessageSquare, Send } from 'lucide-react';
 import { api } from '../services/api';
 import { Tenant, Unit } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 export const Tenants: React.FC = () => {
+  const { user } = useAuth();
+  const { addToast } = useToast();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
   const [tenantDetails, setTenantDetails] = useState<Tenant | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'lease' | 'transactions' | 'maintenance' | 'documents'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'lease' | 'transactions' | 'maintenance' | 'documents' | 'messages'>('overview');
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [notes, setNotes] = useState('');
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -20,7 +24,11 @@ export const Tenants: React.FC = () => {
   const [showRenewalModal, setShowRenewalModal] = useState(false);
   const [renewalDate, setRenewalDate] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [documentForm, setDocumentForm] = useState({ name: '', url: '', type: 'ID' });
+  const [documentForm, setDocumentForm] = useState({ name: '', type: 'ID' });
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [messageText, setMessageText] = useState('');
+  const [messages, setMessages] = useState<any[]>([]);
   
   // Filters and Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,9 +50,10 @@ export const Tenants: React.FC = () => {
     dob: '',
     id_type: 'National ID',
     id_number: '',
-    id_expiry: '',
+    id_expiry_date: '',
     emergency_contact_name: '',
-    emergency_contact_phone: ''
+    emergency_contact_phone: '',
+    emergency_contact_relation: ''
   });
 
   const loadData = async () => {
@@ -71,30 +80,82 @@ export const Tenants: React.FC = () => {
           dob: data.dob || '',
           id_type: data.id_type || 'National ID',
           id_number: data.id_number || '',
-          id_expiry: data.id_expiry || '',
+          id_expiry_date: data.id_expiry_date || '',
           emergency_contact_name: data.emergency_contact_name || '',
-          emergency_contact_phone: data.emergency_contact_phone || ''
+          emergency_contact_phone: data.emergency_contact_phone || '',
+          emergency_contact_relation: data.emergency_contact_relation || ''
         });
+      });
+      
+      // Load messages
+      api.getMessages().then(allMessages => {
+        const tenantMessages = allMessages.filter(m => 
+          (m.sender_id === selectedTenantId.toString() && m.sender_type === 'Tenant') || 
+          (m.receiver_id === selectedTenantId.toString() && m.receiver_type === 'Tenant')
+        ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        setMessages(tenantMessages);
       });
     } else {
       setTenantDetails(null);
+      setMessages([]);
     }
   }, [selectedTenantId]);
 
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!messageText.trim() || !tenantDetails || !user) return;
+
+    try {
+      await api.sendMessage({
+        sender_id: user.id,
+        sender_type: 'User',
+        receiver_id: tenantDetails.id.toString(),
+        receiver_type: 'Tenant',
+        content: messageText,
+        read: false
+      });
+      setMessageText('');
+      // Reload messages
+      const allMessages = await api.getMessages();
+      const tenantMessages = allMessages.filter(m => 
+        (m.sender_id === tenantDetails.id.toString() && m.sender_type === 'Tenant') || 
+        (m.receiver_id === tenantDetails.id.toString() && m.receiver_type === 'Tenant')
+      ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      setMessages(tenantMessages);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      addToast('Failed to send message', 'error');
+    }
+  };
+
   const handleAddTenant = async (e: React.FormEvent) => {
     e.preventDefault();
-    await api.createTenant(tenantForm);
-    setShowAddModal(false);
-    setTenantForm({
-      first_name: '',
-      last_name: '',
-      email: '',
-      phone: '',
-      unit_id: 0,
-      lease_start: new Date().toISOString().split('T')[0],
-      lease_end: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
-    });
-    loadData();
+    try {
+      await api.createTenant({ ...tenantForm, admin_id: user?.id });
+      setShowAddModal(false);
+      setTenantForm({
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        unit_id: 0,
+        lease_start: new Date().toISOString().split('T')[0],
+        lease_end: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+        nationality: '',
+        dob: '',
+        id_type: 'National ID',
+        id_number: '',
+        id_expiry_date: '',
+        emergency_contact_name: '',
+        emergency_contact_phone: '',
+        emergency_contact_relation: ''
+      });
+      loadData();
+      addToast('Tenant added successfully', 'success');
+    } catch (error) {
+      console.error('Failed to add tenant:', error);
+      addToast('Failed to add tenant. Please check your connection and permissions.', 'error');
+    }
   };
 
   const uniqueProperties = Array.from(new Set(tenants.map(t => t.property_name).filter(Boolean)));
@@ -113,7 +174,9 @@ export const Tenants: React.FC = () => {
       const query = searchQuery.toLowerCase();
       result = result.filter(t => 
         `${t.first_name} ${t.last_name}`.toLowerCase().includes(query) ||
-        t.email.toLowerCase().includes(query)
+        t.email.toLowerCase().includes(query) ||
+        t.unit_number?.toString().toLowerCase().includes(query) ||
+        getTenantStatus(t).toLowerCase().includes(query)
       );
     }
 
@@ -160,39 +223,62 @@ export const Tenants: React.FC = () => {
 
   const handleSaveNotes = async () => {
     if (!selectedTenantId) return;
-    await api.updateTenant(selectedTenantId, { notes });
+    await api.updateTenant(selectedTenantId, { notes, admin_id: user?.id });
     setIsEditingNotes(false);
     api.getTenant(selectedTenantId).then(setTenantDetails);
+    addToast('Notes saved successfully', 'success');
   };
 
   const handleSavePersonal = async () => {
     if (!selectedTenantId) return;
-    await api.updateTenant(selectedTenantId, personalForm);
+    await api.updateTenant(selectedTenantId, { ...personalForm, admin_id: user?.id });
     setIsEditingPersonal(false);
     api.getTenant(selectedTenantId).then(setTenantDetails);
+    addToast('Personal details updated successfully', 'success');
   };
 
   const handleToggleReminders = async () => {
     if (!selectedTenantId || !tenantDetails) return;
     const newValue = !tenantDetails.auto_rent_reminders;
-    await api.updateTenant(selectedTenantId, { auto_rent_reminders: newValue });
+    await api.updateTenant(selectedTenantId, { auto_rent_reminders: newValue, admin_id: user?.id });
     api.getTenant(selectedTenantId).then(setTenantDetails);
+    addToast(`Auto-reminders ${newValue ? 'enabled' : 'disabled'}`, 'success');
   };
 
   const handleRenewLease = async () => {
     if (!selectedTenantId || !renewalDate) return;
-    await api.updateTenant(selectedTenantId, { lease_end: renewalDate });
+    await api.updateTenant(selectedTenantId, { lease_end: renewalDate, admin_id: user?.id });
     setShowRenewalModal(false);
     api.getTenant(selectedTenantId).then(setTenantDetails);
+    addToast('Lease renewed successfully', 'success');
+  };
+
+  const handleMoveOut = async () => {
+    if (!selectedTenantId || !window.confirm('Are you sure you want to move out this tenant? This will end their lease today and mark the unit as vacant.')) return;
+    await api.moveOutTenant(selectedTenantId, user?.id);
+    api.getTenant(selectedTenantId).then(setTenantDetails);
+    loadData(); // Refresh list to update status
+    addToast('Tenant moved out successfully', 'success');
   };
 
   const handleUploadDocument = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTenantId) return;
-    await api.uploadTenantDocument(selectedTenantId, documentForm);
-    setShowUploadModal(false);
-    setDocumentForm({ name: '', url: '', type: 'ID' });
-    api.getTenant(selectedTenantId).then(setTenantDetails);
+    if (!selectedTenantId || !documentFile) return;
+    
+    try {
+      setUploading(true);
+      await api.uploadTenantDocument(selectedTenantId, documentFile, documentForm);
+      setShowUploadModal(false);
+      setDocumentForm({ name: '', type: 'ID' });
+      setDocumentFile(null);
+      api.getTenant(selectedTenantId).then(setTenantDetails);
+      addToast('Document uploaded successfully', 'success');
+    } catch (error) {
+      console.error('Upload error:', error);
+      addToast('Failed to upload document', 'error');
+    } finally {
+      setUploading(false);
+    }
   };
 
   if (selectedTenantId && tenantDetails) {
@@ -202,6 +288,7 @@ export const Tenants: React.FC = () => {
       { id: 'transactions', label: 'Transaction History', icon: <DollarSign size={16} /> },
       { id: 'maintenance', label: 'Tenant Requests', icon: <Wrench size={16} /> },
       { id: 'documents', label: 'Documents', icon: <FileText size={16} /> },
+      { id: 'messages', label: 'Messages', icon: <MessageSquare size={16} /> },
     ];
 
     return (
@@ -228,7 +315,7 @@ export const Tenants: React.FC = () => {
         <div className="vintsy-card p-8 mb-8">
           <div className="flex flex-col md:flex-row items-center gap-8">
             <div className="w-24 h-24 rounded-2xl bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 flex items-center justify-center font-bold text-3xl border-4 border-white dark:border-zinc-900 shadow-xl">
-              {tenantDetails.first_name[0]}{tenantDetails.last_name[0]}
+              {tenantDetails.first_name?.[0]}{tenantDetails.last_name?.[0]}
             </div>
             <div className="text-center md:text-left flex-1">
               <div className="flex flex-wrap items-center gap-3 mb-2 justify-center md:justify-start">
@@ -348,8 +435,8 @@ export const Tenants: React.FC = () => {
                         <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">ID Expiry</label>
                         <input 
                           type="date" 
-                          value={personalForm.id_expiry}
-                          onChange={e => setPersonalForm({...personalForm, id_expiry: e.target.value})}
+                          value={personalForm.id_expiry_date}
+                          onChange={e => setPersonalForm({...personalForm, id_expiry_date: e.target.value})}
                           className="vintsy-input w-full"
                         />
                       </div>
@@ -381,7 +468,7 @@ export const Tenants: React.FC = () => {
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">ID Expiry Date</p>
-                          <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.id_expiry ? new Date(tenantDetails.id_expiry).toLocaleDateString() : 'Not specified'}</p>
+                          <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.id_expiry_date ? new Date(tenantDetails.id_expiry_date).toLocaleDateString() : 'Not specified'}</p>
                         </div>
                       </div>
                     </div>
@@ -438,12 +525,21 @@ export const Tenants: React.FC = () => {
                       <Building2 size={16} />
                       Lease Information
                     </h3>
-                    <button 
-                      onClick={() => setShowRenewalModal(true)}
-                      className="vintsy-button-primary text-[10px] uppercase tracking-widest"
-                    >
-                      Renew Lease
-                    </button>
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={handleMoveOut}
+                        className="px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-[10px] uppercase tracking-widest font-bold flex items-center gap-2"
+                      >
+                        <LogOut size={14} />
+                        Move Out
+                      </button>
+                      <button 
+                        onClick={() => setShowRenewalModal(true)}
+                        className="vintsy-button-primary text-[10px] uppercase tracking-widest"
+                      >
+                        Renew Lease
+                      </button>
+                    </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div className="space-y-6">
@@ -597,6 +693,60 @@ export const Tenants: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {activeTab === 'messages' && (
+              <div className="vintsy-card p-8 flex flex-col h-[600px]">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8 flex items-center gap-2">
+                  <MessageSquare size={16} />
+                  Direct Messages
+                </h3>
+                
+                <div className="flex-1 overflow-y-auto space-y-4 mb-6 pr-2">
+                  {messages.length === 0 ? (
+                    <div className="h-full flex items-center justify-center text-zinc-500 text-sm italic">
+                      No messages yet. Start the conversation below.
+                    </div>
+                  ) : (
+                    messages.map((msg, idx) => {
+                      const isManager = msg.sender_type === 'User' || msg.sender_type === 'System';
+                      return (
+                        <div key={idx} className={`flex ${isManager ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[80%] p-4 rounded-2xl ${
+                            isManager 
+                              ? 'bg-violet-600 text-white rounded-tr-sm' 
+                              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-tl-sm'
+                          }`}>
+                            <p className="text-sm">{msg.content}</p>
+                            <p className={`text-[9px] font-bold uppercase tracking-widest mt-2 ${
+                              isManager ? 'text-violet-200' : 'text-zinc-400'
+                            }`}>
+                              {new Date(msg.timestamp).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+                
+                <form onSubmit={handleSendMessage} className="flex gap-3">
+                  <input 
+                    type="text" 
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    placeholder="Type your message..."
+                    className="vintsy-input flex-1"
+                  />
+                  <button 
+                    type="submit"
+                    disabled={!messageText.trim()}
+                    className="vintsy-button-primary flex items-center justify-center w-12 h-12 rounded-xl disabled:opacity-50"
+                  >
+                    <Send size={18} />
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
 
           <div className="lg:col-span-1 space-y-8">
@@ -669,25 +819,25 @@ export const Tenants: React.FC = () => {
                 </button>
               </div>
               
-              <div id="invoice-content" className="p-8 bg-white text-black rounded-xl border border-zinc-200 print:border-none print:p-0">
+              <div id="invoice-content" className="p-8 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-xl border border-zinc-200 dark:border-zinc-700 print:border-none print:p-0 print:bg-white print:text-black">
                 <div className="flex justify-between items-start mb-12">
                   <div>
                     <h1 className="text-4xl font-black text-violet-700 tracking-tighter uppercase">Invoice</h1>
                     <p className="text-sm text-zinc-500 mt-2 font-medium">PropPulse Management</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-zinc-900">Date: {new Date().toLocaleDateString()}</p>
+                    <p className="font-bold text-zinc-900 dark:text-white">Date: {new Date().toLocaleDateString()}</p>
                     <p className="text-zinc-500 text-sm mt-1">Invoice #: INV-{tenantDetails.id}-{new Date().getMonth() + 1}{new Date().getFullYear()}</p>
                   </div>
                 </div>
                 
                 <div className="mb-12">
                   <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4">Bill To</h3>
-                  <p className="font-bold text-lg text-zinc-900">{tenantDetails.first_name} {tenantDetails.last_name}</p>
-                  <p className="text-zinc-600 mt-1">{tenantDetails.property_name}, Unit {tenantDetails.unit_number}</p>
-                  <p className="text-zinc-600">{tenantDetails.property_address}</p>
-                  <p className="text-zinc-600 mt-2">{tenantDetails.email}</p>
-                  <p className="text-zinc-600">{tenantDetails.phone}</p>
+                  <p className="font-bold text-lg text-zinc-900 dark:text-white">{tenantDetails.first_name} {tenantDetails.last_name}</p>
+                  <p className="text-zinc-600 dark:text-zinc-400 mt-1">{tenantDetails.property_name}, Unit {tenantDetails.unit_number}</p>
+                  <p className="text-zinc-600 dark:text-zinc-400">{tenantDetails.property_address}</p>
+                  <p className="text-zinc-600 dark:text-zinc-400 mt-2">{tenantDetails.email}</p>
+                  <p className="text-zinc-600 dark:text-zinc-400">{tenantDetails.phone}</p>
                 </div>
                 
                 <table className="w-full mb-12 text-left border-collapse">
@@ -699,15 +849,15 @@ export const Tenants: React.FC = () => {
                   </thead>
                   <tbody>
                     <tr className="border-b border-zinc-200">
-                      <td className="py-6 text-zinc-900 font-medium">Monthly Rent - {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}</td>
-                      <td className="py-6 text-right text-zinc-900 font-bold">${tenantDetails.rent_amount?.toLocaleString()}</td>
+                      <td className="py-6 text-zinc-900 dark:text-white font-medium">Monthly Rent - {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}</td>
+                      <td className="py-6 text-right text-zinc-900 dark:text-white font-bold">${tenantDetails.rent_amount?.toLocaleString()}</td>
                     </tr>
                   </tbody>
                 </table>
                 
                 <div className="flex justify-end">
                   <div className="w-1/2">
-                    <div className="flex justify-between font-black text-2xl border-t-2 border-zinc-800 pt-4 text-zinc-900">
+                    <div className="flex justify-between font-black text-2xl border-t-2 border-zinc-800 pt-4 text-zinc-900 dark:text-white">
                       <span>Total Due</span>
                       <span>${tenantDetails.rent_amount?.toLocaleString()}</span>
                     </div>
@@ -764,7 +914,7 @@ export const Tenants: React.FC = () => {
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
               <input 
                 type="text" 
-                placeholder="Search by name or email..." 
+                placeholder="Search by name, email, unit, or status..." 
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="vintsy-input w-full pl-10"
@@ -853,7 +1003,7 @@ export const Tenants: React.FC = () => {
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-xl bg-violet-700 dark:bg-violet-900/40 text-white dark:text-violet-400 flex items-center justify-center font-bold text-xs border border-violet-800 dark:border-violet-800 shadow-md">
-                        {tenant.first_name[0]}{tenant.last_name[0]}
+                        {tenant.first_name?.[0]}{tenant.last_name?.[0]}
                       </div>
                       <div>
                         <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenant.first_name} {tenant.last_name}</p>
@@ -903,6 +1053,64 @@ export const Tenants: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-violet-100 dark:border-zinc-800"
+          >
+            <div className="p-6 border-b border-violet-50 dark:border-zinc-800 flex justify-between items-center bg-violet-50/50 dark:bg-zinc-900/50">
+              <h2 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                <FileText size={20} className="text-violet-600" />
+                Upload Document
+              </h2>
+              <button onClick={() => setShowUploadModal(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleUploadDocument} className="p-6 space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Document Name</label>
+                <input 
+                  type="text" 
+                  required
+                  value={documentForm.name}
+                  onChange={e => setDocumentForm({...documentForm, name: e.target.value})}
+                  className="vintsy-input w-full"
+                  placeholder="e.g. Passport Copy"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Document Type</label>
+                <select 
+                  value={documentForm.type}
+                  onChange={e => setDocumentForm({...documentForm, type: e.target.value})}
+                  className="vintsy-input w-full appearance-none"
+                >
+                  <option value="ID">Identification</option>
+                  <option value="Lease">Lease Agreement</option>
+                  <option value="Income">Proof of Income</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Document File</label>
+                <input 
+                  type="file" 
+                  required
+                  onChange={e => setDocumentFile(e.target.files?.[0] || null)}
+                  className="vintsy-input w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                />
+              </div>
+              <button type="submit" disabled={uploading} className="w-full vintsy-button-primary py-3 mt-6 disabled:opacity-50">
+                {uploading ? 'Uploading...' : 'Upload Document'}
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -1044,6 +1252,15 @@ export const Tenants: React.FC = () => {
                       className="vintsy-input w-full"
                     />
                   </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">ID Expiry</label>
+                    <input 
+                      type="date" 
+                      value={tenantForm.id_expiry_date}
+                      onChange={e => setTenantForm({...tenantForm, id_expiry_date: e.target.value})}
+                      className="vintsy-input w-full"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -1066,6 +1283,16 @@ export const Tenants: React.FC = () => {
                       value={tenantForm.emergency_contact_phone}
                       onChange={e => setTenantForm({...tenantForm, emergency_contact_phone: e.target.value})}
                       className="vintsy-input w-full"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Relationship</label>
+                    <input 
+                      type="text" 
+                      value={tenantForm.emergency_contact_relation}
+                      onChange={e => setTenantForm({...tenantForm, emergency_contact_relation: e.target.value})}
+                      className="vintsy-input w-full"
+                      placeholder="e.g. Spouse, Parent, Sibling"
                     />
                   </div>
                 </div>

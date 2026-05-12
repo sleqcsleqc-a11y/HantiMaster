@@ -23,12 +23,12 @@ import {
   Line
 } from 'recharts';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 import { api } from '../services/api';
 import { FinanceStats } from '../types';
 
 export const Finance: React.FC = () => {
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [stats, setStats] = useState<FinanceStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -43,14 +43,14 @@ export const Finance: React.FC = () => {
 
   useEffect(() => {
     if (hasPermission('FINANCE', 'view')) {
-      api.getFinanceStats().then(data => {
+      api.getFinanceStats(user?.id).then(data => {
         setStats(data);
         setLoading(false);
       });
     } else {
       setLoading(false);
     }
-  }, [hasPermission]);
+  }, [hasPermission, user]);
 
   if (!hasPermission('FINANCE', 'view')) {
     return (

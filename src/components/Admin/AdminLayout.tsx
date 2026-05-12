@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Shield, 
@@ -34,26 +34,39 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeModule
   const { user, logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  const menuItems = [
-    { section: 'Overview', items: [
-      { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard },
-    ]},
-    { section: 'User Governance', items: [
-      { id: 'users', label: 'All Users', icon: Users },
-      { id: 'roles', label: 'Role Management', icon: Shield },
-      { id: 'matrix', label: 'Permission Matrix', icon: Database },
-    ]},
-    { section: 'Requests', items: [
-      { id: 'requests', label: 'Permission Requests', icon: Key },
-    ]},
-    { section: 'Security', items: [
-      { id: 'alerts', label: 'Security Alerts', icon: ShieldAlert },
-      { id: 'audit', label: 'Audit Logs', icon: History },
-    ]},
-    { section: 'System Rules', items: [
-      { id: 'rules', label: 'System Rules', icon: Settings },
-    ]}
-  ];
+  const menuItems = useMemo(() => {
+    const isSystemAdmin = user?.role_name === 'System Administrator';
+    
+    const sections = [
+      { section: 'Overview', items: [
+        { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard },
+      ]},
+      { section: 'User Governance', items: [
+        { id: 'users', label: 'All Users', icon: Users },
+        ...(isSystemAdmin ? [
+          { id: 'roles', label: 'Role Management', icon: Shield },
+          { id: 'matrix', label: 'Permission Matrix', icon: Database },
+        ] : []),
+      ]},
+      { section: 'Requests', items: [
+        { id: 'requests', label: 'Permission Requests', icon: Key },
+      ]},
+    ];
+
+    if (isSystemAdmin) {
+      sections.push(
+        { section: 'Security', items: [
+          { id: 'alerts', label: 'Security Alerts', icon: ShieldAlert },
+          { id: 'audit', label: 'Audit Logs', icon: History },
+        ]},
+        { section: 'System Rules', items: [
+          { id: 'rules', label: 'System Rules', icon: Settings },
+        ]}
+      );
+    }
+
+    return sections;
+  }, [user?.role_name]);
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex">
@@ -61,7 +74,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeModule
       <motion.aside 
         initial={false}
         animate={{ width: isSidebarOpen ? 280 : 80 }}
-        className="bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col sticky top-0 h-screen z-50"
+        className="bg-white dark:bg-zinc-900/80 backdrop-blur-xl border-r border-zinc-200 dark:border-zinc-800 flex flex-col sticky top-0 h-screen z-50"
       >
         <div className="p-6 flex items-center justify-between">
           <AnimatePresence mode="wait">
