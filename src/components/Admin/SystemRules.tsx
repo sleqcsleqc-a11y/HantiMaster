@@ -28,7 +28,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { Role } from '../../types';
 
 export const SystemRules: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logActivity } = useAuth();
   const { addToast } = useToast();
   const [rules, setRules] = useState<any>(null);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -72,6 +72,7 @@ export const SystemRules: React.FC = () => {
         role_b_id: parseInt(newRule.role_b_id),
         admin_id: user?.id
       });
+      await logActivity(`Created ${newRule.type} rule`, 'SystemRule', 0, `${newRule.role_a_id} -> ${newRule.role_b_id}`);
       setNewRule({ type: 'Inheritance', role_a_id: '', role_b_id: '', description: '' });
       loadData();
       addToast('Rule added successfully', 'success');
@@ -84,6 +85,7 @@ export const SystemRules: React.FC = () => {
   const handleDeleteRule = async (id: number) => {
     try {
       await api.deleteHierarchyRule(id, user?.id || '');
+      await logActivity('Deleted security rule', 'SystemRule', id);
       loadData();
       addToast('Rule deleted successfully', 'success');
     } catch (error) {

@@ -611,12 +611,41 @@ export const api = {
 
   // Governance
   getGovernanceStats: async () => {
+    const { count: totalUsers } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+    const { count: activeRoles } = await supabase.from('roles').select('*', { count: 'exact', head: true });
+    const { count: pendingRequests } = await supabase.from('permission_requests').select('*', { count: 'exact', head: true }).eq('status', 'Pending');
+    
+    const { data: profiles } = await supabase.from('profiles').select('status, roles(name)');
+    const suspendedCount = profiles?.filter(p => p.status === 'Suspended').length || 0;
+    
+    const distribution: Record<string, number> = {};
+    profiles?.forEach(p => {
+      const roleName = p.roles?.name || 'Unknown';
+      distribution[roleName] = (distribution[roleName] || 0) + 1;
+    });
+
     return {
-      totalUsers: 0,
-      activeRoles: 0,
-      pendingRequests: 0,
-      securityAlerts: 0
+      total_users: totalUsers,
+      active_roles: activeRoles,
+      pending_requests: pendingRequests,
+      suspended_users: suspendedCount,
+      role_distribution: Object.entries(distribution).map(([role, count]) => ({ role, count }))
     };
+  },
+  bulkUpdateUserStatus: async (userIds: string[], status: string, adminId?: string) => {
+    const { error } = await supabase.from('profiles').update({ status }).in('id', userIds);
+    if (error) throw error;
+    
+    if (adminId) {
+      await supabase.from('audit_logs').insert(userIds.map(id => ({
+        user_id: adminId,
+        action: `Bulk update status to ${status}`,
+        entity_type: 'User',
+        entity_id: 0,
+        details: `Updated user profile ${id}`
+      })));
+    }
+    return { success: true };
   },
   getGovernanceUsers: async () => {
     const { data, error } = await supabase.from('profiles').select('*, roles(name)');
@@ -664,15 +693,45 @@ export const api = {
 
     return { id: authData.user.id };
   },
-  getGovernanceUserDetails: async (id: string) => {
-    const { data, error } = await supabase.from('profiles').select('*, roles(name)').eq('id', id).single();
-    if (error) throw error;
-    return { ...data, role_name: data.roles?.name };
-  },
   updateGovernanceUser: async (id: string, data: any, adminId?: string) => {
-    const { admin_id, ...updateData } = data;
-    const { error } = await supabase.from('profiles').update(updateData).eq('id', id);
+    const { error } = await supabase.from('profiles').update(data).eq('id', id);
     if (error) throw error;
+    
+    if (adminId) {
+      await supabase.from('audit_logs').insert({
+        user_id: adminId,
+        action: 'Updated user governance',
+        entity_type: 'User',
+        entity_id: 0,
+        details: `Updated user profile ${id}`
+      });
+    }
+    return { success: true };
+  },
+  getGovernanceUserDetails: async (id: string) => {
+    const [{ data: user, error: userError }, { data: overrides }, { data: activity }] = await Promise.all([
+      supabase.from('profiles').select('*, roles(name)').eq('id', id).single(),
+      supabase.from('permission_overrides').select('*').eq('user_id', id),
+      supabase.from('audit_logs').select('*').eq('user_id', id).order('timestamp', { ascending: false }).limit(5)
+    ]);
+    
+    if (userError) throw userError;
+    return { ...user, role_name: user.roles?.name, overrides: overrides || [], activity: activity || [] };
+  },
+  // Permission Overrides
+  updatePermissionOverride: async (userId: string, module: string, action: string, type: 'Grant' | 'Deny' | 'Inherit') => {
+    if (type === 'Inherit') {
+      const { error } = await supabase.from('permission_overrides').delete().match({ user_id: userId, module, action });
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from('permission_overrides').upsert({
+        user_id: userId,
+        module,
+        action,
+        override_type: type
+      });
+      if (error) throw error;
+    }
     return { success: true };
   },
   getPermissionRequests: async () => {
@@ -712,12 +771,46 @@ export const api = {
     return { roles: roles || [], permissions: permissions || [], rolePermissions };
   },
   getSecurityAlerts: async () => {
-    return [];
+    // In a real system, these would come from a security scanner or log analyzer
+    // For this demo, we'll return some mock alerts based on audit logs
+    const { data: profiles } = await supabase.from('profiles').select('email, status').eq('status', 'Locked');
+    const alerts = profiles?.map(p => ({
+      id: Math.random(),
+      type: 'Account Locked',
+      risk: 'High',
+      description: `Account for ${p.email} has been locked due to repeated failed login attempts.`,
+      user: p.email,
+      timestamp: new Date().toISOString()
+    })) || [];
+    
+    // Add some static mock alerts for variety
+    alerts.push({
+      id: 99,
+      type: 'Privilege Escalation',
+      risk: 'Critical',
+      description: 'Unauthorized attempt to modify role permissions detected.',
+      user: 'Sarah M.',
+      timestamp: new Date(Date.now() - 3600000).toISOString()
+    });
+
+    return alerts;
   },
   getSystemRules: async () => {
-    const { data, error } = await supabase.from('role_hierarchy_rules').select('*');
-    if (error) throw error;
-    return { hierarchyRules: data };
+    const { data: hierarchy } = await supabase.from('role_hierarchy').select(`*, role_a:role_a_id(name), role_b:role_b_id(name)`);
+    return {
+      password_policy: { min_length: 12, complexity: 'High', rotation_days: 90 },
+      mfa_settings: { enforced_roles: ['System Administrator', 'HR Manager', 'Accountant'], optional_roles: ['Property Manager', 'Leasing Agent'] },
+      session_settings: { timeout_minutes: 30, auto_logout: true },
+      hierarchy_rules: hierarchy?.map(h => ({
+        id: h.id,
+        type: h.type,
+        role_a_id: h.role_a_id,
+        role_a_name: h.role_a?.name,
+        role_b_id: h.role_b_id,
+        role_b_name: h.role_b?.name,
+        description: h.description
+      })) || []
+    };
   },
   createHierarchyRule: async (data: any) => {
     const { error } = await supabase.from('role_hierarchy_rules').insert(data);

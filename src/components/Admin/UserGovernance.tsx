@@ -27,7 +27,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { User, Role } from '../../types';
 
 export const UserGovernance: React.FC = () => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, logActivity } = useAuth();
   const { addToast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -49,6 +49,9 @@ export const UserGovernance: React.FC = () => {
     role_id: 0,
     property_scope: 'Assigned' as 'Global' | 'Assigned'
   });
+  
+  // Bulk Selection
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
 
   const loadData = async () => {
     setLoading(true);
@@ -72,11 +75,31 @@ export const UserGovernance: React.FC = () => {
 
   const handleUserStatus = async (userId: string, status: string) => {
     await api.updateGovernanceUser(userId, { status }, currentUser?.id);
+    await logActivity(`Update user status to ${status}`, 'User', userId);
     loadData();
     if (selectedUser?.id === userId) {
       setSelectedUser(prev => prev ? { ...prev, status } : null);
     }
-    addToast(`User status updated to ${status}`, 'success');
+    addToast('User status updated to ' + status, 'success');
+  };
+
+  const handleBulkStatusUpdate = async (status: string) => {
+    if (selectedUserIds.length === 0) return;
+    try {
+      await api.bulkUpdateUserStatus(selectedUserIds, status, currentUser?.id);
+      loadData();
+      setSelectedUserIds([]);
+      addToast(`Updated ${selectedUserIds.length} users to ${status}`, 'success');
+    } catch (error) {
+      console.error("Bulk update failed", error);
+      addToast("Failed to perform bulk update", "error");
+    }
+  };
+
+  const toggleUserSelection = (id: string) => {
+    setSelectedUserIds(prev => 
+      prev.includes(id) ? prev.filter(uid => uid !== id) : [...prev, id]
+    );
   };
 
   const handleSelectUser = async (user: User) => {
@@ -96,6 +119,7 @@ export const UserGovernance: React.FC = () => {
     if (!selectedUser) return;
     try {
       await api.updateGovernanceUser(selectedUser.id, editForm, currentUser?.id);
+      await logActivity('Modified user profile', 'User', selectedUser.id, `Status: ${editForm.status}, Role ID: ${editForm.role_id}`);
       setIsEditing(false);
       loadData();
       const details = await api.getGovernanceUserDetails(selectedUser.id);
@@ -104,6 +128,19 @@ export const UserGovernance: React.FC = () => {
     } catch (error) {
       console.error("Failed to update user", error);
       addToast('Failed to update user', 'error');
+    }
+  };
+
+  const handleUpdateOverride = async (module: string, action: string, type: any) => {
+    if (!selectedUser) return;
+    try {
+      await api.updatePermissionOverride(selectedUser.id, module, action, type);
+      const details = await api.getGovernanceUserDetails(selectedUser.id);
+      setSelectedUser(details);
+      addToast(`Permission override updated to ${type}`, 'success');
+    } catch (error) {
+      console.error("Failed to update override", error);
+      addToast('Failed to update override', 'error');
     }
   };
 
@@ -169,16 +206,49 @@ export const UserGovernance: React.FC = () => {
     <div className="space-y-6">
       {/* Top Bar */}
       <div className="vintsy-card p-6 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-          <input 
-            type="text" 
-            placeholder="Search users by name, email, or role..." 
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
-          />
-        </div>
+        {selectedUserIds.length > 0 ? (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex-1 w-full bg-violet-50 dark:bg-violet-900/10 p-4 rounded-2xl border border-violet-100 dark:border-violet-800 flex items-center justify-between"
+          >
+            <div className="flex items-center gap-4">
+              <span className="text-xs font-bold text-violet-700 dark:text-violet-400">
+                {selectedUserIds.length} users selected
+              </span>
+              <div className="h-4 w-px bg-violet-200 dark:bg-violet-800" />
+              <button 
+                onClick={() => handleBulkStatusUpdate('Active')}
+                className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest hover:underline"
+              >
+                Activate All
+              </button>
+              <button 
+                onClick={() => handleBulkStatusUpdate('Suspended')}
+                className="text-[10px] font-bold text-red-600 uppercase tracking-widest hover:underline"
+              >
+                Suspend All
+              </button>
+            </div>
+            <button 
+              onClick={() => setSelectedUserIds([])}
+              className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest hover:text-zinc-600"
+            >
+              Clear
+            </button>
+          </motion.div>
+        ) : (
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+            <input 
+              type="text" 
+              placeholder="Search users by name, email, or role..." 
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
+            />
+          </div>
+        )}
         <div className="flex items-center gap-3 w-full md:w-auto">
           <select 
             value={roleFilter}
@@ -218,6 +288,17 @@ export const UserGovernance: React.FC = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-zinc-50 dark:bg-zinc-800/50 text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                <th className="px-8 py-5 w-12">
+                  <input 
+                    type="checkbox" 
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedUserIds(filteredUsers.map(u => u.id));
+                      else setSelectedUserIds([]);
+                    }}
+                    checked={selectedUserIds.length === filteredUsers.length && filteredUsers.length > 0}
+                    className="rounded border-zinc-300 text-violet-600 focus:ring-violet-500"
+                  />
+                </th>
                 <th className="px-8 py-5 cursor-pointer hover:text-violet-600 transition-colors" onClick={() => handleSort('name')}>
                   User Profile {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
@@ -237,16 +318,38 @@ export const UserGovernance: React.FC = () => {
               {filteredUsers.map(u => (
                 <tr 
                   key={u.id} 
-                  className="group hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer"
+                  className={`group hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer ${selectedUserIds.includes(u.id) ? 'bg-violet-50/50 dark:bg-violet-900/10' : ''}`}
                   onClick={() => handleSelectUser(u)}
                 >
+                  <td className="px-8 py-5" onClick={e => e.stopPropagation()}>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedUserIds.includes(u.id)}
+                      onChange={() => toggleUserSelection(u.id)}
+                      className="rounded border-zinc-300 text-violet-600 focus:ring-violet-500"
+                    />
+                  </td>
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-2xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-700 dark:text-violet-400 font-bold text-sm shadow-sm">
-                        {u.first_name?.[0]}{u.last_name?.[0]}
+                      <div className="relative">
+                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm shadow-sm ${
+                          u.role_name === 'System Administrator' 
+                            ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' 
+                            : 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400'
+                        }`}>
+                          {u.first_name?.[0]}{u.last_name?.[0]}
+                        </div>
+                        {u.role_name === 'System Administrator' && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[8px] text-zinc-900">
+                            ★
+                          </div>
+                        )}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white group-hover:text-violet-600 transition-colors">{u.first_name} {u.last_name}</p>
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white group-hover:text-violet-600 transition-colors flex items-center gap-2">
+                          {u.first_name} {u.last_name}
+                          {u.status === 'Locked' && <AlertCircle size={12} className="text-red-500" />}
+                        </p>
                         <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">{u.email}</p>
                       </div>
                     </div>
@@ -557,7 +660,41 @@ export const UserGovernance: React.FC = () => {
                   <div className="vintsy-card p-6 space-y-4">
                     <h5 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                       <Shield size={12} />
-                      Security & Access
+                      Individual Permission Overrides
+                    </h5>
+                    <div className="space-y-3">
+                      {[
+                        { module: 'FINANCE', action: 'view', label: 'Finance Access' },
+                        { module: 'USER_MANAGEMENT', action: 'view', label: 'User Admin' },
+                        { module: 'PROPERTY_MANAGEMENT', action: 'delete', label: 'Delete Properties' },
+                      ].map((perm) => {
+                        const currentOverride = selectedUser.overrides?.find((o: any) => o.module === perm.module && o.action === perm.action);
+                        return (
+                          <div key={`${perm.module}-${perm.action}`} className="flex justify-between items-center p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                            <div>
+                              <p className="text-xs font-bold text-zinc-900 dark:text-white">{perm.label}</p>
+                              <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">{perm.module}</p>
+                            </div>
+                            <select 
+                              value={currentOverride?.override_type || 'Inherit'}
+                              onChange={(e) => handleUpdateOverride(perm.module, perm.action, e.target.value)}
+                              className="px-3 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-[10px] font-bold uppercase tracking-widest focus:outline-none"
+                            >
+                              <option value="Inherit">Inherit</option>
+                              <option value="Grant">Grant</option>
+                              <option value="Deny">Deny</option>
+                            </select>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Security Status */}
+                  <div className="vintsy-card p-6 space-y-4">
+                    <h5 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                      <Lock size={12} />
+                      Security & Access Status
                     </h5>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">

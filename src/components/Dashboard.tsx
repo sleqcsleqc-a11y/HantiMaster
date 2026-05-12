@@ -10,15 +10,18 @@ import {
   ArrowDownRight,
   ChevronRight,
   Lock,
-  Building2
+  Building2,
+  Key
 } from 'lucide-react';
 import { api } from '../services/api';
 import { FinanceStats } from '../types';
+import { RequestPermissionModal } from './RequestPermissionModal';
 
 export const Dashboard: React.FC = () => {
   const { user, hasPermission } = useAuth();
   const [stats, setStats] = useState<FinanceStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
   useEffect(() => {
     if (hasPermission('FINANCE', 'view')) {
@@ -164,11 +167,20 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
           
-          <button className="w-full mt-8 vintsy-button-secondary text-xs uppercase tracking-widest">
-            Manage Service
+          <button 
+            onClick={() => setIsRequestModalOpen(true)}
+            className="w-full mt-8 vintsy-button-secondary text-xs uppercase tracking-widest flex items-center justify-center gap-2"
+          >
+            <Key size={14} />
+            Request Permission
           </button>
         </div>
       </div>
+      
+      <RequestPermissionModal 
+        isOpen={isRequestModalOpen} 
+        onClose={() => setIsRequestModalOpen(false)} 
+      />
     </div>
   );
 };

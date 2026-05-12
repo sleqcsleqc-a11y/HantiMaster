@@ -5,10 +5,14 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 interface AuthContextType {
   user: User | null;
   overrides: PermissionOverride[];
+  hierarchyRules: any[];
   loading: boolean;
   login: (credentials: any) => Promise<void>;
   signup: (credentials: any) => Promise<void>;
   logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  requestPermission: (req: Partial<PermissionRequest>) => Promise<void>;
+  logActivity: (action: string, entityType: string, entityId: string | number, details?: string) => Promise<void>;
   hasPermission: (module: string, action: string) => boolean;
   impersonate: (userId: number) => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -19,6 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [overrides, setOverrides] = useState<PermissionOverride[]>([]);
+  const [hierarchyRules, setHierarchyRules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchUserProfile = async (userId: string, email?: string, metadata?: any) => {
@@ -27,7 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('profiles')
         .select(`
           *,
-          roles (name)
+          roles (id, name)
         `)
         .eq('id', userId)
         .single();
@@ -40,6 +45,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const { data: roles } = await supabase.from('roles').select('id').eq('name', 'System Administrator').single();
           const { data: tenantRole } = await supabase.from('roles').select('id').eq('name', 'Tenant').single();
           
+          // Update: If email is admin@hantimaster.com, always promote to System Admin
+          const isHardcodedAdmin = email === 'admin@hantimaster.com';
+          
           // Check if any profiles exist to determine if this is the first user
           const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
           const isFirstUser = count === 0;
@@ -49,9 +57,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .insert({
               id: userId,
               email: email,
-              first_name: metadata?.first_name || '',
-              last_name: metadata?.last_name || '',
-              role_id: isFirstUser ? roles?.id : tenantRole?.id,
+              first_name: metadata?.first_name || (isHardcodedAdmin ? 'System' : ''),
+              last_name: metadata?.last_name || (isHardcodedAdmin ? 'Admin' : ''),
+              role_id: (isHardcodedAdmin || isFirstUser) ? roles?.id : tenantRole?.id,
               status: 'Active'
             })
             .select(`*, roles(name)`)
@@ -85,6 +93,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (profile) {
+        // Emergency promotion for admin@hantimaster.com if they are currently a Tenant
+        if (profile.email === 'admin@hantimaster.com' && profile.roles?.name !== 'System Administrator') {
+          console.log("Promoting hardcoded admin user...");
+          const { data: adminRole } = await supabase.from('roles').select('id').eq('name', 'System Administrator').single();
+          if (adminRole) {
+            await supabase.from('profiles').update({ role_id: adminRole.id }).eq('id', userId);
+            // Re-fetch to get updated role_name
+            return fetchUserProfile(userId, email, metadata);
+          }
+        }
+
         // Map Supabase profile to User type
         const mappedUser: User = {
           id: profile.id,
@@ -102,13 +121,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
         setUser(mappedUser);
 
-        // Fetch overrides
-        const { data: userOverrides } = await supabase
-          .from('permission_overrides')
-          .select('*')
-          .eq('user_id', userId);
+        // Fetch overrides and hierarchy rules
+        const [{ data: userOverrides }, { data: rules }] = await Promise.all([
+          supabase.from('permission_overrides').select('*').eq('user_id', userId),
+          supabase.from('role_hierarchy').select(`*, role_a:role_a_id(id, name), role_b:role_b_id(id, name)`)
+        ]);
           
         setOverrides(userOverrides || []);
+        setHierarchyRules(rules || []);
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
@@ -124,8 +144,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check active session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
-        console.error("Session error:", error);
-        supabase.auth.signOut();
+        console.error("Session fetch error:", error);
+        if (error.message.includes('Refresh Token Not Found')) {
+          supabase.auth.signOut();
+        }
         setLoading(false);
         return;
       }
@@ -135,12 +157,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
       }
     }).catch(err => {
-      console.error("Failed to get session:", err);
+      console.error("Critical session failure:", err);
+      if (err?.message?.includes('Refresh Token Not Found')) {
+        supabase.auth.signOut();
+      }
       setLoading(false);
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESH_REFECH_ERROR' || event === 'SIGNED_OUT') {
+        setUser(null);
+        setOverrides([]);
+        setLoading(false);
+        return;
+      }
+      
       if (session?.user) {
         fetchUserProfile(session.user.id, session.user.email, session.user.user_metadata);
       } else {
@@ -174,6 +206,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setOverrides([]);
   };
 
+  const requestPermission = async (req: Partial<PermissionRequest>) => {
+    if (!user) return;
+    const { error } = await supabase.from('permission_requests').insert({
+      user_id: user.id,
+      module: req.module,
+      action: req.action,
+      justification: req.justification,
+      status: 'Pending'
+    });
+    if (error) throw error;
+    await logActivity('Request Permission', 'PermissionRequest', 0, `Requested ${req.action} on ${req.module}`);
+  };
+
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) throw error;
+  };
+
+  const logActivity = async (action: string, entityType: string, entityId: string | number, details?: string) => {
+    if (!user) return;
+    try {
+      await supabase.from('audit_logs').insert({
+        user_id: user.id,
+        action,
+        entity_type: entityType,
+        entity_id: typeof entityId === 'number' ? entityId : 0,
+        details: details || '',
+        timestamp: new Date().toISOString()
+      });
+    } catch (e) {
+      console.warn("Failed to log audit activity:", e);
+    }
+  };
+
   const refreshUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
@@ -197,48 +265,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return override.override_type === 'Grant';
     }
 
-    if (user.role_name === 'System Administrator') return true;
-    
-    // Fallback to role-based checks (same logic as before, or fetch from DB)
-    // Ideally, we should fetch role_permissions from DB, but keeping hardcoded logic for now to match previous behavior
-    // or we can fetch it in fetchUserProfile
-    
-    const role = user.role_name;
-    
-    if (module === 'ADMIN_GOVERNANCE') {
-      return role === 'System Administrator' || role === 'HR Manager';
-    }
+    // Role inheritance check
+    const checkRolePermission = (roleName: string): boolean => {
+      // Direct roles
+      if (roleName === 'System Administrator') return true;
 
-    if (module === 'USER_MANAGEMENT') {
-      if (action === 'delete' || action === 'assign_admin') return role === 'System Administrator';
-      return ['System Administrator', 'HR Manager'].includes(role || '');
-    }
-
-    if (module === 'PERMISSION_MANAGEMENT') {
-      return role === 'System Administrator';
-    }
-    
-    if (module === 'PROPERTY_MANAGEMENT') {
-      if (action === 'delete') return role === 'System Administrator';
-      return ['System Administrator', 'Property Manager', 'Leasing Agent', 'Property Owner'].includes(role || '');
-    }
-
-    if (module === 'FINANCE') {
-      return ['System Administrator', 'Accountant', 'Property Owner'].includes(role || '');
-    }
-
-    if (module === 'MAINTENANCE') {
-      if (action === 'assign' || action === 'close') {
-        return ['System Administrator', 'Maintenance Supervisor'].includes(role || '');
+      if (module === 'ADMIN_GOVERNANCE') {
+        return roleName === 'HR Manager';
       }
-      return true;
-    }
 
-    return true;
+      if (module === 'USER_MANAGEMENT') {
+        if (action === 'delete' || action === 'assign_admin') return false; 
+        return roleName === 'HR Manager';
+      }
+
+      if (module === 'PERMISSION_MANAGEMENT') {
+        return false;
+      }
+      
+      if (module === 'PROPERTY_MANAGEMENT') {
+        return ['Property Manager', 'Leasing Agent', 'Property Owner'].includes(roleName);
+      }
+
+      if (module === 'FINANCE') {
+        return ['Accountant', 'Property Owner'].includes(roleName);
+      }
+
+      if (module === 'MAINTENANCE') {
+        return true;
+      }
+
+      return false;
+    };
+
+    // Recursive inheritance check
+    const isInheritedAdmin = (currentRole: string): boolean => {
+      if (currentRole === 'System Administrator') return true;
+      
+      const parentRules = hierarchyRules.filter(r => r.type === 'Inheritance' && r.role_a.name === currentRole);
+      for (const rule of parentRules) {
+        if (isInheritedAdmin(rule.role_b.name)) return true;
+      }
+      return false;
+    };
+
+    // If I inherit from Admin, I am an admin
+    if (isInheritedAdmin(user.role_name || '')) return true;
+
+    // Check base permission
+    if (checkRolePermission(user.role_name || '')) return true;
+
+    // Check inherited permissions
+    const getEffectiveRoles = (role: string): string[] => {
+      const roles = [role];
+      const inheritance = hierarchyRules
+        .filter(r => r.type === 'Inheritance' && r.role_a.name === role)
+        .map(r => r.role_b.name);
+      
+      inheritance.forEach(ir => {
+        roles.push(...getEffectiveRoles(ir));
+      });
+      return roles;
+    };
+
+    const effectiveRoles = getEffectiveRoles(user.role_name || '');
+    return effectiveRoles.some(r => checkRolePermission(r));
   };
 
   return (
-    <AuthContext.Provider value={{ user, overrides, loading, login, signup, logout, hasPermission, impersonate, refreshUser }}>
+    <AuthContext.Provider value={{ user, overrides, hierarchyRules, loading, login, signup, logout, resetPassword, requestPermission, logActivity, hasPermission, impersonate, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

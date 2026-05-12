@@ -23,7 +23,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { isSupabaseConfigured } from './lib/supabase';
 
 const AppContent: React.FC = () => {
-  const { user, loading, login, signup } = useAuth();
+  const { user, loading, login, signup, resetPassword } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [selectedOwnerId, setSelectedOwnerId] = useState<number | null>(null);
@@ -31,6 +31,8 @@ const AppContent: React.FC = () => {
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [loginError, setLoginError] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark';
@@ -132,7 +134,11 @@ const AppContent: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (isSignUp) {
+      if (isForgotPassword) {
+        await resetPassword(loginForm.email);
+        setResetSent(true);
+        setLoginError('');
+      } else if (isSignUp) {
         await signup(loginForm);
         setLoginError('Account created! You can now sign in.');
         setIsSignUp(false);
@@ -175,15 +181,22 @@ const AppContent: React.FC = () => {
               <Building2 size={32} />
             </div>
             <h1 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">HantiMaster</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 mt-2 text-sm uppercase tracking-widest font-bold">Premium Management</p>
+            <p className="text-zinc-500 dark:text-zinc-400 mt-2 text-sm uppercase tracking-widest font-bold">
+              {isForgotPassword ? 'Reset Password' : 'Premium Management'}
+            </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
-            {loginError && (
+            {resetSent ? (
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-xl text-green-600 dark:text-green-400 text-[10px] font-bold uppercase tracking-widest text-center">
+                Success! Check your email for reset instructions.
+              </div>
+            ) : loginError && (
               <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-[10px] font-bold uppercase tracking-widest text-center">
                 {loginError}
               </div>
             )}
+            
             <div>
               <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Email Address</label>
               <input 
@@ -195,31 +208,58 @@ const AppContent: React.FC = () => {
                 placeholder="Enter your email"
               />
             </div>
-            <div>
-              <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Password</label>
-              <input 
-                type="password" 
-                required
-                value={loginForm.password}
-                onChange={e => setLoginForm({...loginForm, password: e.target.value})}
-                className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all text-sm font-medium"
-                placeholder="••••••••"
-              />
-            </div>
+
+            {!isForgotPassword && (
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Password</label>
+                <input 
+                  type="password" 
+                  required
+                  value={loginForm.password}
+                  onChange={e => setLoginForm({...loginForm, password: e.target.value})}
+                  className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all text-sm font-medium"
+                  placeholder="••••••••"
+                />
+                <div className="text-right mt-2">
+                  <button 
+                    type="button"
+                    onClick={() => setIsForgotPassword(true)}
+                    className="text-[10px] font-bold text-violet-600 hover:underline uppercase tracking-wider"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+              </div>
+            )}
+
             <button type="submit" className="w-full bg-violet-600 hover:bg-violet-700 text-white py-4 rounded-xl text-xs uppercase tracking-widest font-bold transition-all shadow-lg shadow-violet-600/20 hover:shadow-violet-600/40">
-              {isSignUp ? 'Create Account' : 'Sign In to Dashboard'}
+              {isForgotPassword ? 'Send Reset Link' : isSignUp ? 'Create Account' : 'Sign In to Dashboard'}
             </button>
-            <div className="text-center mt-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setLoginError('');
-                }}
-                className="text-xs text-violet-600 dark:text-violet-400 hover:underline font-medium"
-              >
-                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-              </button>
+
+            <div className="text-center mt-4 space-y-2">
+              {isForgotPassword ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotPassword(false);
+                    setResetSent(false);
+                  }}
+                  className="text-xs text-violet-600 dark:text-violet-400 hover:underline font-medium"
+                >
+                  Back to Sign In
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setLoginError('');
+                  }}
+                  className="text-xs text-violet-600 dark:text-violet-400 hover:underline font-medium"
+                >
+                  {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                </button>
+              )}
             </div>
           </form>
         </motion.div>
