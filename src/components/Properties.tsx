@@ -4,6 +4,7 @@ import { Building2, MapPin, Home, MoreVertical, Plus, Filter, ArrowUpDown, Searc
 import { api } from '../services/api';
 import { Property, Owner } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 interface PropertiesProps {
   onSelectProperty: (id: number) => void;
@@ -11,6 +12,7 @@ interface PropertiesProps {
 
 export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
   const { user, hasPermission } = useAuth();
+  const { addToast } = useToast();
   const [properties, setProperties] = useState<Property[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,9 +84,10 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
       });
       setLocalPreview(null);
       loadProperties();
+      addToast('Property created successfully', 'success');
     } catch (error) {
       console.error('Failed to add property:', error);
-      alert('Failed to add property. Please check your connection and permissions.');
+      addToast('Failed to add property. Please check your permissions.', 'error');
     }
   };
 
@@ -445,7 +448,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
               <img 
                 src={property.image_url} 
                 alt={property.name}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 grayscale group-hover:grayscale-0"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
                 referrerPolicy="no-referrer"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />

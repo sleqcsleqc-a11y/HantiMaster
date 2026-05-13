@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { ArrowLeft, Building2, CircleDollarSign, Users, Wrench, Download, User, Calendar, FileText, Mail, Phone, Globe, Shield, ChevronRight, Plus, X } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { Owner, Property } from '../types';
 
 interface OwnerDetailsProps {
@@ -13,6 +14,7 @@ interface OwnerDetailsProps {
 
 export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onSelectProperty }) => {
   const { user } = useAuth();
+  const { addToast } = useToast();
   const [owner, setOwner] = useState<Owner | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'portfolio' | 'transactions' | 'documents'>('overview');
@@ -42,12 +44,19 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
 
   const handleSavePersonal = async () => {
     if (personalForm.email && !personalForm.email.includes('@')) {
-      alert('Please enter a valid email address.');
+      addToast('Please enter a valid email address.', 'error');
       return;
     }
-    await api.updateOwner(ownerId, { ...personalForm, admin_id: user?.id });
-    setIsEditingPersonal(false);
-    api.getOwner(ownerId).then(setOwner);
+    try {
+      await api.updateOwner(ownerId, { ...personalForm, admin_id: user?.id });
+      setIsEditingPersonal(false);
+      const updatedOwner = await api.getOwner(ownerId);
+      setOwner(updatedOwner);
+      addToast('Personal information updated successfully', 'success');
+    } catch (error) {
+      console.error('Failed to update owner:', error);
+      addToast('Failed to update owner information', 'error');
+    }
   };
 
   const handleUploadDocument = async (e: React.FormEvent) => {
@@ -340,7 +349,7 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
                       <img 
                         src={property.image_url} 
                         alt={property.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 grayscale group-hover:grayscale-0"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
                         referrerPolicy="no-referrer"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60" />

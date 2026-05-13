@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, PermissionOverride } from '../types';
+import { User, PermissionOverride, PermissionRequest } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface AuthContextType {
@@ -77,6 +77,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               first_name: newProfile.first_name,
               last_name: newProfile.last_name,
               email: newProfile.email,
+              phone: newProfile.phone,
+              address: newProfile.address,
               role_name: newProfile.roles?.name,
               property_scope: newProfile.property_scope,
               tenant_id: newProfile.tenant_id,
@@ -111,6 +113,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           first_name: profile.first_name,
           last_name: profile.last_name,
           email: profile.email,
+          phone: profile.phone,
+          address: profile.address,
           role_name: profile.roles?.name,
           property_scope: profile.property_scope,
           tenant_id: profile.tenant_id,
@@ -124,7 +128,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Fetch overrides and hierarchy rules
         const [{ data: userOverrides }, { data: rules }] = await Promise.all([
           supabase.from('permission_overrides').select('*').eq('user_id', userId),
-          supabase.from('role_hierarchy').select(`*, role_a:role_a_id(id, name), role_b:role_b_id(id, name)`)
+          supabase.from('role_hierarchy_rules').select(`*, role_a:roles!role_a_id(id, name), role_b:roles!role_b_id(id, name)`)
         ]);
           
         setOverrides(userOverrides || []);

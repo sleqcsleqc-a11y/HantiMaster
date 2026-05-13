@@ -394,7 +394,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
               <div className="aspect-video rounded-2xl overflow-hidden border border-violet-100 dark:border-zinc-800 group relative shadow-md">
                 <img 
                   src={property.image_url} 
-                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110" 
+                  className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110" 
                   alt="Main"
                   referrerPolicy="no-referrer"
                 />
@@ -404,7 +404,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                 <div key={img.id} className="aspect-video rounded-2xl overflow-hidden border border-violet-100 dark:border-zinc-800 group shadow-md relative">
                   <img 
                     src={img.image_url} 
-                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110" 
+                    className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110" 
                     alt="Gallery"
                     referrerPolicy="no-referrer"
                   />

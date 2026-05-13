@@ -735,7 +735,7 @@ export const api = {
     return { success: true };
   },
   getPermissionRequests: async () => {
-    const { data, error } = await supabase.from('permission_requests').select('*, profiles(first_name, last_name)');
+    const { data, error } = await supabase.from('permission_requests').select('*, profiles!permission_requests_user_id_fkey(first_name, last_name)');
     if (error) throw error;
     return data.map(r => ({ ...r, user_name: r.profiles ? `${r.profiles.first_name} ${r.profiles.last_name}` : 'Unknown' }));
   },
@@ -796,7 +796,7 @@ export const api = {
     return alerts;
   },
   getSystemRules: async () => {
-    const { data: hierarchy } = await supabase.from('role_hierarchy').select(`*, role_a:role_a_id(name), role_b:role_b_id(name)`);
+    const { data: hierarchy } = await supabase.from('role_hierarchy_rules').select(`*, role_a:roles!role_a_id(name), role_b:roles!role_b_id(name)`);
     return {
       password_policy: { min_length: 12, complexity: 'High', rotation_days: 90 },
       mfa_settings: { enforced_roles: ['System Administrator', 'HR Manager', 'Accountant'], optional_roles: ['Property Manager', 'Leasing Agent'] },
@@ -805,9 +805,9 @@ export const api = {
         id: h.id,
         type: h.type,
         role_a_id: h.role_a_id,
-        role_a_name: h.role_a?.name,
+        role_a_name: (h.role_a as any)?.name,
         role_b_id: h.role_b_id,
-        role_b_name: h.role_b?.name,
+        role_b_name: (h.role_b as any)?.name,
         description: h.description
       })) || []
     };
