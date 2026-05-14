@@ -16,6 +16,7 @@ import { TenantDashboard } from './components/Tenant/TenantDashboard';
 import { TenantPayments } from './components/Tenant/TenantPayments';
 import { TenantMaintenance } from './components/Tenant/TenantMaintenance';
 import { TenantLease } from './components/Tenant/TenantLease';
+import { DocumentManagement } from './components/DocumentManagement';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { Building2, AlertTriangle, ExternalLink, Copy, Check } from 'lucide-react';
@@ -330,6 +331,8 @@ const AppContent: React.FC = () => {
         return <Communication />;
       case 'tasks':
         return <Tasks />;
+      case 'lease':
+        return <DocumentManagement />;
       default:
         return <Dashboard />;
     }

@@ -16,7 +16,8 @@ import {
   Filter,
   Activity,
   ArrowUpRight,
-  Info
+  Info,
+  History as HistoryIcon
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -273,7 +274,7 @@ export const PermissionRequests: React.FC = () => {
                   {/* Past History */}
                   <div className="vintsy-card p-6 space-y-4">
                     <h5 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                      <History size={14} />
+                      <HistoryIcon size={14} />
                       User Request History
                     </h5>
                     <div className="space-y-3">

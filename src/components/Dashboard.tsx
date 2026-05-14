@@ -86,11 +86,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectProperty, onSelect
       case 'Task':
         setActiveTab('tasks');
         break;
+      case 'LegalDocument':
+        setActiveTab('lease');
+        break;
       default:
         // Default mapping if type is unknown or general
         if (activity.action.toLowerCase().includes('property')) setActiveTab('properties');
         else if (activity.action.toLowerCase().includes('tenant')) setActiveTab('tenants');
         else if (activity.action.toLowerCase().includes('maintenance')) setActiveTab('maintenance');
+        else if (activity.action.toLowerCase().includes('lease') || activity.action.toLowerCase().includes('document')) setActiveTab('lease');
     }
   };
 

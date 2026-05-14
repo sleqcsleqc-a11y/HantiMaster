@@ -1,4 +1,4 @@
-import { Property, Unit, Tenant, MaintenanceRequest, FinanceStats, PropertyImage, Owner, Task, Message, PropertyDocument } from "../types";
+import { Property, Unit, Tenant, MaintenanceRequest, FinanceStats, PropertyImage, Owner, Task, Message, PropertyDocument, DocumentTemplate, LegalDocument, DocumentSignature } from "../types";
 import { supabase } from "../lib/supabase";
 
 export const api = {
@@ -278,15 +278,47 @@ export const api = {
     return data || [];
   },
 
-  async uploadPropertyDocument(propertyId: number, data: { name: string, url: string, type: string, asset_id?: string }, userId?: string): Promise<{ success: boolean }> {
+  async uploadPropertyDocument(propertyId: number, file: File, data: { name: string, type: string }, userId?: string): Promise<{ success: boolean }> {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+    const filePath = `property-documents/${propertyId}/${fileName}`;
+
+    // 1. Upload to Storage
+    const { error: uploadError } = await supabase.storage
+      .from('hanti-assets')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    // 2. Get Public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('hanti-assets')
+      .getPublicUrl(filePath);
+
+    // 3. Record in media_assets
+    const { data: asset, error: assetError } = await supabase.from('media_assets').insert({
+      storage_path: filePath,
+      filename: file.name,
+      mime_type: file.type,
+      size: file.size,
+      uploaded_by: userId
+    }).select().single();
+
+    if (assetError) throw assetError;
+
+    // 4. Record in property_documents
     const { error } = await supabase.from('property_documents').insert({
       property_id: propertyId,
-      ...data,
+      name: data.name,
+      type: data.type,
+      url: publicUrl,
+      asset_id: asset.id,
       uploaded_by: userId
     });
+
     if (error) {
       if (error.code === 'PGRST205') {
-        throw new Error('Property documents feature is currently unavailable. Please contact support.');
+        throw new Error('Property documents table not found. Please run the migration in the Legal Documents tab.');
       }
       throw error;
     }
@@ -904,5 +936,113 @@ export const api = {
       .getPublicUrl(data.storage_path);
 
     return publicUrl;
+  },
+
+  // Legal Documents & Templates
+  async getDocumentTemplates(): Promise<DocumentTemplate[]> {
+    const { data, error } = await supabase.from('document_templates').select('*').eq('is_active', true);
+    if (error) throw error;
+    return (data || []).map(t => ({
+      ...t,
+      placeholders: typeof t.placeholders === 'string' ? JSON.parse(t.placeholders) : (Array.isArray(t.placeholders) ? t.placeholders : [])
+    }));
+  },
+
+  async getLegalDocuments(filters?: { property_id?: number, tenant_id?: number, owner_id?: number }): Promise<LegalDocument[]> {
+    let query = supabase.from('legal_documents').select('*, document_signatures(*)').order('created_at', { ascending: false });
+    
+    if (filters?.property_id) query = query.eq('property_id', filters.property_id);
+    if (filters?.tenant_id) query = query.eq('tenant_id', filters.tenant_id);
+    if (filters?.owner_id) query = query.eq('owner_id', filters.owner_id);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data?.map((d: any) => ({
+      ...d,
+      signatures: d.document_signatures
+    })) || [];
+  },
+
+  async getLegalDocument(id: number): Promise<LegalDocument> {
+    const { data, error } = await supabase
+      .from('legal_documents')
+      .select('*, document_signatures(*)')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return {
+      ...data,
+      signatures: data.document_signatures
+    };
+  },
+
+  async createLegalDocument(data: Partial<LegalDocument>): Promise<{ id: number }> {
+    const { data: doc, error } = await supabase.from('legal_documents').insert(data).select().single();
+    if (error) throw error;
+    return { id: doc.id };
+  },
+
+  async updateLegalDocument(id: number, data: Partial<LegalDocument>): Promise<{ success: boolean }> {
+    const { error } = await supabase.from('legal_documents').update(data).eq('id', id);
+    if (error) throw error;
+    return { success: true };
+  },
+
+  async addSignature(data: Partial<DocumentSignature>): Promise<{ success: boolean }> {
+    const { error } = await supabase.from('document_signatures').insert(data);
+    if (error) throw error;
+    return { success: true };
+  },
+
+  async seedTemplates(): Promise<void> {
+    const templates = [
+      {
+        category: 'Lease',
+        name_en: 'Residential Tenancy Agreement',
+        name_so: 'Heshiiska Kirada Guriga',
+        content_en: '# RESIDENTIAL TENANCY AGREEMENT\n\nThis Agreement is made on {{date}} between:\n\n**LANDLORD:** {{landlord_name}}\n**TENANT:** {{tenant_name}}\n\n### 1. PROPERTY\nThe Landlord agrees to rent to the Tenant the property located at: {{property_address}}.\n\n### 2. TERM\nThe lease begins on {{lease_start}} and ends on {{lease_end}}.\n\n### 3. RENT\nThe monthly rent is ${{rent_amount}}, payable on the {{payment_day}} of each month.',
+        content_so: '# HESHIISKA KIRADA GURIGA\n\nHeshiiskan waxaa la kala saxiixday {{date}} inta u dhaxaysa:\n\n**MULKIILAHA:** {{landlord_name}}\n**KIREYSTAHA:** {{tenant_name}}\n\n### 1. HANTIDA\nMulkiiluhu wuxuu ogolaaday inuu kireeyo kireystaha guriga ku yaal: {{property_address}}.\n\n### 2. MUDDADA\nKiradu waxay bilaabmaysaa {{lease_start}} waxayna ku dhammaanaysaa {{lease_end}}.\n\n### 3. KIRADA\nKirada bishii waa ${{rent_amount}}, oo la bixinayo {{payment_day}} ee bil kasta.',
+        placeholders: ['date', 'landlord_name', 'tenant_name', 'property_address', 'lease_start', 'lease_end', 'rent_amount', 'payment_day']
+      },
+      {
+        category: 'Lease',
+        name_en: 'Commercial Lease Agreement',
+        name_so: 'Heshiiska Kirada Ganacsiga',
+        content_en: '# COMMERCIAL LEASE AGREEMENT\n\n**BUSINESS NAME:** {{business_name}}\n**REGISTRATION NO:** {{registration_number}}\n\n### 1. PREMISES\nThe Premises are located at {{property_address}}, Parcel #{{parcel_number}}.\n\n### 2. USE OF PREMISES\nThe Tenant shall use the Premises for {{business_activity}} purpose only.',
+        content_so: '# HESHIISKA KIRADA GANACSIGA\n\n**MAGACA GANACSIGA:** {{business_name}}\n**LAMBARKA DIIWAANGELINTA:** {{registration_number}}\n\n### 1. DHISMAHA\nDhismahu wuxuu ku yaal {{property_address}}, Booska #{{parcel_number}}.\n\n### 2. ISTICMAALKA DHISMAHA\nKireystuhu wuxuu u isticmaali doonaa dhismaha ujeedo {{business_activity}} oo kaliya.',
+        placeholders: ['business_name', 'registration_number', 'property_address', 'parcel_number', 'business_activity']
+      },
+      {
+        category: 'Notice',
+        name_en: 'Notice of Rent Due',
+        name_so: 'Ogeysiiska Lacagta Kirada ah',
+        content_en: '# NOTICE OF RENT DUE\n\nDate: {{date}}\n\nTo: {{tenant_name}}\n\nThis is to notify you that your rent for {{period}} is now due. Please ensure payment of ${{amount}} is made by {{due_date}}.',
+        content_so: '# OGEYSIISKA LACAGTA KIRADA AH\n\nTaariikhda: {{date}}\n\nKu: {{tenant_name}}\n\nTani waxay kugu ogeysiinaysaa in kiradaada ee muddada {{period}} ay hadda tahay mid la bixin karo. Fadlan hubi in lacagta dhan ${{amount}} la bixiyo ka hor {{due_date}}.',
+        placeholders: ['date', 'tenant_name', 'period', 'amount', 'due_date']
+      },
+      {
+        category: 'Notice',
+        name_en: 'Late Payment Notice',
+        name_so: 'Ogeysiiska Dib-u-dhaca Lacagta',
+        content_en: '# LATE PAYMENT NOTICE\n\nURGENT: Your rent payment is overdue by {{days}} days. A late fee of ${{late_fee}} has been applied.',
+        content_so: '# OGEYSIISKA DIB-U-DHACA LACAGTA\n\nDEGDEG: Lacag bixinta kiradaadu waxay dib u dhacday {{days}} maalmood. Ganaax dhan ${{late_fee}} ayaa lagugu soo rogay.',
+        placeholders: ['days', 'late_fee']
+      },
+      {
+        category: 'Financial',
+        name_en: 'Rent Receipt',
+        name_so: 'Rasiidka Kirada (Boono)',
+        content_en: '# RENT RECEIPT\n\nReceived from: {{tenant_name}}\nAmount: ${{amount}}\nFor: {{period}}\nMethod: {{payment_method}}',
+        content_so: '# RASIIDKA KIRADA (BOONO)\n\nLaga helay: {{tenant_name}}\nCadadka: ${{amount}}\nUjeedada: {{period}}\nHabka: {{payment_method}}',
+        placeholders: ['tenant_name', 'amount', 'period', 'payment_method']
+      }
+    ];
+
+    for (const t of templates) {
+      const { data: existing } = await supabase.from('document_templates').select('id').eq('name_en', t.name_en).maybeSingle();
+      if (!existing) {
+        await supabase.from('document_templates').insert(t);
+      }
+    }
   }
 };

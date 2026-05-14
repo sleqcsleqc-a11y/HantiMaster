@@ -75,7 +75,8 @@ export const TenantMaintenance: React.FC = () => {
         unit_id: tenant.unit_id,
         tenant_id: tenant.id,
         image_url: requestForm.image_url || undefined,
-        image_asset_id: requestForm.image_asset_id || undefined
+        image_asset_id: requestForm.image_asset_id || undefined,
+        priority: requestForm.priority as any
       });
       setShowAddModal(false);
       setRequestForm({ title: '', description: '', priority: 'Medium', image_url: '', image_asset_id: '' });

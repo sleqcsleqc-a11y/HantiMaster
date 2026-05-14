@@ -44,6 +44,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
   const [tenants, setTenants] = useState<any[]>([]); // For tenant assignment
   const [uploading, setUploading] = useState(false);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
+  const [selectedDocFile, setSelectedDocFile] = useState<File | null>(null);
 
   // Unit Filtering & Sorting State
   const [filterStatus, setFilterStatus] = useState<'All' | 'Occupied' | 'Vacant'>('All');
@@ -246,11 +247,28 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
 
   const handleAddDocument = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedDocFile) {
+      alert('Please select a file to upload.');
+      return;
+    }
+    
     if (user) {
-      await api.uploadPropertyDocument(propertyId, documentForm, user.id);
-      setShowAddDocument(false);
-      setDocumentForm({ name: '', url: '', type: 'Contract' });
-      loadData();
+      try {
+        setUploading(true);
+        await api.uploadPropertyDocument(propertyId, selectedDocFile, { 
+          name: documentForm.name, 
+          type: documentForm.type 
+        }, user.id);
+        setShowAddDocument(false);
+        setDocumentForm({ name: '', url: '', type: 'Contract' });
+        setSelectedDocFile(null);
+        loadData();
+      } catch (error) {
+        console.error('Failed to upload document:', error);
+        alert(error instanceof Error ? error.message : 'Failed to upload document');
+      } finally {
+        setUploading(false);
+      }
     }
   };
 
@@ -966,7 +984,27 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
               </div>
               <form onSubmit={handleAddDocument} className="space-y-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Document Name</label>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Document File</label>
+                  <div className="space-y-4">
+                    <input 
+                      type="file" 
+                      required
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setSelectedDocFile(file);
+                          if (!documentForm.name) {
+                            setDocumentForm({ ...documentForm, name: file.name.split('.')[0] });
+                          }
+                        }
+                      }}
+                      className="vintsy-input w-full"
+                    />
+                    <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">PDF, DOC, JPG up to 10MB.</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Display Name</label>
                   <input 
                     type="text" 
                     required
@@ -991,19 +1029,12 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                     <option value="Other">Other</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Document URL (Mock)</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={documentForm.url}
-                    onChange={e => setDocumentForm({...documentForm, url: e.target.value})}
-                    className="vintsy-input w-full"
-                    placeholder="https://example.com/doc.pdf"
-                  />
-                </div>
-                <button type="submit" className="w-full vintsy-button-primary py-3 mt-6">
-                  Upload Document
+                <button 
+                  type="submit" 
+                  disabled={uploading || !selectedDocFile}
+                  className="w-full vintsy-button-primary py-3 mt-6 disabled:opacity-50"
+                >
+                  {uploading ? 'Uploading...' : 'Upload Document'}
                 </button>
               </form>
             </motion.div>

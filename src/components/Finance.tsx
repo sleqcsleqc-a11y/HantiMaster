@@ -130,7 +130,7 @@ export const Finance: React.FC = () => {
 
           <div className="vintsy-card p-8">
             <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8">Income vs Expenses</h4>
-            <div className="h-72 w-full">
+            <div className="h-72 w-full min-h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" className="dark:stroke-zinc-800" />
@@ -216,7 +216,7 @@ export const Finance: React.FC = () => {
 
           <div className="vintsy-card p-8">
             <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8">Income Trends</h4>
-            <div className="h-64 w-full">
+            <div className="h-64 w-full min-h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" className="dark:stroke-zinc-800" />

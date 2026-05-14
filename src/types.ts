@@ -300,3 +300,48 @@ export interface MediaAsset {
   created_at: string;
   uploaded_by: string;
 }
+
+export interface DocumentTemplate {
+  id: number;
+  category: 'Lease' | 'Notice' | 'Financial' | 'Property Management';
+  name_en: string;
+  name_so: string;
+  content_en: string;
+  content_so: string;
+  placeholders: string[]; 
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface LegalDocument {
+  id: number;
+  template_id?: number;
+  property_id?: number;
+  unit_id?: number;
+  tenant_id?: number;
+  owner_id?: number;
+  title: string;
+  content_en: string;
+  content_so: string;
+  placeholders_data: Record<string, string>;
+  status: 'Draft' | 'Pending' | 'Signed' | 'Expired' | 'Archived';
+  version: number;
+  file_url?: string;
+  asset_id?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  signatures?: DocumentSignature[];
+}
+
+export interface DocumentSignature {
+  id: number;
+  document_id: number;
+  signer_id?: string;
+  signer_name: string;
+  signer_role: 'Landlord' | 'Tenant' | 'Witness';
+  signature_data: string;
+  signed_at: string;
+  ip_address?: string;
+  user_agent?: string;
+}

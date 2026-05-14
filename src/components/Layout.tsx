@@ -53,7 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onPro
       return ['dashboard', 'governance'].includes(item.id);
     }
     if (user?.role_name === 'Property Management Staff') {
-      return !['finance', 'payments', 'lease'].includes(item.id);
+      return !['finance', 'payments'].includes(item.id);
     }
     if (user?.role_name === 'Finance Team') {
       return ['dashboard', 'finance', 'properties', 'owners'].includes(item.id);
