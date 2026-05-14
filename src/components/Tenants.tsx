@@ -681,7 +681,7 @@ export const Tenants: React.FC = () => {
                         </div>
                       </div>
                       <a 
-                        href={doc.url} 
+                        href={doc.url || '#'} 
                         target="_blank" 
                         rel="noreferrer"
                         className="p-2 text-zinc-400 hover:text-violet-600 transition-colors"

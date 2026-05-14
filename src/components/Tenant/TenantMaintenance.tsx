@@ -136,9 +136,9 @@ export const TenantMaintenance: React.FC = () => {
                 {request.image_url && (
                   <div className="mb-4">
                     {request.image_url.match(/\.(mp4|webm|ogg)$/i) ? (
-                      <video src={request.image_url} controls className="w-48 h-auto max-h-48 object-cover rounded-xl border border-zinc-200 dark:border-zinc-700" />
+                      <video src={request.image_url || null} controls className="w-48 h-auto max-h-48 object-cover rounded-xl border border-zinc-200 dark:border-zinc-700" />
                     ) : (
-                      <img src={request.image_url} alt="Request" className="w-24 h-24 object-cover rounded-xl border border-zinc-200 dark:border-zinc-700" />
+                      <img src={request.image_url || null} alt="Request" className="w-24 h-24 object-cover rounded-xl border border-zinc-200 dark:border-zinc-700" />
                     )}
                   </div>
                 )}
@@ -240,9 +240,9 @@ export const TenantMaintenance: React.FC = () => {
                       {requestForm.image_url && (
                         <div className="w-16 h-16 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700">
                           {requestForm.image_url.match(/\.(mp4|webm|ogg)$/i) ? (
-                            <video src={requestForm.image_url} className="w-full h-full object-cover" />
+                            <video src={requestForm.image_url || null} className="w-full h-full object-cover" />
                           ) : (
-                            <img src={requestForm.image_url} alt="Preview" className="w-full h-full object-cover" />
+                            <img src={requestForm.image_url || null} alt="Preview" className="w-full h-full object-cover" />
                           )}
                         </div>
                       )}

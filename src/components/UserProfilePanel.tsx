@@ -133,7 +133,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ isOpen, onCl
                 <div className="relative group">
                   <div className="w-24 h-24 rounded-3xl bg-violet-600 flex items-center justify-center text-white text-3xl font-bold shadow-xl shadow-violet-600/20 overflow-hidden">
                     {user?.avatar_url ? (
-                      <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <img src={user.avatar_url || null} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
                       <>{user?.first_name?.[0]}{user?.last_name?.[0]}</>
                     )}

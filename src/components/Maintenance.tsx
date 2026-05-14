@@ -124,7 +124,7 @@ export const Maintenance: React.FC = () => {
           >
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border shadow-md overflow-hidden ${priorityColors[request.priority as keyof typeof priorityColors]}`}>
               {request.image_url ? (
-                <img src={request.image_url} alt="Request Media" className="w-full h-full object-cover" />
+                <img src={request.image_url || null} alt="Request Media" className="w-full h-full object-cover" />
               ) : (
                 <Wrench size={24} />
               )}
@@ -246,7 +246,7 @@ export const Maintenance: React.FC = () => {
                 <div className="flex items-center gap-4">
                   {requestForm.image_url && (
                     <div className="w-16 h-16 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700">
-                      <img src={requestForm.image_url} alt="Preview" className="w-full h-full object-cover" />
+                      <img src={requestForm.image_url || null} alt="Preview" className="w-full h-full object-cover" />
                     </div>
                   )}
                   <input 

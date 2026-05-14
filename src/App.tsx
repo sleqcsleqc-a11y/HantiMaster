@@ -309,7 +309,13 @@ const AppContent: React.FC = () => {
 
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard />;
+        return (
+          <Dashboard 
+            onSelectProperty={(id) => setSelectedPropertyId(id)} 
+            onSelectOwner={(id) => setSelectedOwnerId(id)}
+            setActiveTab={handleTabChange}
+          />
+        );
       case 'properties':
         return <Properties onSelectProperty={(id) => setSelectedPropertyId(id)} />;
       case 'owners':

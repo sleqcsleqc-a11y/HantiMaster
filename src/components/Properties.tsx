@@ -68,7 +68,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
         ...propertyForm,
         owner_id: propertyForm.owner_id ? Number(propertyForm.owner_id) : undefined,
         image_asset_id: propertyForm.image_asset_id || undefined
-      });
+      }, user?.id);
       setShowAddProperty(false);
       setPropertyForm({ 
         name: '', 
@@ -314,7 +314,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
                   <div className="w-full h-48 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center overflow-hidden bg-zinc-50 dark:bg-zinc-800/50 relative group">
                     {(localPreview || propertyForm.image_url) ? (
                       <>
-                        <img src={localPreview || propertyForm.image_url} alt="Preview" className="w-full h-full object-cover" />
+                        <img src={localPreview || propertyForm.image_url || undefined} alt="Preview" className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                            <p className="text-white text-xs font-bold uppercase tracking-widest">Change Image</p>
                         </div>
@@ -445,12 +445,18 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
             onClick={() => onSelectProperty(property.id)}
           >
             <div className="relative h-64 overflow-hidden">
-              <img 
-                src={property.image_url} 
-                alt={property.name}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
-                referrerPolicy="no-referrer"
-              />
+              {property.image_url ? (
+                <img 
+                  src={property.image_url || undefined} 
+                  alt={property.name}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+                  <Building2 size={48} />
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
               <div className="absolute bottom-6 left-6 right-6">
                 <div className="flex gap-2">

@@ -60,7 +60,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
   // Form states
   const [editForm, setEditForm] = useState<Partial<Property>>({});
   const [unitForm, setUnitForm] = useState({ unit_number: '', rent_amount: 0, status: 'Vacant' as const });
-  const [imageForm, setImageForm] = useState({ image_url: '' });
+  const [imageForm, setImageForm] = useState<{image_url: string, asset_id?: string}>({ image_url: '' });
   const [documentForm, setDocumentForm] = useState({ name: '', url: '', type: 'Contract' });
 
   const availableAmenities = ['Pool', 'Gym', 'Parking', 'Elevator', 'Security', 'Laundry', 'Balcony', 'Pet Friendly', 'WiFi'];
@@ -162,7 +162,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
     await api.updateProperty(propertyId, {
       ...editForm,
       owner_id: editForm.owner_id ? Number(editForm.owner_id) : undefined
-    });
+    }, user?.id);
     setIsEditing(false);
     loadData();
   };
@@ -215,7 +215,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
       try {
         setUploading(true);
         const { id, url } = await api.uploadAsset(file, user.id);
-        setImageForm({ image_url: url });
+        setImageForm({ image_url: url, asset_id: id });
       } catch (error) {
         console.error('Error uploading gallery image:', error);
         alert('Failed to upload image. Please try again.');
@@ -347,11 +347,11 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
           </button>
           {hasPermission('PROPERTY_MANAGEMENT', 'edit') && (
             <button 
-              onClick={() => setIsEditing(true)}
-              className="vintsy-button-secondary flex items-center gap-2 text-[10px] uppercase tracking-widest"
+              onClick={() => setIsEditing(!isEditing)}
+              className={`vintsy-button-secondary flex items-center gap-2 text-[10px] uppercase tracking-widest ${isEditing ? 'bg-zinc-100 dark:bg-zinc-800 border-violet-500 text-violet-600' : ''}`}
             >
               <Edit3 size={14} />
-              Edit Property
+              {isEditing ? 'Cancel Editing' : 'Edit Property'}
             </button>
           )}
           {hasPermission('PROPERTY_MANAGEMENT', 'create') && (
@@ -369,78 +369,254 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Info & Gallery */}
         <div className="lg:col-span-2 space-y-8">
-          <div className="vintsy-card p-8">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-4">Description</h4>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap">
-              {property.description || 'No description provided.'}
-            </p>
-          </div>
-
-          {/* Gallery */}
-          <div className="vintsy-card p-8">
-            <div className="flex justify-between items-center mb-8">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Image Gallery</h4>
-              {hasPermission('PROPERTY_MANAGEMENT', 'edit') && (
-                <button 
-                  onClick={() => setShowAddImage(true)}
-                  className="text-[10px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-widest flex items-center gap-2 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
-                >
-                  <Upload size={12} />
-                  Upload Image
-                </button>
-              )}
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="aspect-video rounded-2xl overflow-hidden border border-violet-100 dark:border-zinc-800 group relative shadow-md">
-                <img 
-                  src={property.image_url} 
-                  className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110" 
-                  alt="Main"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute top-3 left-3 px-2.5 py-1 bg-violet-700 text-white text-[8px] font-bold uppercase rounded-lg shadow-xl">Main</div>
+          {isEditing ? (
+            <div className="vintsy-card p-8 space-y-8">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Edit Basic Details</h4>
               </div>
-              {images.map((img) => (
-                <div key={img.id} className="aspect-video rounded-2xl overflow-hidden border border-violet-100 dark:border-zinc-800 group shadow-md relative">
-                  <img 
-                    src={img.image_url} 
-                    className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110" 
-                    alt="Gallery"
-                    referrerPolicy="no-referrer"
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Property Name</label>
+                  <input 
+                    type="text" 
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    className="vintsy-input w-full"
                   />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Type</label>
+                  <select 
+                    value={editForm.type}
+                    onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
+                    className="vintsy-input w-full appearance-none"
+                  >
+                    <option>Residential</option>
+                    <option>Commercial</option>
+                    <option>Industrial</option>
+                  </select>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Address</label>
+                  <input 
+                    type="text" 
+                    value={editForm.address}
+                    onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                    className="vintsy-input w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Property Value ($)</label>
+                  <input 
+                    type="number" 
+                    value={editForm.property_value || ''}
+                    onChange={(e) => setEditForm({ ...editForm, property_value: Number(e.target.value) })}
+                    className="vintsy-input w-full"
+                  />
+                </div>
+                <div className="flex items-center gap-2 pt-6">
+                  <input 
+                    type="checkbox" 
+                    id="edit_is_furnished_inline"
+                    checked={editForm.is_furnished || false}
+                    onChange={e => setEditForm({...editForm, is_furnished: e.target.checked})}
+                    className="w-4 h-4 text-violet-600 rounded border-zinc-300 focus:ring-violet-600"
+                  />
+                  <label htmlFor="edit_is_furnished_inline" className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Is Furnished?</label>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Description</label>
+                  <textarea 
+                    value={editForm.description || ''}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    className="vintsy-input w-full"
+                    rows={4}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Owner</label>
+                  <select 
+                    value={editForm.owner_id || ''}
+                    onChange={(e) => setEditForm({ ...editForm, owner_id: Number(e.target.value) })}
+                    className="vintsy-input w-full appearance-none"
+                  >
+                    <option value="">Select an owner...</option>
+                    {owners.map(o => (
+                      <option key={o.id} value={o.id}>{o.first_name} {o.last_name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-8 border-t border-zinc-100 dark:border-zinc-800">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-6">Amenities</h4>
+                <div className="flex flex-wrap gap-2">
+                  {availableAmenities.map(amenity => {
+                    const currentAmenities = JSON.parse(editForm.amenities || '[]');
+                    const isSelected = currentAmenities.includes(amenity);
+                    return (
+                      <button
+                        key={amenity}
+                        type="button"
+                        onClick={() => {
+                          const newAmenities = isSelected 
+                            ? currentAmenities.filter((a: string) => a !== amenity)
+                            : [...currentAmenities, amenity];
+                          setEditForm({...editForm, amenities: JSON.stringify(newAmenities)});
+                        }}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                          isSelected 
+                            ? 'bg-violet-600 text-white border-violet-700 shadow-lg shadow-violet-600/20' 
+                            : 'bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                        }`}
+                      >
+                        {amenity}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="pt-8 border-t border-zinc-100 dark:border-zinc-800">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-6">Main Property Image</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                  <div className="aspect-video rounded-2xl overflow-hidden border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center bg-zinc-50 dark:bg-zinc-800/50 relative group">
+                    {(localPreview || editForm.image_url) ? (
+                      <img src={localPreview || editForm.image_url || undefined} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-zinc-400">
+                        <Building2 size={32} />
+                        <span className="text-[10px] uppercase tracking-widest font-bold">No Image Selected</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-4">
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="inline-property-image-upload"
+                    />
+                    <label 
+                      htmlFor="inline-property-image-upload"
+                      className={`w-full text-center inline-block px-6 py-4 bg-violet-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest cursor-pointer hover:bg-violet-700 transition-all shadow-lg shadow-violet-600/20 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {uploading ? 'Uploading...' : 'Upload New Image'}
+                    </label>
+                    <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold text-center">PNG, JPG up to 5MB.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-8 border-t border-zinc-100 dark:border-zinc-800 flex flex-col md:flex-row gap-4">
+                <button 
+                  onClick={handleUpdateProperty}
+                  className="flex-1 vintsy-button-primary py-4 text-xs uppercase tracking-widest shadow-xl shadow-violet-600/20"
+                >
+                  Save All Changes
+                </button>
+                <button 
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditForm(property);
+                    setLocalPreview(null);
+                  }}
+                  className="flex-1 vintsy-button-secondary py-4 text-xs uppercase tracking-widest"
+                >
+                  Cancel & Discard
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="vintsy-card p-8">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-4">Description</h4>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap">
+                  {property.description || 'No description provided.'}
+                </p>
+              </div>
+
+              {/* Gallery */}
+              <div className="vintsy-card p-8">
+                <div className="flex justify-between items-center mb-8">
+                  <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Image Gallery</h4>
                   {hasPermission('PROPERTY_MANAGEMENT', 'edit') && (
                     <button 
-                      onClick={() => {
-                        setEditingImageId(img.id);
-                        setImageForm({ image_url: img.image_url });
-                        setShowAddImage(true);
-                      }}
-                      className="absolute top-3 right-3 p-2 bg-white/90 dark:bg-zinc-900/90 text-violet-600 dark:text-violet-400 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-violet-50 dark:hover:bg-zinc-800"
+                      onClick={() => setShowAddImage(true)}
+                      className="text-[10px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-widest flex items-center gap-2 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
                     >
-                      <Edit3 size={14} />
+                      <Upload size={12} />
+                      Upload Image
                     </button>
                   )}
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="aspect-video rounded-2xl overflow-hidden border border-violet-100 dark:border-zinc-800 group relative shadow-md">
+                    {property.image_url ? (
+                      <img 
+                        src={property.image_url} 
+                        className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110" 
+                        alt="Main"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+                        <Building2 size={32} />
+                      </div>
+                    )}
+                    <div className="absolute top-3 left-3 px-2.5 py-1 bg-violet-700 text-white text-[8px] font-bold uppercase rounded-lg shadow-xl">Main</div>
+                  </div>
+                  {images.map((img) => (
+                    <div key={img.id} className="aspect-video rounded-2xl overflow-hidden border border-violet-100 dark:border-zinc-800 group shadow-md relative">
+                      {img.image_url ? (
+                        <img 
+                          src={img.image_url} 
+                          className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110" 
+                          alt="Gallery"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+                          <ImageIcon size={32} />
+                        </div>
+                      )}
+                      {hasPermission('PROPERTY_MANAGEMENT', 'edit') && (
+                        <button 
+                          onClick={() => {
+                            setEditingImageId(img.id);
+                            setImageForm({ image_url: img.image_url });
+                            setShowAddImage(true);
+                          }}
+                          className="absolute top-3 right-3 p-2 bg-white/90 dark:bg-zinc-900/90 text-violet-600 dark:text-violet-400 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-violet-50 dark:hover:bg-zinc-800"
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-          {/* Amenities */}
-          <div className="vintsy-card p-8">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8">Amenities</h4>
-            <div className="flex flex-wrap gap-3">
-              {property.amenities && JSON.parse(property.amenities).length > 0 ? (
-                JSON.parse(property.amenities).map((amenity: string) => (
-                  <span key={amenity} className="px-4 py-2 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 text-xs font-bold rounded-xl border border-violet-100 dark:border-violet-800/30 flex items-center gap-2">
-                    <CheckCircle2 size={14} />
-                    {amenity}
-                  </span>
-                ))
-              ) : (
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">No amenities listed.</p>
-              )}
-            </div>
-          </div>
+              {/* Amenities */}
+              <div className="vintsy-card p-8">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8">Amenities</h4>
+                <div className="flex flex-wrap gap-3">
+                  {property.amenities && JSON.parse(property.amenities).length > 0 ? (
+                    JSON.parse(property.amenities).map((amenity: string) => (
+                      <span key={amenity} className="px-4 py-2 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 text-xs font-bold rounded-xl border border-violet-100 dark:border-violet-800/30 flex items-center gap-2">
+                        <CheckCircle2 size={14} />
+                        {amenity}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">No amenities listed.</p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Documents */}
           <div className="vintsy-card p-8">
@@ -469,7 +645,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                     </div>
                   </div>
                   <a 
-                    href={doc.url} 
+                    href={doc.url || '#'} 
                     target="_blank" 
                     rel="noreferrer"
                     className="p-2 text-zinc-400 hover:text-violet-600 transition-colors"
@@ -643,173 +819,6 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
 
       {/* Modals */}
       <AnimatePresence>
-        {isEditing && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsEditing(false)}
-              className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg vintsy-card p-8 shadow-2xl"
-            >
-              <div className="flex justify-between items-center mb-8">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Edit Property</h3>
-                <button onClick={() => setIsEditing(false)} className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"><X size={20} /></button>
-              </div>
-              <form onSubmit={handleUpdateProperty} className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Property Name</label>
-                  <input 
-                    type="text" 
-                    value={editForm.name}
-                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                    className="vintsy-input w-full"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Address</label>
-                  <input 
-                    type="text" 
-                    value={editForm.address}
-                    onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                    className="vintsy-input w-full"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Type</label>
-                    <select 
-                      value={editForm.type}
-                      onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
-                      className="vintsy-input w-full appearance-none"
-                    >
-                      <option>Residential</option>
-                      <option>Commercial</option>
-                      <option>Industrial</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Property Value</label>
-                    <input 
-                      type="number" 
-                      value={editForm.property_value || ''}
-                      onChange={(e) => setEditForm({ ...editForm, property_value: Number(e.target.value) })}
-                      className="vintsy-input w-full"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2 mt-6">
-                    <input 
-                      type="checkbox" 
-                      id="edit_is_furnished"
-                      checked={editForm.is_furnished || false}
-                      onChange={e => setEditForm({...editForm, is_furnished: e.target.checked})}
-                      className="w-4 h-4 text-violet-600 rounded border-zinc-300 focus:ring-violet-600"
-                    />
-                    <label htmlFor="edit_is_furnished" className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Is Furnished?</label>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Description</label>
-                    <textarea 
-                      value={editForm.description || ''}
-                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                      className="vintsy-input w-full"
-                      rows={2}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Owner</label>
-                  <select 
-                    value={editForm.owner_id || ''}
-                    onChange={(e) => setEditForm({ ...editForm, owner_id: Number(e.target.value) })}
-                    className="vintsy-input w-full appearance-none"
-                  >
-                    <option value="">Select an owner...</option>
-                    {owners.map(o => (
-                      <option key={o.id} value={o.id}>{o.first_name} {o.last_name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Amenities</label>
-                  <div className="flex flex-wrap gap-2">
-                    {availableAmenities.map(amenity => {
-                      const currentAmenities = JSON.parse(editForm.amenities || '[]');
-                      const isSelected = currentAmenities.includes(amenity);
-                      return (
-                        <button
-                          key={amenity}
-                          type="button"
-                          onClick={() => {
-                            const newAmenities = isSelected 
-                              ? currentAmenities.filter((a: string) => a !== amenity)
-                              : [...currentAmenities, amenity];
-                            setEditForm({...editForm, amenities: JSON.stringify(newAmenities)});
-                          }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                            isSelected 
-                              ? 'bg-violet-600 text-white shadow-md' 
-                              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                          }`}
-                        >
-                          {amenity}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Property Image</label>
-                  <div className="space-y-4">
-                    <div className="w-full h-48 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center overflow-hidden bg-zinc-50 dark:bg-zinc-800/50 relative group">
-                      {(localPreview || editForm.image_url) ? (
-                        <>
-                          <img src={localPreview || editForm.image_url} alt="Preview" className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                             <p className="text-white text-xs font-bold uppercase tracking-widest">Change Image</p>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center gap-2 text-zinc-400">
-                          <Building2 size={32} />
-                          <span className="text-[10px] uppercase tracking-widest font-bold">No Image Selected</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-center">
-                      <input 
-                        type="file" 
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        id="edit-property-image-upload"
-                      />
-                      <label 
-                        htmlFor="edit-property-image-upload"
-                        className={`inline-block px-6 py-3 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-all ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        {uploading ? 'Uploading...' : 'Choose Image'}
-                      </label>
-                    </div>
-                    <p className="text-center text-[9px] text-zinc-400 uppercase tracking-widest font-bold">PNG, JPG up to 5MB. Auto-resized to fit.</p>
-                  </div>
-                </div>
-                <button type="submit" className="w-full vintsy-button-primary py-4 text-xs uppercase tracking-widest">
-                  Save Changes
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-
         {showAddUnit && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div 
@@ -898,7 +907,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                     <div className="w-full h-48 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center overflow-hidden bg-zinc-50 dark:bg-zinc-800/50 relative group">
                       {(localPreview || imageForm.image_url) ? (
                         <>
-                          <img src={localPreview || imageForm.image_url} alt="Preview" className="w-full h-full object-cover" />
+                          <img src={localPreview || imageForm.image_url || null} alt="Preview" className="w-full h-full object-cover" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                              <p className="text-white text-xs font-bold uppercase tracking-widest">Change Image</p>
                           </div>

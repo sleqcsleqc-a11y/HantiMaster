@@ -195,14 +195,32 @@ export const api = {
       occupancy_rate: occupancyRate
     };
   },
-  async updateProperty(id: number, data: Partial<Property>): Promise<{ success: boolean }> {
+  async updateProperty(id: number, data: Partial<Property>, adminId?: string): Promise<{ success: boolean }> {
     const { error } = await supabase.from('properties').update(data).eq('id', id);
     if (error) throw error;
+    
+    if (adminId) {
+      await supabase.from('audit_logs').insert({
+        user_id: adminId,
+        action: `Updated property: ${data.name || 'details'}`,
+        entity_type: 'Property',
+        entity_id: id
+      });
+    }
     return { success: true };
   },
-  async createProperty(data: Partial<Property>): Promise<{ id: number }> {
+  async createProperty(data: Partial<Property>, adminId?: string): Promise<{ id: number }> {
     const { data: prop, error } = await supabase.from('properties').insert(data).select().single();
     if (error) throw error;
+
+    if (adminId) {
+      await supabase.from('audit_logs').insert({
+        user_id: adminId,
+        action: `Created property: ${prop.name}`,
+        entity_type: 'Property',
+        entity_id: prop.id
+      });
+    }
     return { id: prop.id };
   },
   async getPropertyUnits(id: number): Promise<Unit[]> {
@@ -237,7 +255,7 @@ export const api = {
     if (error) throw error;
     return data || [];
   },
-  async addPropertyImage(id: number, data: { image_url: string }): Promise<{ id: number }> {
+  async addPropertyImage(id: number, data: { image_url: string, asset_id?: string }): Promise<{ id: number }> {
     const { data: img, error } = await supabase.from('property_images').insert({ ...data, property_id: id }).select().single();
     if (error) throw error;
     return { id: img.id };

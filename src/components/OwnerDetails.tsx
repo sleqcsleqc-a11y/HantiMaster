@@ -346,12 +346,18 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
                     onClick={() => onSelectProperty(property.id)}
                   >
                     <div className="relative h-40 overflow-hidden">
-                      <img 
-                        src={property.image_url} 
-                        alt={property.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
-                        referrerPolicy="no-referrer"
-                      />
+                      {property.image_url ? (
+                        <img 
+                          src={property.image_url} 
+                          alt={property.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+                          <Building2 size={24} />
+                        </div>
+                      )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60" />
                       <div className="absolute bottom-4 left-4">
                         <h4 className="text-sm font-bold text-white tracking-tight">{property.name}</h4>
@@ -447,7 +453,7 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
                       </div>
                     </div>
                     <a 
-                      href={doc.url} 
+                      href={doc.url || '#'} 
                       target="_blank" 
                       rel="noreferrer"
                       className="p-2 text-zinc-400 hover:text-violet-600 transition-colors"

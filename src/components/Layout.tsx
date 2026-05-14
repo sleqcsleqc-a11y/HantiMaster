@@ -106,7 +106,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onPro
         >
           <div className="w-8 h-8 rounded-full bg-violet-50 dark:bg-zinc-800 border border-violet-100 dark:border-zinc-700 flex items-center justify-center text-[10px] font-bold text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-all overflow-hidden">
             {user?.avatar_url ? (
-              <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              <img src={user.avatar_url || null} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             ) : (
               <>{user?.first_name?.[0]}{user?.last_name?.[0]}</>
             )}
@@ -209,7 +209,7 @@ export const Header: React.FC<HeaderProps> = ({ title, isDarkMode, toggleDarkMod
             </div>
             <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-zinc-800 border border-violet-100 dark:border-zinc-700 flex items-center justify-center text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-all shadow-sm overflow-hidden">
               {user?.avatar_url ? (
-                <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                <img src={user.avatar_url || null} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : (
                 <UserCircle size={20} />
               )}
