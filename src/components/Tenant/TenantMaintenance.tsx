@@ -92,8 +92,8 @@ export const TenantMaintenance: React.FC = () => {
     <div className="p-8 max-w-7xl mx-auto space-y-8">
       <div className="flex justify-between items-end mb-12">
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">Service</h3>
-          <p className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Maintenance Requests</p>
+          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Service</h3>
+          <p className="text-2xl font-bold text-zinc-900 tracking-tight">Maintenance Requests</p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
@@ -124,7 +124,7 @@ export const TenantMaintenance: React.FC = () => {
               
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
-                  <h4 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">{request.title}</h4>
+                  <h4 className="text-lg font-bold text-zinc-900 tracking-tight">{request.title}</h4>
                   <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
                     request.priority === 'Emergency' ? 'bg-red-50 text-red-600 border-red-100' :
                     request.priority === 'High' ? 'bg-orange-50 text-orange-600 border-orange-100' :
@@ -133,19 +133,19 @@ export const TenantMaintenance: React.FC = () => {
                     {request.priority}
                   </span>
                 </div>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 max-w-2xl font-medium">{request.description}</p>
+                <p className="text-sm text-zinc-500 mb-4 max-w-2xl font-medium">{request.description}</p>
                 {request.image_url && (
                   <div className="mb-4">
                     {request.image_url.match(/\.(mp4|webm|ogg)$/i) ? (
-                      <video src={request.image_url || null} controls className="w-48 h-auto max-h-48 object-cover rounded-xl border border-zinc-200 dark:border-zinc-700" />
+                      <video src={request.image_url || null} controls className="w-48 h-auto max-h-48 object-cover rounded-xl border border-zinc-200" />
                     ) : (
-                      <img src={request.image_url || null} alt="Request" className="w-24 h-24 object-cover rounded-xl border border-zinc-200 dark:border-zinc-700" />
+                      <img src={request.image_url || null} alt="Request" className="w-24 h-24 object-cover rounded-xl border border-zinc-200" />
                     )}
                   </div>
                 )}
-                <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
                   <span className="flex items-center gap-2">
-                    <Clock size={12} className="text-violet-700 dark:text-violet-400" />
+                    <Clock size={12} className="text-violet-700" />
                     Submitted on {new Date(request.created_at).toLocaleDateString()}
                   </span>
                 </div>
@@ -153,7 +153,7 @@ export const TenantMaintenance: React.FC = () => {
 
               <div className="flex items-center gap-8">
                 <div className="text-right">
-                  <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest block mb-1">Status</span>
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">Status</span>
                   <div className={`flex items-center gap-2 font-bold text-sm ${
                     request.status === 'Completed' ? 'text-emerald-600' : 'text-orange-600'
                   }`}>
@@ -161,7 +161,7 @@ export const TenantMaintenance: React.FC = () => {
                     {request.status}
                   </div>
                 </div>
-                <button className="w-12 h-12 rounded-xl border border-violet-100 dark:border-zinc-800 flex items-center justify-center text-zinc-300 hover:text-violet-700 transition-all">
+                <button className="w-12 h-12 rounded-xl border border-violet-100 flex items-center justify-center text-zinc-300 hover:text-violet-700 transition-all">
                   <ChevronRight size={20} />
                 </button>
               </div>
@@ -188,10 +188,10 @@ export const TenantMaintenance: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-zinc-900 rounded-3xl p-8 max-w-xl w-full shadow-2xl border border-violet-100 dark:border-zinc-800"
+              className="bg-white rounded-3xl p-8 max-w-xl w-full shadow-2xl border border-violet-100"
             >
               <div className="flex justify-between items-center mb-8">
-                <h3 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">New Request</h3>
+                <h3 className="text-2xl font-bold text-zinc-900 tracking-tight">New Request</h3>
                 <button onClick={() => setShowAddModal(false)} className="text-zinc-400 hover:text-zinc-600 transition-colors">
                   <X size={24} />
                 </button>
@@ -239,7 +239,7 @@ export const TenantMaintenance: React.FC = () => {
                     <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Photos / Videos (Optional)</label>
                     <div className="flex items-center gap-4">
                       {requestForm.image_url && (
-                        <div className="w-16 h-16 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700">
+                        <div className="w-16 h-16 rounded-xl overflow-hidden border border-zinc-200">
                           {requestForm.image_url.match(/\.(mp4|webm|ogg)$/i) ? (
                             <video src={requestForm.image_url || null} className="w-full h-full object-cover" />
                           ) : (
@@ -257,7 +257,7 @@ export const TenantMaintenance: React.FC = () => {
                         />
                         <label 
                           htmlFor="maintenance-media-upload"
-                          className={`w-full py-3 border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-2xl flex items-center justify-center gap-2 text-zinc-400 hover:text-violet-600 hover:border-violet-300 transition-all cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          className={`w-full py-3 border-2 border-dashed border-zinc-200 rounded-2xl flex items-center justify-center gap-2 text-zinc-400 hover:text-violet-600 hover:border-violet-300 transition-all cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           <Camera size={18} />
                           <span className="text-[10px] font-bold uppercase tracking-widest">{uploading ? 'Uploading...' : 'Upload Photo/Video'}</span>

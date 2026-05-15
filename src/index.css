@@ -10,10 +10,6 @@
   body {
     @apply bg-white text-zinc-900 antialiased transition-colors duration-300 min-h-screen;
   }
-  
-  .dark body {
-    @apply bg-[#1a1625] text-zinc-100;
-  }
 }
 
 @layer components {
@@ -21,39 +17,19 @@
     @apply bg-gradient-to-br from-violet-50 via-white to-violet-50/30 min-h-screen;
   }
 
-  .dark .vintsy-main-gradient {
-    @apply bg-gradient-to-br from-[#1a1625] via-[#241e33] to-[#1a1625] min-h-screen;
-  }
-
   .vintsy-card {
     @apply bg-white/80 backdrop-blur-sm border border-violet-100/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:shadow-violet-200/40 hover:-translate-y-1 transition-all duration-300;
-  }
-  
-  .dark .vintsy-card {
-    @apply bg-[#241e33]/80 backdrop-blur-md border-white/5 hover:shadow-violet-900/20 hover:shadow-2xl hover:border-violet-500/30;
   }
   
   .vintsy-button-primary {
     @apply bg-gradient-to-r from-violet-700 to-violet-900 text-white font-semibold px-5 py-2.5 rounded-xl hover:from-violet-800 hover:to-black transition-all active:scale-95 shadow-lg shadow-violet-600/20 hover:shadow-violet-600/40;
   }
   
-  .dark .vintsy-button-primary {
-    @apply bg-gradient-to-r from-violet-500 to-violet-600 text-white hover:from-violet-400 hover:to-violet-500 shadow-violet-900/40;
-  }
-  
   .vintsy-button-secondary {
     @apply bg-violet-50 text-violet-900 border border-violet-200 font-semibold px-5 py-2.5 rounded-xl hover:bg-violet-100 hover:border-violet-300 transition-all active:scale-95 shadow-sm;
   }
 
-  .dark .vintsy-button-secondary {
-    @apply bg-white/5 text-violet-200 border-white/10 hover:bg-white/10 hover:border-violet-400/50 hover:text-white;
-  }
-
   .vintsy-input {
     @apply bg-white/50 border border-violet-200 rounded-xl px-4 py-3 text-sm text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400;
-  }
-
-  .dark .vintsy-input {
-    @apply bg-[#241e33] border-white/10 text-zinc-100 focus:border-violet-400/50 focus:ring-violet-400/10 placeholder:text-zinc-500;
   }
 }

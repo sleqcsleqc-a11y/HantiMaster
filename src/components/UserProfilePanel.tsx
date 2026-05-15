@@ -115,21 +115,21 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ isOpen, onCl
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-white dark:bg-zinc-900 shadow-2xl z-[110] overflow-y-auto"
+            className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-[110] overflow-y-auto"
           >
             <div className="p-8 space-y-8">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">My Profile</h3>
+                <h3 className="text-xl font-bold text-zinc-900 tracking-tight">My Profile</h3>
                 <button 
                   onClick={onClose}
-                  className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-400 transition-colors"
+                  className="p-2 hover:bg-zinc-100 rounded-xl text-zinc-400 transition-colors"
                 >
                   <X size={20} />
                 </button>
               </div>
 
               {/* User Identity */}
-              <div className="flex flex-col items-center text-center space-y-4 p-8 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800">
+              <div className="flex flex-col items-center text-center space-y-4 p-8 bg-zinc-50 rounded-3xl border border-zinc-100">
                 <div className="relative group">
                   <div className="w-24 h-24 rounded-3xl bg-violet-600 flex items-center justify-center text-white text-3xl font-bold shadow-xl shadow-violet-600/20 overflow-hidden">
                     {user?.avatar_url ? (
@@ -145,7 +145,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ isOpen, onCl
                   </div>
                   <label 
                     htmlFor="avatar-upload"
-                    className="absolute -bottom-2 -right-2 p-2 bg-white dark:bg-zinc-900 rounded-xl shadow-lg border border-zinc-100 dark:border-zinc-800 text-violet-600 cursor-pointer hover:scale-110 transition-transform"
+                    className="absolute -bottom-2 -right-2 p-2 bg-white rounded-xl shadow-lg border border-zinc-100 text-violet-600 cursor-pointer hover:scale-110 transition-transform"
                   >
                     <Edit2 size={14} />
                     <input 
@@ -159,7 +159,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ isOpen, onCl
                   </label>
                 </div>
                 <div>
-                  <h4 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">{user?.first_name} {user?.last_name}</h4>
+                  <h4 className="text-2xl font-bold text-zinc-900 tracking-tight">{user?.first_name} {user?.last_name}</h4>
                   <div className="flex items-center justify-center gap-2 mt-2">
                     <Shield size={14} className="text-violet-600" />
                     <span className="text-[10px] font-bold text-violet-600 uppercase tracking-widest">{user?.role_name}</span>
@@ -180,16 +180,16 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ isOpen, onCl
                 </div>
                 <div className="vintsy-card p-4 space-y-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400">
                       <Mail size={18} />
                     </div>
                     <div className="text-left">
                       <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Email Address</p>
-                      <p className="text-sm font-medium text-zinc-900 dark:text-white">{user?.email}</p>
+                      <p className="text-sm font-medium text-zinc-900">{user?.email}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400">
                       <Phone size={18} />
                     </div>
                     <div className="text-left flex-1">
@@ -199,15 +199,15 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ isOpen, onCl
                           type="tel"
                           value={editForm.phone}
                           onChange={e => setEditForm({...editForm, phone: e.target.value})}
-                          className="w-full mt-1 px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm"
+                          className="w-full mt-1 px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm"
                         />
                       ) : (
-                        <p className="text-sm font-medium text-zinc-900 dark:text-white">{user?.phone || 'Not provided'}</p>
+                        <p className="text-sm font-medium text-zinc-900">{user?.phone || 'Not provided'}</p>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400">
                       <MapPin size={18} />
                     </div>
                     <div className="text-left flex-1">
@@ -217,10 +217,10 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ isOpen, onCl
                           type="text"
                           value={editForm.address}
                           onChange={e => setEditForm({...editForm, address: e.target.value})}
-                          className="w-full mt-1 px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm"
+                          className="w-full mt-1 px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm"
                         />
                       ) : (
-                        <p className="text-sm font-medium text-zinc-900 dark:text-white">{user?.address || 'Not provided'}</p>
+                        <p className="text-sm font-medium text-zinc-900">{user?.address || 'Not provided'}</p>
                       )}
                     </div>
                   </div>
@@ -237,31 +237,31 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ isOpen, onCl
               </div>
 
               {/* Notification Preferences */}
-              <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+              <div className="space-y-4 pt-4 border-t border-zinc-100">
                 <h5 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-2 flex items-center gap-2">
                   <Bell size={14} />
                   Notification Preferences
                 </h5>
                 <div className="vintsy-card p-4 space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-zinc-900 dark:text-white">Email Notifications</span>
+                    <span className="text-sm font-medium text-zinc-900">Email Notifications</span>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" defaultChecked />
-                      <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-violet-300 dark:peer-focus:ring-violet-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-violet-600"></div>
+                      <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-violet-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
                     </label>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-zinc-900 dark:text-white">In-App Alerts</span>
+                    <span className="text-sm font-medium text-zinc-900">In-App Alerts</span>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" defaultChecked />
-                      <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-violet-300 dark:peer-focus:ring-violet-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-violet-600"></div>
+                      <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-violet-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
                     </label>
                   </div>
                 </div>
               </div>
 
               {/* Request Access Section */}
-              <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+              <div className="space-y-4 pt-4 border-t border-zinc-100">
                 <h5 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-2 flex items-center gap-2">
                   <Key size={14} />
                   Request Additional Access
@@ -274,7 +274,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ isOpen, onCl
                     value={requestText}
                     onChange={e => setRequestText(e.target.value)}
                     placeholder="Describe the access or permissions you require..."
-                    className="w-full h-32 p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all resize-none"
+                    className="w-full h-32 p-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all resize-none"
                     required
                   />
                   <button 
@@ -296,7 +296,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ isOpen, onCl
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                      className="flex items-center gap-2 p-3 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-bold uppercase tracking-widest"
                     >
                       <CheckCircle2 size={14} />
                       Request submitted successfully
@@ -307,7 +307,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ isOpen, onCl
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                      className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold uppercase tracking-widest"
                     >
                       <AlertCircle size={14} />
                       Failed to submit request

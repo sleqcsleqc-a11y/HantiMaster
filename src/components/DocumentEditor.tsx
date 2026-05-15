@@ -74,6 +74,18 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
           // Initialize from template
           const initialData: Record<string, string> = {
             date: new Date().toLocaleDateString(),
+            payment_day: '1st',
+            payment_method: 'Bank Transfer (EVC Plus / Sahal)',
+            security_deposit: '0.00',
+            return_days: '30',
+            notice_period: '30',
+            lease_duration: '12',
+            tenant_utilities: 'Electricity, Water, Internet',
+            landlord_utilities: 'Structural Maintenance, Property Tax',
+            default_days: '15',
+            grace_period_days: '7',
+            contact_phone: '+252...',
+            tax_responsibility: 'Tenant pays utility taxes, Landlord pays property tax'
           };
 
           if (tenant) {
@@ -81,11 +93,23 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             initialData.rent_amount = tenant.rent_amount?.toString() || '';
             initialData.lease_start = tenant.lease_start || '';
             initialData.lease_end = tenant.lease_end || '';
+            initialData.unit_number = tenant.unit_number || '';
+            
+            // Calculate duration if dates exist
+            if (tenant.lease_start && tenant.lease_end) {
+              const start = new Date(tenant.lease_start);
+              const end = new Date(tenant.lease_end);
+              const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+              initialData.lease_duration = Math.max(1, months).toString();
+            }
+
+            initialData.security_deposit = tenant.rent_amount?.toString() || '0.00';
           }
 
           if (property) {
             initialData.property_address = property.address;
             initialData.landlord_name = property.owner_name || '';
+            initialData.contact_phone = property.owner_phone || '+252...';
           }
 
           setDoc({
@@ -111,8 +135,13 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
   }, [documentId, template, property, tenant]);
 
   const replacePlaceholders = (content: string, data: Record<string, string>) => {
+    if (!content) return '';
     let newContent = content;
-    Object.entries(data).forEach(([key, value]) => {
+    // Sort keys by length descending to avoid partial replacement issues
+    const keys = Object.keys(data).sort((a, b) => b.length - a.length);
+    
+    keys.forEach((key) => {
+      const value = data[key];
       const regex = new RegExp(`{{${key}}}`, 'g');
       newContent = newContent.replace(regex, value || `[${key}]`);
     });
@@ -193,7 +222,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-[60] bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center">
+      <div className="fixed inset-0 z-[60] bg-white/80 backdrop-blur-sm flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -207,18 +236,18 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="fixed inset-0 z-[60] flex flex-col bg-zinc-50 dark:bg-zinc-950 overflow-hidden"
+      className="fixed inset-0 z-[60] flex flex-col bg-zinc-50 overflow-hidden"
     >
       {/* Header */}
-      <header className="h-20 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between px-8 shrink-0">
+      <header className="h-20 border-b border-zinc-200 bg-white flex items-center justify-between px-8 shrink-0">
         <div className="flex items-center gap-6">
-          <button onClick={onClose} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
+          <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-xl transition-colors">
             <X size={20} className="text-zinc-500" />
           </button>
           <div>
              <div className="flex items-center gap-2 mb-1">
                 <FileText size={16} className="text-violet-600" />
-                <h2 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wider">
+                <h2 className="text-sm font-bold text-zinc-900 uppercase tracking-wider">
                   {doc.title || 'Untitled Document'}
                 </h2>
                 <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-widest ${
@@ -236,11 +265,11 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl mr-4">
+          <div className="flex bg-zinc-100 p-1 rounded-xl mr-4">
             <button 
               onClick={() => setActiveTab('edit')}
               className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${
-                activeTab === 'edit' ? 'bg-white dark:bg-zinc-700 text-violet-600 shadow-sm' : 'text-zinc-500'
+                activeTab === 'edit' ? 'bg-white text-violet-600 shadow-sm' : 'text-zinc-500'
               }`}
             >
               Edit
@@ -248,7 +277,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             <button 
               onClick={() => setActiveTab('preview')}
               className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${
-                activeTab === 'preview' ? 'bg-white dark:bg-zinc-700 text-violet-600 shadow-sm' : 'text-zinc-500'
+                activeTab === 'preview' ? 'bg-white text-violet-600 shadow-sm' : 'text-zinc-500'
               }`}
             >
               Preview
@@ -268,7 +297,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             <>
               <button 
                 onClick={handleExportPDF}
-                className="flex items-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all"
+                className="flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all"
               >
                 <Download size={14} />
                 Export PDF
@@ -289,14 +318,14 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
       
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar: Placeholders & Options */}
-        <aside className="w-80 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 overflow-y-auto shrink-0 scrollbar-hide">
+        <aside className="w-80 border-r border-zinc-200 bg-white p-8 overflow-y-auto shrink-0 scrollbar-hide">
           <div className="mb-8">
             <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] mb-4">Language Options</h4>
             <div className="grid grid-cols-1 gap-2">
               <button 
                 onClick={() => setLanguage('en')}
                 className={`flex items-center justify-between p-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all ${
-                  language === 'en' ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800 text-violet-600' : 'border-锌-100 dark:border-zinc-800 text-zinc-500'
+                  language === 'en' ? 'bg-violet-50 border-violet-200 text-violet-600' : 'border-锌-100 text-zinc-500'
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -308,7 +337,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
               <button 
                 onClick={() => setLanguage('so')}
                 className={`flex items-center justify-between p-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all ${
-                  language === 'so' ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800 text-violet-600' : 'border-锌-100 dark:border-zinc-800 text-zinc-500'
+                  language === 'so' ? 'bg-violet-50 border-violet-200 text-violet-600' : 'border-锌-100 text-zinc-500'
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -320,7 +349,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
               <button 
                 onClick={() => setLanguage('both')}
                 className={`flex items-center justify-between p-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all ${
-                  language === 'both' ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800 text-violet-600' : 'border-锌-100 dark:border-zinc-800 text-zinc-500'
+                  language === 'both' ? 'bg-violet-50 border-violet-200 text-violet-600' : 'border-锌-100 text-zinc-500'
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -338,7 +367,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
               <Info size={12} className="text-zinc-400" />
             </div>
             
-            {(Array.isArray(template?.placeholders) ? template.placeholders : []).map(key => (
+            {(Array.isArray(template?.placeholders) ? template?.placeholders : (typeof template?.placeholders === 'string' ? JSON.parse(template?.placeholders) : [])).map(key => (
               <div key={key} className="space-y-2">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                   {key.replace(/_/g, ' ')}
@@ -357,7 +386,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             ))}
           </div>
 
-          <div className="mt-12 pt-12 border-t border-zinc-100 dark:border-zinc-800 space-y-6">
+          <div className="mt-12 pt-12 border-t border-zinc-100 space-y-6">
             <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] mb-4">Entity Linking</h4>
             
             <div className="space-y-2">
@@ -387,7 +416,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
         </aside>
 
         {/* Editor/Preview Area */}
-        <main className="flex-1 bg-zinc-50 dark:bg-zinc-950 p-12 overflow-y-auto scrollbar-hide">
+        <main className="flex-1 bg-zinc-50 p-12 overflow-y-auto scrollbar-hide">
           <div className="max-w-5xl mx-auto">
             {activeTab === 'edit' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
@@ -399,7 +428,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
                    <textarea 
                     value={doc.content_en}
                     onChange={(e) => setDoc({ ...doc, content_en: e.target.value })}
-                    className="flex-1 w-full bg-zinc-50/50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-6 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                    className="flex-1 w-full bg-zinc-50/50 border border-zinc-100 rounded-2xl p-6 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500/20"
                     placeholder="Enter English markdown content..."
                    />
                 </div>
@@ -411,7 +440,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
                    <textarea 
                     value={doc.content_so}
                     onChange={(e) => setDoc({ ...doc, content_so: e.target.value })}
-                    className="flex-1 w-full bg-zinc-50/50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-6 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                    className="flex-1 w-full bg-zinc-50/50 border border-zinc-100 rounded-2xl p-6 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500/20"
                     placeholder="Gali qoraalka Af Soomaaliga ah..."
                    />
                 </div>
@@ -439,7 +468,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
                          <div className="prose prose-sm prose-zinc prose-headings:uppercase prose-headings:tracking-widest">
                            <ReactMarkdown>{processedContentEn}</ReactMarkdown>
                          </div>
-                         <div className="prose prose-sm prose-zinc prose-headings:uppercase prose-headings:tracking-widest border-l-2 border-zinc-100 pl-12" dir="rtl">
+                         <div className="prose prose-sm prose-zinc prose-headings:uppercase prose-headings:tracking-widest border-l-2 border-zinc-100 pl-12">
                            <ReactMarkdown>{processedContentSo}</ReactMarkdown>
                          </div>
                       </div>
@@ -448,7 +477,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
                         <ReactMarkdown>{processedContentEn}</ReactMarkdown>
                       </div>
                     ) : (
-                      <div className="prose prose prose-zinc prose-headings:uppercase max-w-none text-right" dir="rtl">
+                      <div className="prose prose prose-zinc prose-headings:uppercase max-w-none">
                         <ReactMarkdown>{processedContentSo}</ReactMarkdown>
                       </div>
                     )}
@@ -506,7 +535,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md vintsy-card p-10 bg-white dark:bg-zinc-900 shadow-2xl"
+              className="relative w-full max-w-md vintsy-card p-10 bg-white shadow-2xl"
             >
               <h3 className="text-sm font-bold uppercase tracking-[0.2em] mb-8">Digital Signature Confirmation</h3>
               <p className="text-xs text-zinc-500 mb-8 leading-relaxed">
@@ -535,7 +564,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
                    </button>
                    <button 
                      onClick={() => setShowSignature(false)}
-                     className="flex-1 py-4 bg-zinc-50 dark:bg-zinc-800 text-zinc-500 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-zinc-100 dark:border-zinc-700"
+                     className="flex-1 py-4 bg-zinc-50 text-zinc-500 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-zinc-100"
                    >
                      Cancel
                    </button>

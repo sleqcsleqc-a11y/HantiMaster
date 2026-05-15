@@ -56,11 +56,11 @@ export const Finance: React.FC = () => {
     return (
       <div className="p-8 h-[calc(100vh-80px)] flex items-center justify-center">
         <div className="text-center max-w-md">
-          <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-800 rounded-3xl flex items-center justify-center mx-auto mb-6">
+          <div className="w-20 h-20 bg-zinc-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
             <Lock size={32} className="text-zinc-400" />
           </div>
-          <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Access Restricted</h3>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">
+          <h3 className="text-2xl font-bold text-zinc-900 mb-2">Access Restricted</h3>
+          <p className="text-zinc-500 text-sm leading-relaxed">
             You do not have the required permissions to view financial analytics. 
             Please contact your administrator if you believe this is an error.
           </p>
@@ -91,8 +91,8 @@ export const Finance: React.FC = () => {
     <div className="p-8 space-y-8 max-w-7xl mx-auto" id="finance-report">
       <div className="flex justify-between items-center mb-12">
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">Financials</h3>
-          <p className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Revenue & Performance</p>
+          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Financials</h3>
+          <p className="text-2xl font-bold text-zinc-900 tracking-tight">Revenue & Performance</p>
         </div>
         <button 
           onClick={exportToPDF}
@@ -119,9 +119,9 @@ export const Finance: React.FC = () => {
             </div>
 
             <div className="vintsy-card p-10">
-              <p className="text-zinc-400 dark:text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-2">Pending Collections</p>
-              <h4 className="text-5xl font-bold text-zinc-900 dark:text-white tracking-tighter mb-8">${(stats?.pending_payments ?? 0).toLocaleString()}</h4>
-              <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 text-xs font-bold uppercase tracking-widest">
+              <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest mb-2">Pending Collections</p>
+              <h4 className="text-5xl font-bold text-zinc-900 tracking-tighter mb-8">${(stats?.pending_payments ?? 0).toLocaleString()}</h4>
+              <div className="flex items-center gap-2 text-orange-700 text-xs font-bold uppercase tracking-widest">
                 <Calendar size={16} />
                 <span>Due in 4 days</span>
               </div>
@@ -129,11 +129,11 @@ export const Finance: React.FC = () => {
           </div>
 
           <div className="vintsy-card p-8">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8">Income vs Expenses</h4>
+            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8">Income vs Expenses</h4>
             <div className="h-72 w-full min-h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" className="dark:stroke-zinc-800" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
                   <XAxis 
                     dataKey="name" 
                     axisLine={false} 
@@ -161,25 +161,25 @@ export const Finance: React.FC = () => {
           </div>
 
           <div className="vintsy-card">
-            <div className="p-8 border-b border-violet-50 dark:border-zinc-800 flex justify-between items-center">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Recent Transactions</h4>
-              <button className="text-[10px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-widest hover:text-violet-700 dark:hover:text-violet-300 transition-colors">View All</button>
+            <div className="p-8 border-b border-violet-50 flex justify-between items-center">
+              <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Recent Transactions</h4>
+              <button className="text-[10px] font-bold text-violet-600 uppercase tracking-widest hover:text-violet-700 transition-colors">View All</button>
             </div>
-            <div className="divide-y divide-violet-50 dark:divide-zinc-800">
+            <div className="divide-y divide-violet-50">
               {[1, 2, 3, 4, 5].map((item) => (
-                <div key={item} className="p-8 flex items-center justify-between hover:bg-violet-50/20 dark:hover:bg-zinc-800/30 transition-all duration-300 group">
+                <div key={item} className="p-8 flex items-center justify-between hover:bg-violet-50/20 transition-all duration-300 group">
                   <div className="flex items-center gap-6">
-                    <div className="w-12 h-12 rounded-xl bg-violet-50 dark:bg-zinc-800 border border-violet-100 dark:border-zinc-700 flex items-center justify-center text-zinc-400 dark:text-zinc-500 group-hover:bg-violet-700 group-hover:text-white transition-all duration-300 shadow-sm">
+                    <div className="w-12 h-12 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-zinc-400 group-hover:bg-violet-700 group-hover:text-white transition-all duration-300 shadow-sm">
                       {item % 2 === 0 ? <CreditCard size={20} /> : <Banknote size={20} />}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-zinc-900 dark:text-white">Rent Payment - Unit 101</p>
-                      <p className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-medium">Feb 24, 2024 • John Doe</p>
+                      <p className="text-sm font-bold text-zinc-900">Rent Payment - Unit 101</p>
+                      <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-medium">Feb 24, 2024 • John Doe</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">+$1,200.00</p>
-                    <p className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Completed</p>
+                    <p className="text-sm font-bold text-emerald-700">+$1,200.00</p>
+                    <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Completed</p>
                   </div>
                 </div>
               ))}
@@ -189,20 +189,20 @@ export const Finance: React.FC = () => {
 
         <div className="space-y-6">
           <div className="vintsy-card p-8">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8">Revenue Breakdown</h4>
+            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8">Revenue Breakdown</h4>
             <div className="space-y-8">
               {[
-                { label: 'Residential', value: 85, color: 'bg-violet-600 dark:bg-violet-500' },
-                { label: 'Commercial', value: 10, color: 'bg-violet-400 dark:bg-violet-400' },
-                { label: 'Late Fees', value: 3, color: 'bg-violet-300 dark:bg-violet-300' },
-                { label: 'Other', value: 2, color: 'bg-violet-200 dark:bg-violet-200' },
+                { label: 'Residential', value: 85, color: 'bg-violet-600' },
+                { label: 'Commercial', value: 10, color: 'bg-violet-400' },
+                { label: 'Late Fees', value: 3, color: 'bg-violet-300' },
+                { label: 'Other', value: 2, color: 'bg-violet-200' },
               ].map((item) => (
                 <div key={item.label} className="space-y-3">
                   <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
-                    <span className="text-zinc-500 dark:text-zinc-400">{item.label}</span>
-                    <span className="text-zinc-900 dark:text-white">{item.value}%</span>
+                    <span className="text-zinc-500">{item.label}</span>
+                    <span className="text-zinc-900">{item.value}%</span>
                   </div>
-                  <div className="h-1.5 w-full bg-violet-50 dark:bg-zinc-800 rounded-full overflow-hidden border border-violet-100 dark:border-zinc-700">
+                  <div className="h-1.5 w-full bg-violet-50 rounded-full overflow-hidden border border-violet-100">
                     <motion.div 
                       initial={{ width: 0 }}
                       animate={{ width: `${item.value}%` }}
@@ -215,11 +215,11 @@ export const Finance: React.FC = () => {
           </div>
 
           <div className="vintsy-card p-8">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8">Income Trends</h4>
+            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8">Income Trends</h4>
             <div className="h-64 w-full min-h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" className="dark:stroke-zinc-800" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
                   <XAxis 
                     dataKey="name" 
                     axisLine={false} 

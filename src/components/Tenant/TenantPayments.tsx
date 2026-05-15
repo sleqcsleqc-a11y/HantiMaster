@@ -80,8 +80,8 @@ export const TenantPayments: React.FC = () => {
     <div className="p-8 max-w-7xl mx-auto space-y-8">
       <div className="flex justify-between items-end mb-8">
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">Financial</h3>
-          <p className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Rent & Payments</p>
+          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Financial</h3>
+          <p className="text-2xl font-bold text-zinc-900 tracking-tight">Rent & Payments</p>
         </div>
         <button 
           onClick={() => setShowPaymentModal(true)}
@@ -116,21 +116,21 @@ export const TenantPayments: React.FC = () => {
           </div>
 
           <div className="vintsy-card p-6 space-y-4">
-            <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Payment Information</h4>
-            <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-              <p className="text-xs font-bold text-zinc-900 dark:text-white mb-2">Bank Transfer Details</p>
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Payment Information</h4>
+            <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+              <p className="text-xs font-bold text-zinc-900 mb-2">Bank Transfer Details</p>
               <div className="space-y-2">
                 <div className="flex justify-between text-[10px]">
                   <span className="text-zinc-500 uppercase tracking-widest">Bank</span>
-                  <span className="text-zinc-900 dark:text-white font-bold">Vintsy Global Bank</span>
+                  <span className="text-zinc-900 font-bold">Vintsy Global Bank</span>
                 </div>
                 <div className="flex justify-between text-[10px]">
                   <span className="text-zinc-500 uppercase tracking-widest">Account Name</span>
-                  <span className="text-zinc-900 dark:text-white font-bold">HantiMaster Property Mgmt</span>
+                  <span className="text-zinc-900 font-bold">HantiMaster Property Mgmt</span>
                 </div>
                 <div className="flex justify-between text-[10px]">
                   <span className="text-zinc-500 uppercase tracking-widest">Account Number</span>
-                  <span className="text-zinc-900 dark:text-white font-bold">0042 9981 2234</span>
+                  <span className="text-zinc-900 font-bold">0042 9981 2234</span>
                 </div>
               </div>
             </div>
@@ -143,7 +143,7 @@ export const TenantPayments: React.FC = () => {
         {/* Payment History */}
         <div className="lg:col-span-2 space-y-6">
           <div className="vintsy-card p-8">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8">Payment History</h4>
+            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8">Payment History</h4>
             <div className="space-y-4">
               {payments.length > 0 ? (
                 payments.map((payment, index) => (
@@ -152,7 +152,7 @@ export const TenantPayments: React.FC = () => {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-100 dark:border-zinc-800 rounded-2xl group hover:border-violet-300 dark:hover:border-violet-500 transition-all"
+                    className="flex items-center justify-between p-4 bg-zinc-50 border border-zinc-100 rounded-2xl group hover:border-violet-300 transition-all"
                   >
                     <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
@@ -161,14 +161,14 @@ export const TenantPayments: React.FC = () => {
                         {payment.status === 'Completed' ? <CheckCircle2 size={18} /> : <Clock size={18} />}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{payment.type} Payment</p>
+                        <p className="text-sm font-bold text-zinc-900">{payment.type} Payment</p>
                         <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
                           {new Date(payment.date).toLocaleDateString()} • {payment.status}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-6">
-                      <p className="text-sm font-bold text-zinc-900 dark:text-white">${payment.amount.toLocaleString()}</p>
+                      <p className="text-sm font-bold text-zinc-900">${payment.amount.toLocaleString()}</p>
                       <button className="p-2 text-zinc-400 hover:text-violet-600 transition-colors">
                         <Download size={18} />
                       </button>
@@ -193,15 +193,15 @@ export const TenantPayments: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl border border-violet-100 dark:border-zinc-800"
+              className="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl border border-violet-100"
             >
               {paymentSuccess ? (
                 <div className="text-center py-12">
-                  <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/20">
+                  <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/20">
                     <CheckCircle2 size={40} />
                   </div>
-                  <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Payment Successful!</h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">Your rent payment has been processed successfully.</p>
+                  <h3 className="text-2xl font-bold text-zinc-900 mb-2">Payment Successful!</h3>
+                  <p className="text-sm text-zinc-500">Your rent payment has been processed successfully.</p>
                 </div>
               ) : (
                 <>
@@ -211,30 +211,30 @@ export const TenantPayments: React.FC = () => {
                         <Camera size={24} />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">Submit Evidence</h3>
+                        <h3 className="text-xl font-bold text-zinc-900 tracking-tight">Submit Evidence</h3>
                         <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Proof of Payment</p>
                       </div>
                     </div>
                     <button 
                       onClick={() => setShowPaymentModal(false)}
-                      className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                      className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-700 transition-colors"
                     >
                       <X size={20} />
                     </button>
                   </div>
 
                   <form onSubmit={handlePayment} className="space-y-6">
-                    <div className="p-6 bg-zinc-50 dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800">
+                    <div className="p-6 bg-zinc-50 rounded-3xl border border-zinc-100">
                       <div className="flex justify-between items-center mb-4">
                         <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Amount Paid</span>
-                        <span className="text-2xl font-bold text-zinc-900 dark:text-white">${tenant?.rent_amount?.toLocaleString()}</span>
+                        <span className="text-2xl font-bold text-zinc-900">${tenant?.rent_amount?.toLocaleString()}</span>
                       </div>
-                      <div className="h-px bg-zinc-200 dark:bg-zinc-800 w-full mb-6" />
+                      <div className="h-px bg-zinc-200 w-full mb-6" />
                       
                       <label className="block">
                         <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Upload Receipt / Screenshot</span>
                         <div className={`relative h-32 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer ${
-                          proofFile ? 'border-emerald-500 bg-emerald-50/10' : 'border-zinc-200 dark:border-zinc-800 hover:border-violet-300 dark:hover:border-zinc-700'
+                          proofFile ? 'border-emerald-500 bg-emerald-50/10' : 'border-zinc-200 hover:border-violet-300'
                         }`}>
                           <input 
                             type="file" 
@@ -245,7 +245,7 @@ export const TenantPayments: React.FC = () => {
                           {proofFile ? (
                             <>
                               <CheckCircle2 size={24} className="text-emerald-500 mb-2" />
-                              <span className="text-xs font-bold text-zinc-900 dark:text-white">{proofFile.name}</span>
+                              <span className="text-xs font-bold text-zinc-900">{proofFile.name}</span>
                               <span className="text-[10px] text-zinc-500">Click to change</span>
                             </>
                           ) : (
@@ -259,9 +259,9 @@ export const TenantPayments: React.FC = () => {
                       </label>
                     </div>
 
-                    <div className="flex items-center gap-3 p-4 bg-violet-50 dark:bg-violet-900/10 rounded-2xl border border-violet-100 dark:border-violet-900/30">
+                    <div className="flex items-center gap-3 p-4 bg-violet-50 rounded-2xl border border-violet-100">
                       <ShieldCheck size={18} className="text-violet-600" />
-                      <p className="text-[10px] font-medium text-violet-700 dark:text-violet-400">Our team will verify your payment within 24-48 hours.</p>
+                      <p className="text-[10px] font-medium text-violet-700">Our team will verify your payment within 24-48 hours.</p>
                     </div>
 
                     <button 

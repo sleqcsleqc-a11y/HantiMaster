@@ -44,10 +44,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               layout
               className={`pointer-events-auto min-w-[300px] max-w-md p-4 rounded-xl shadow-lg border flex items-start gap-3 ${
                 toast.type === 'success' 
-                  ? 'bg-white dark:bg-zinc-900 border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400' 
+                  ? 'bg-white border-emerald-100 text-emerald-700' 
                   : toast.type === 'error'
-                  ? 'bg-white dark:bg-zinc-900 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-400'
-                  : 'bg-white dark:bg-zinc-900 border-violet-100 dark:border-violet-900/30 text-violet-700 dark:text-violet-400'
+                  ? 'bg-white border-red-100 text-red-700'
+                  : 'bg-white border-violet-100 text-violet-700'
               }`}
             >
               <div className={`mt-0.5 ${
@@ -63,7 +63,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               </div>
               <button 
                 onClick={() => removeToast(toast.id)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+                className="text-zinc-400 hover:text-zinc-600 transition-colors"
               >
                 <X size={14} />
               </button>

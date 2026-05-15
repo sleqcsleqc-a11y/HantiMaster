@@ -34,42 +34,24 @@ const AppContent: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [resetSent, setResetSent] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') === 'dark';
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
   if (!isSupabaseConfigured) {
     const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
     const likelyStripe = rawKey.startsWith('sb_') || rawKey.startsWith('pk_');
 
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-6">
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="max-w-2xl w-full bg-white dark:bg-zinc-900 rounded-[2.5rem] p-12 shadow-2xl border border-zinc-200 dark:border-zinc-800"
+          className="max-w-2xl w-full bg-white rounded-[2.5rem] p-12 shadow-2xl border border-zinc-200"
         >
           <div className="flex flex-col items-center text-center mb-10">
-            <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-3xl flex items-center justify-center text-amber-600 dark:text-amber-400 mb-8">
+            <div className="w-20 h-20 bg-amber-100 rounded-3xl flex items-center justify-center text-amber-600 mb-8">
               <AlertTriangle size={40} />
             </div>
-            <h1 className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight mb-4">Configuration Required</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 max-w-md leading-relaxed">
+            <h1 className="text-4xl font-bold text-zinc-900 tracking-tight mb-4">Configuration Required</h1>
+            <p className="text-zinc-500 max-w-md leading-relaxed">
               {likelyStripe 
                 ? "It looks like you've provided Stripe keys instead of Supabase keys. Please update your environment variables with the correct 'anon public' key from Supabase."
                 : "HantiMaster requires a Supabase connection to store your property data. Please set up your environment variables to continue."}
@@ -77,14 +59,14 @@ const AppContent: React.FC = () => {
           </div>
 
           <div className="space-y-8">
-            <div className="p-8 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800">
+            <div className="p-8 bg-zinc-50 rounded-3xl border border-zinc-100">
               <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-6">Setup Instructions</h3>
               <ol className="space-y-6">
                 <li className="flex gap-4">
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center">1</span>
                   <div className="space-y-2">
-                    <p className="text-sm font-bold text-zinc-900 dark:text-white">Get your Supabase Credentials</p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">Go to your Supabase Dashboard &gt; Project Settings &gt; API.</p>
+                    <p className="text-sm font-bold text-zinc-900">Get your Supabase Credentials</p>
+                    <p className="text-xs text-zinc-500">Go to your Supabase Dashboard &gt; Project Settings &gt; API.</p>
                     <a 
                       href="https://supabase.com/dashboard" 
                       target="_blank" 
@@ -98,14 +80,14 @@ const AppContent: React.FC = () => {
                 <li className="flex gap-4">
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center">2</span>
                   <div className="space-y-4">
-                    <p className="text-sm font-bold text-zinc-900 dark:text-white">Add Environment Variables</p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">Add these keys to your platform's Environment Variables section:</p>
+                    <p className="text-sm font-bold text-zinc-900">Add Environment Variables</p>
+                    <p className="text-xs text-zinc-500">Add these keys to your platform's Environment Variables section:</p>
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                       <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-zinc-200">
                         <code className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">VITE_SUPABASE_URL</code>
                         <button className="text-zinc-400 hover:text-violet-600 transition-colors"><Copy size={14} /></button>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                      <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-zinc-200">
                         <code className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">VITE_SUPABASE_ANON_KEY</code>
                         <button className="text-zinc-400 hover:text-violet-600 transition-colors"><Copy size={14} /></button>
                       </div>
@@ -118,7 +100,7 @@ const AppContent: React.FC = () => {
             <div className="flex flex-col items-center gap-4">
               <button 
                 onClick={() => window.location.reload()}
-                className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
+                className="w-full py-4 bg-zinc-900 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
               >
                 I've added the keys, reload app
               </button>
@@ -163,7 +145,7 @@ const AppContent: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -171,29 +153,29 @@ const AppContent: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-6">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-md w-full bg-white dark:bg-zinc-900 rounded-3xl p-10 shadow-2xl border border-zinc-200 dark:border-zinc-800"
+          className="max-w-md w-full bg-white rounded-3xl p-10 shadow-2xl border border-zinc-200"
         >
           <div className="flex flex-col items-center text-center mb-10">
             <div className="w-16 h-16 bg-violet-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-xl shadow-violet-600/20">
               <Building2 size={32} />
             </div>
-            <h1 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">HantiMaster</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 mt-2 text-sm uppercase tracking-widest font-bold">
+            <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">HantiMaster</h1>
+            <p className="text-zinc-500 mt-2 text-sm uppercase tracking-widest font-bold">
               {isForgotPassword ? 'Reset Password' : 'Premium Management'}
             </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
             {resetSent ? (
-              <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-xl text-green-600 dark:text-green-400 text-[10px] font-bold uppercase tracking-widest text-center">
+              <div className="p-4 bg-green-50 border border-green-100 rounded-xl text-green-600 text-[10px] font-bold uppercase tracking-widest text-center">
                 Success! Check your email for reset instructions.
               </div>
             ) : loginError && (
-              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-[10px] font-bold uppercase tracking-widest text-center">
+              <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-[10px] font-bold uppercase tracking-widest text-center">
                 {loginError}
               </div>
             )}
@@ -205,7 +187,7 @@ const AppContent: React.FC = () => {
                 required
                 value={loginForm.email}
                 onChange={e => setLoginForm({...loginForm, email: e.target.value})}
-                className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all text-sm font-medium"
+                className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all text-sm font-medium"
                 placeholder="Enter your email"
               />
             </div>
@@ -218,7 +200,7 @@ const AppContent: React.FC = () => {
                   required
                   value={loginForm.password}
                   onChange={e => setLoginForm({...loginForm, password: e.target.value})}
-                  className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all text-sm font-medium"
+                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all text-sm font-medium"
                   placeholder="••••••••"
                 />
                 <div className="text-right mt-2">
@@ -245,7 +227,7 @@ const AppContent: React.FC = () => {
                     setIsForgotPassword(false);
                     setResetSent(false);
                   }}
-                  className="text-xs text-violet-600 dark:text-violet-400 hover:underline font-medium"
+                  className="text-xs text-violet-600 hover:underline font-medium"
                 >
                   Back to Sign In
                 </button>
@@ -256,7 +238,7 @@ const AppContent: React.FC = () => {
                     setIsSignUp(!isSignUp);
                     setLoginError('');
                   }}
-                  className="text-xs text-violet-600 dark:text-violet-400 hover:underline font-medium"
+                  className="text-xs text-violet-600 hover:underline font-medium"
                 >
                   {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
                 </button>
@@ -372,13 +354,11 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen vintsy-main-gradient font-sans text-zinc-900 dark:text-zinc-100 selection:bg-violet-100 selection:text-violet-900 transition-colors duration-300">
+    <div className="flex h-screen vintsy-main-gradient font-sans text-zinc-900 selection:bg-violet-100 selection:text-violet-900 transition-colors duration-300">
       <Sidebar activeTab={activeTab} setActiveTab={handleTabChange} onProfileClick={() => setIsProfilePanelOpen(true)} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header 
           title={getTitle()} 
-          isDarkMode={isDarkMode} 
-          toggleDarkMode={toggleDarkMode} 
           onProfileClick={() => setIsProfilePanelOpen(true)}
         />
         <main className="flex-1 overflow-y-auto">

@@ -149,6 +149,123 @@ CREATE POLICY "Authenticated users can view signatures" ON public.document_signa
 CREATE POLICY "Authenticated users can sign docs" ON public.document_signatures FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "Authenticated users can read property docs" ON public.property_documents FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Admins and Managers can manage property docs" ON public.property_documents FOR ALL USING (true);
+
+-- Enhanced Templates
+INSERT INTO public.document_templates (category, name_en, name_so, content_en, content_so, placeholders)
+VALUES 
+('Lease', 'Residential Tenancy Agreement', 'Heshiiska Kirada Guriga', 
+ '# RESIDENTIAL TENANCY AGREEMENT
+
+**DATE:** {{date}}
+**TENANCY REFERENCE:** {{reference_no}}
+
+### 1. THE PARTIES
+This Residential Tenancy Agreement is entered into by:
+**THE LANDLORD:** {{landlord_name}}
+**THE TENANT:** {{tenant_name}}
+**AUTHORIZED OCCUPANTS:** {{occupants_list}}
+
+### 2. THE PROPERTY
+The Landlord let to the Tenant the property located at:
+**ADDRESS:** {{property_address}}
+**UNIT/SUITE:** {{unit_number}}
+**INVENTORY STATUS:** {{inventory_status}} (Furnished/Unfurnished)
+
+### 3. TERM & DURATION
+The tenancy shall be for a fixed term of **{{lease_duration}} months**, commencing on **{{lease_start}}** and terminating on **{{lease_end}}**.
+Upon expiry, the parties may negotiate a renewal or the tenancy may convert to a month-to-month basis as per local laws.
+
+### 4. RENT & PAYMENTS
+* **Monthly Base Rent:** \${{rent_amount}}
+* **Payment Due Date:** On or before the {{payment_day}} day of each calendar month.
+* **Late Fee:** A late fee of \${{late_fee}} shall apply if rent is not received within {{grace_period}} days of the due date.
+* **Preferred Payment Method:** {{payment_method}}
+
+### 5. SECURITY DEPOSIT
+The Tenant shall pay a Security Deposit of **\${{security_deposit}}** upon signing. This deposit will be held by the Landlord as security for the performance of the Tenant''s obligations and will be refunded within {{return_days}} days of termination, less any deductions for unpaid rent or damages beyond normal wear and tear.
+
+### 6. UTILITIES & SERVICES
+* **Landlord Responsibility:** {{landlord_utilities}} (e.g., Water, Waste Management)
+* **Tenant Responsibility:** {{tenant_utilities}} (e.g., Electricity, Internet, Gas)
+
+### 7. MAINTENANCE & REPAIRS
+* **Tenant Duties:** Keep premises clean, sanitary, and in good condition. Report any defects immediately.
+* **Landlord Duties:** Maintain structural integrity, exterior, and essential services (plumbing, wiring, HVAC).
+* **Emergency Access:** The Landlord may enter without notice in case of emergency. For routine inspections, {{notice_for_entry}} hours notice will be given.
+
+### 8. RULES & CONDUCT
+* **Subletting:** Prohibited without written Landlord consent.
+* **Pets:** {{pet_policy}}
+* **Smoking:** {{smoking_policy}}
+* **Noises:** Tenant shall not disturb the peace of neighbors.
+
+### 9. TERMINATION & NOTICES
+Either party may terminate this agreement by providing **{{notice_period}} days** written notice before the end of the term.
+
+### 10. GOVERNING LAW
+This agreement shall be governed by and construed in accordance with the Laws of the Federal Republic of Somalia.
+
+**SIGNATURES:**
+
+**Landlord/Agent:** ________________________  Date: __________
+
+**Tenant:** ________________________  Date: __________',
+ '# HESHIISKA KIRADA GURIGA (DEEGAANKA)
+
+**TAARIIKHDA:** {{date}}
+**TIXRAACA:** {{reference_no}}
+
+### 1. DHINACYADA HESHIISKA
+Heshiiskan waxaa kal saxiixday:
+**MULKIILAHA:** {{landlord_name}}
+**KIREYSTAHA:** {{tenant_name}}
+**DADKA DEGEN:** {{occupants_list}}
+
+### 2. HANTIDA / GURIGA
+Mulkiiluhu wuxuu u kireeyay Kireystaha guriga ku yaal:
+**CINWAANKA:** {{property_address}}
+**LAMBARKA GURIGA:** {{unit_number}}
+**XAALADDA GURIGA:** {{inventory_status}} (Qalabaysan/Aan qalabaysnayn)
+
+### 3. MUDDADA HESHIISKA
+Heshiiska kiradu waa mid go''an oo socon doona muddo **{{lease_duration}} bilood ah**, oo ka bilaabanaysa **{{lease_start}}** kuna dhammaanaysa **{{lease_end}}**.
+
+### 4. KIRADA & LACAG BIXINTA
+* **Kirada Bishii:** \${{rent_amount}}
+* **Xilliga Lacag-bixinta:** Maalinta {{payment_day}} ee bil kasta.
+* **Ganaaxa Dib-u-dhaca:** Ganaax dhan \${{late_fee}} ayaa lagu soo rogi doonaa haddii kirada la waayo {{grace_period}} maalmood gudahood.
+* **Habka Lacag-bixinta:** {{payment_method}}
+
+### 5. DHIBOOMADKA (DEPOSIT)
+Kireystuhu waa inuu bixiyo dhiboomad dhan **\${{security_deposit}}**. Lacagtan waxaa loo hayn doonaa dammaanad ahaan, waxaana lagu soo celin doonaa {{return_days}} maalmood gudahood marka guriga laga guuro, marka laga reebo wixii khasaare ah ama kire aan la bixin.
+
+### 6. ADEEGYADA (BIYAHA & KONTOROOLKA)
+* **Mas''uuliyadda Mulkiilaha:** {{landlord_utilities}}
+* **Mas''uuliyadda Kireystaha:** {{tenant_utilities}}
+
+### 7. DAYACTIRKA
+* **Kireystaha:** Waa inuu guriga u hayo si nadiif ah oo nidaamsan.
+* **Mulkiilaha:** Waxaa mas''uul ka yahay dhismaha iyo nidaamyada waaweyn (tuubooyinka, korontada).
+* **Gelitaanka Guriga:** Mulkiiluhu wuxuu geli karaa guriga ogeysiis {{notice_for_entry}} saacadood ah ka dib.
+
+### 8. XEERARKA GURIGA
+* **Kireynta kale:** Reebban iyada oo aan oggolaansho qoraal ah laga helin.
+* **Xayawaanka:** {{pet_policy}}
+* **Sigaar-cabidda:** {{smoking_policy}}
+
+### 9. JOOJINTA HESHIISKA
+Labadaba dhinac waxay joojin karaan heshiiska iyagoo bixinaya ogeysiis qoraal ah oo {{notice_period}} maalmood ah.
+
+### 10. SHARCIGA LAGU DHAQMAYO
+Heshiiskan waxaa lagu maamuli doonaa sharciyada Jamhuuriyadda Federaalka Soomaaliya.
+
+**SAXIIXADA:**
+
+**Mulkiilaha:** ________________________  Taariikh: __________
+
+**Kireystaha:** ________________________  Taariikh: __________',
+ '["date", "reference_no", "landlord_name", "tenant_name", "occupants_list", "property_address", "unit_number", "inventory_status", "lease_duration", "lease_start", "lease_end", "rent_amount", "payment_day", "late_fee", "grace_period", "payment_method", "security_deposit", "return_days", "landlord_utilities", "tenant_utilities", "notice_for_entry", "notice_period", "pet_policy", "smoking_policy"]'
+) ON CONFLICT DO NOTHING;
 `;
 
   useEffect(() => {
@@ -177,10 +294,10 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Signed': return 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20';
-      case 'Pending': return 'text-amber-600 bg-amber-50 dark:bg-amber-900/20';
-      case 'Draft': return 'text-zinc-500 bg-zinc-50 dark:bg-zinc-800';
-      default: return 'text-zinc-400 bg-zinc-50 dark:bg-zinc-800';
+      case 'Signed': return 'text-emerald-600 bg-emerald-50';
+      case 'Pending': return 'text-amber-600 bg-amber-50';
+      case 'Draft': return 'text-zinc-500 bg-zinc-50';
+      default: return 'text-zinc-400 bg-zinc-50';
     }
   };
 
@@ -196,11 +313,11 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
     <div className="p-8 space-y-12 max-w-[1600px] mx-auto">
       {/* Hero Section */}
       <div className="relative group">
-        <div className="vintsy-card p-12 overflow-hidden bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 transition-all duration-700">
+        <div className="vintsy-card p-12 overflow-hidden bg-zinc-900 text-white transition-all duration-700">
           <div className="relative z-10 flex flex-col md:flex-row justify-between items-end md:items-center gap-8">
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                 <div className="w-10 h-10 rounded-2xl bg-white/10 dark:bg-zinc-900/5 flex items-center justify-center">
+                 <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center">
                     <Scale size={20} className="text-violet-400" />
                  </div>
                  <span className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">Legal Excellence • Somalia</span>
@@ -233,11 +350,11 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
       {/* Main Tabs & Filters */}
       <div className="space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-           <div className="flex bg-white dark:bg-zinc-900 p-1.5 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+           <div className="flex bg-white p-1.5 rounded-2xl border border-zinc-100 shadow-sm">
              <button 
                onClick={() => setActiveTab('all')}
                className={`flex items-center gap-3 px-8 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
-                 activeTab === 'all' ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xl' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
+                 activeTab === 'all' ? 'bg-zinc-900 text-white shadow-xl' : 'text-zinc-500 hover:text-zinc-900'
                }`}
              >
                <FileText size={16} />
@@ -246,7 +363,7 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
              <button 
                onClick={() => setActiveTab('templates')}
                className={`flex items-center gap-3 px-8 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
-                 activeTab === 'templates' ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xl' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
+                 activeTab === 'templates' ? 'bg-zinc-900 text-white shadow-xl' : 'text-zinc-500 hover:text-zinc-900'
                }`}
              >
                <Library size={16} />
@@ -265,16 +382,16 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
                  className="vintsy-input w-full pl-12 pr-4 py-3"
                />
              </div>
-             <div className="flex bg-white dark:bg-zinc-900 p-1.5 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+             <div className="flex bg-white p-1.5 rounded-2xl border border-zinc-100 shadow-sm">
                <button 
                  onClick={() => setViewMode('grid')}
-                 className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-400'}`}
+                 className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-400'}`}
                >
                  <LayoutGrid size={16} />
                </button>
                <button 
                  onClick={() => setViewMode('list')}
-                 className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-400'}`}
+                 className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-400'}`}
                >
                  <ListIcon size={16} />
                </button>
@@ -291,7 +408,7 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
               className={`px-6 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all shrink-0 ${
                 selectedCategory === cat 
                   ? 'bg-violet-600 border-violet-600 text-white shadow-lg shadow-violet-600/20' 
-                  : 'bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 text-zinc-500 hover:border-violet-600 hover:text-violet-600'
+                  : 'bg-white border-zinc-100 text-zinc-500 hover:border-violet-600 hover:text-violet-600'
               }`}
             >
               {cat}
@@ -302,16 +419,16 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
         {activeTab === 'all' ? (
           <>
             {errorDetails ? (
-              <div className="vintsy-card p-12 text-center space-y-6 border-red-100 dark:border-red-900/30">
-                 <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-3xl flex items-center justify-center text-red-500 mx-auto">
+              <div className="vintsy-card p-12 text-center space-y-6 border-red-100">
+                 <div className="w-16 h-16 bg-red-50 rounded-3xl flex items-center justify-center text-red-500 mx-auto">
                     <AlertCircle size={32} />
                  </div>
                  <div className="max-w-2xl mx-auto text-left">
-                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2 tracking-tight text-center">Legal Database Synchronization Error</h3>
+                    <h3 className="text-lg font-bold text-zinc-900 mb-2 tracking-tight text-center">Legal Database Synchronization Error</h3>
                     <p className="text-zinc-400 text-sm mb-6 text-center">The following tables are missing from your database schema. Please paste the SQL below into your Supabase SQL Editor.</p>
                     
                     <div className="relative group">
-                      <pre className="text-zinc-500 text-[10px] font-mono bg-zinc-50 dark:bg-zinc-800/50 p-6 rounded-xl border border-zinc-100 dark:border-zinc-800 overflow-x-auto max-h-60 scrollbar-hide">
+                       <pre className="text-zinc-500 text-[10px] font-mono bg-zinc-50 p-6 rounded-xl border border-zinc-100 overflow-x-auto max-h-60 scrollbar-hide">
                         {sqlMigration}
                       </pre>
                       <button 
@@ -319,7 +436,7 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
                           navigator.clipboard.writeText(sqlMigration);
                           addToast('SQL copied to clipboard', 'info');
                         }}
-                        className="absolute top-4 right-4 p-2 bg-white dark:bg-zinc-700 shadow-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-4 right-4 p-2 bg-white shadow-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <Copy size={14} className="text-zinc-500" />
                       </button>
@@ -330,7 +447,7 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
                  <div className="flex justify-center gap-4">
                    <button 
                     onClick={loadData}
-                    className="px-10 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
+                    className="px-10 py-4 bg-zinc-900 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
                    >
                      Retry Connection
                    </button>
@@ -338,11 +455,11 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
               </div>
             ) : filteredDocs.length === 0 ? (
               <div className="vintsy-card p-24 text-center space-y-6">
-                 <div className="w-20 h-20 bg-zinc-50 dark:bg-zinc-800 rounded-3xl flex items-center justify-center text-zinc-300 mx-auto">
+                 <div className="w-20 h-20 bg-zinc-50 rounded-3xl flex items-center justify-center text-zinc-300 mx-auto">
                     <FileText size={40} />
                  </div>
                  <div>
-                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2 tracking-tight">No Documents Found</h3>
+                    <h3 className="text-lg font-bold text-zinc-900 mb-2 tracking-tight">No Documents Found</h3>
                     <p className="text-zinc-400 text-sm max-w-xs mx-auto">Try adjusting your search or generate a new document from the templates library.</p>
                  </div>
                  <button 
@@ -358,7 +475,7 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
                   <motion.div 
                     layout
                     key={doc.id} 
-                    className="vintsy-card group h-full flex flex-col hover:border-violet-200 dark:hover:border-violet-800"
+                    className="vintsy-card group h-full flex flex-col hover:border-violet-200"
                   >
                     <div className="p-8 space-y-6 flex-1">
                        <div className="flex items-start justify-between">
@@ -374,7 +491,7 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
                        </div>
                        
                        <div className="space-y-2">
-                         <h3 className="text-sm font-bold text-zinc-900 dark:text-white group-hover:text-violet-600 transition-colors line-clamp-2">
+                         <h3 className="text-sm font-bold text-zinc-900 group-hover:text-violet-600 transition-colors line-clamp-2">
                            {doc.title}
                          </h3>
                          <div className="flex items-center gap-2 text-zinc-400">
@@ -383,13 +500,13 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
                          </div>
                        </div>
 
-                       <div className="pt-6 border-t border-zinc-50 dark:border-zinc-800 flex flex-wrap gap-4">
+                       <div className="pt-6 border-t border-zinc-50 flex flex-wrap gap-4">
                           <div className="flex-1 space-y-1">
                              <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">Signatures</p>
                              <div className="flex -space-x-2">
                                {[1, 2].map(i => (
-                                 <div key={i} className={`w-6 h-6 rounded-full border-2 border-white dark:border-zinc-900 flex items-center justify-center ${
-                                   doc.signatures && doc.signatures.length >= i ? 'bg-emerald-100 text-emerald-600' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'
+                                 <div key={i} className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center ${
+                                   doc.signatures && doc.signatures.length >= i ? 'bg-emerald-100 text-emerald-600' : 'bg-zinc-100 text-zinc-400'
                                  }`}>
                                    <CheckCircle2 size={10} />
                                  </div>
@@ -399,13 +516,13 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
                           {doc.placeholders_data && (
                             <div className="flex-1 text-right space-y-1">
                                <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">Type</p>
-                               <p className="text-[10px] font-bold text-zinc-900 dark:text-white truncate">Official</p>
+                               <p className="text-[10px] font-bold text-zinc-900 truncate">Official</p>
                             </div>
                           )}
                        </div>
                     </div>
                     
-                    <div className="px-8 py-6 bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800">
+                    <div className="px-8 py-6 bg-zinc-50 flex items-center justify-between border-t border-zinc-100">
                        <button 
                         onClick={() => handleEditDocument(doc.id)}
                         className="text-[10px] font-bold text-violet-600 uppercase tracking-widest hover:underline"
@@ -423,7 +540,7 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
             ) : (
               <div className="vintsy-card overflow-hidden">
                 <table className="w-full text-left">
-                  <thead className="bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-100 dark:border-zinc-800">
+                  <thead className="bg-zinc-50 border-b border-zinc-100">
                     <tr>
                       <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Document Title</th>
                       <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Status</th>
@@ -432,16 +549,16 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
                       <th className="px-8 py-5 text-right"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                  <tbody className="divide-y divide-zinc-100">
                     {filteredDocs.map((doc) => (
-                      <tr key={doc.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/30">
+                      <tr key={doc.id} className="hover:bg-zinc-50/50">
                         <td className="px-8 py-6">
                            <div className="flex items-center gap-4">
                              <div className={`p-2.5 rounded-xl ${getStatusColor(doc.status)}`}>
                                <FileText size={18} />
                              </div>
                              <div>
-                               <p className="text-sm font-bold text-zinc-900 dark:text-white">{doc.title}</p>
+                               <p className="text-sm font-bold text-zinc-900">{doc.title}</p>
                                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">v{doc.version}.0</p>
                              </div>
                            </div>
@@ -454,8 +571,8 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
                         <td className="px-8 py-6">
                            <div className="flex -space-x-1.5">
                               {[1, 2].map(i => (
-                                <div key={i} className={`w-5 h-5 rounded-full border-2 border-white dark:border-zinc-900 flex items-center justify-center ${
-                                  doc.signatures && doc.signatures.length >= i ? 'bg-emerald-100 text-emerald-600' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'
+                                <div key={i} className={`w-5 h-5 rounded-full border-2 border-white flex items-center justify-center ${
+                                  doc.signatures && doc.signatures.length >= i ? 'bg-emerald-100 text-emerald-600' : 'bg-zinc-100 text-zinc-400'
                                 }`}>
                                   <CheckCircle2 size={8} />
                                 </div>
@@ -487,30 +604,30 @@ CREATE POLICY "Admins and Managers can manage property docs" ON public.property_
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 key={template.id} 
-                className="vintsy-card group flex flex-col hover:border-emerald-200 dark:hover:border-emerald-800"
+                className="vintsy-card group flex flex-col hover:border-emerald-200"
               >
                 <div className="p-8 space-y-6 flex-1">
                    <div className="flex items-start justify-between">
-                     <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600">
+                     <div className="p-4 rounded-2xl bg-emerald-50 text-emerald-600">
                        <LayoutGrid size={24} />
                      </div>
-                     <span className="px-2.5 py-1 rounded-full text-[8px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 uppercase tracking-widest">
+                     <span className="px-2.5 py-1 rounded-full text-[8px] font-bold bg-zinc-100 text-zinc-500 uppercase tracking-widest">
                        Bilingual
                      </span>
                    </div>
                    
                    <div className="space-y-4">
                      <div>
-                       <h3 className="text-sm font-bold text-zinc-900 dark:text-white line-clamp-1">{template.name_en}</h3>
+                       <h3 className="text-sm font-bold text-zinc-900 line-clamp-1">{template.name_en}</h3>
                        <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mt-1">{template.name_so}</p>
                      </div>
                      <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">
-                       Standard Somalia legal template with support for {(Array.isArray(template.placeholders) ? template.placeholders : []).length} dynamic fields.
+                       Standard Somalia legal template with support for {(Array.isArray(template.placeholders) ? template.placeholders : (typeof template.placeholders === 'string' ? JSON.parse(template.placeholders) : [])).length} dynamic fields.
                      </p>
                    </div>
                 </div>
                 
-                <div className="px-8 py-6 bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800">
+                <div className="px-8 py-6 bg-zinc-50 flex items-center justify-between border-t border-zinc-100">
                    <button 
                     onClick={() => handleCreateFromTemplate(template)}
                     className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 group/btn"

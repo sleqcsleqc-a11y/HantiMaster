@@ -59,11 +59,11 @@ export const Maintenance: React.FC = () => {
     return (
       <div className="p-8 h-[calc(100vh-80px)] flex items-center justify-center">
         <div className="text-center max-w-md">
-          <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-800 rounded-3xl flex items-center justify-center mx-auto mb-6">
+          <div className="w-20 h-20 bg-zinc-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
             <Lock size={32} className="text-zinc-400" />
           </div>
-          <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Access Restricted</h3>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">
+          <h3 className="text-2xl font-bold text-zinc-900 mb-2">Access Restricted</h3>
+          <p className="text-zinc-500 text-sm leading-relaxed">
             You do not have the required permissions to view maintenance requests.
           </p>
         </div>
@@ -91,18 +91,18 @@ export const Maintenance: React.FC = () => {
   };
 
   const priorityColors = {
-    Emergency: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-100 dark:border-red-800',
-    High: 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border-orange-100 dark:border-orange-800',
-    Medium: 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border-violet-100 dark:border-violet-800',
-    Low: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-100 dark:border-zinc-700',
+    Emergency: 'bg-red-50 text-red-700 border-red-100',
+    High: 'bg-orange-50 text-orange-700 border-orange-100',
+    Medium: 'bg-violet-50 text-violet-700 border-violet-100',
+    Low: 'bg-zinc-50 text-zinc-500 border-zinc-100',
   };
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-12">
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">Service</h3>
-          <p className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Maintenance Requests</p>
+          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Service</h3>
+          <p className="text-2xl font-bold text-zinc-900 tracking-tight">Maintenance Requests</p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
@@ -132,19 +132,19 @@ export const Maintenance: React.FC = () => {
             
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <h4 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight group-hover:text-violet-700 dark:group-hover:text-violet-400 transition-colors">{request.title}</h4>
+                <h4 className="text-lg font-bold text-zinc-900 tracking-tight group-hover:text-violet-700 transition-colors">{request.title}</h4>
                 <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${priorityColors[request.priority as keyof typeof priorityColors]}`}>
                   {request.priority}
                 </span>
               </div>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 max-w-2xl font-medium">{request.description}</p>
-              <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+              <p className="text-sm text-zinc-500 mb-4 max-w-2xl font-medium">{request.description}</p>
+              <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
                 <span className="flex items-center gap-2">
-                  <Clock size={12} className="text-violet-700 dark:text-violet-400" />
+                  <Clock size={12} className="text-violet-700" />
                   {new Date(request.created_at).toLocaleDateString()}
                 </span>
                 <span className="flex items-center gap-2">
-                  <Home size={12} className="text-violet-700 dark:text-violet-400" />
+                  <Home size={12} className="text-violet-700" />
                   Unit {request.unit_number} • {request.first_name} {request.last_name}
                 </span>
               </div>
@@ -152,13 +152,13 @@ export const Maintenance: React.FC = () => {
 
             <div className="flex items-center gap-8">
               <div className="text-right">
-                <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest block mb-1">Status</span>
-                <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-sm">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">Status</span>
+                <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
                   <CheckCircle2 size={16} />
                   {request.status}
                 </div>
               </div>
-              <button className="w-12 h-12 rounded-xl border border-violet-100 dark:border-zinc-800 flex items-center justify-center text-zinc-300 dark:text-zinc-600 hover:text-violet-700 dark:hover:text-violet-400 hover:border-violet-300 dark:hover:border-violet-500 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95">
+              <button className="w-12 h-12 rounded-xl border border-violet-100 flex items-center justify-center text-zinc-300 hover:text-violet-700 hover:border-violet-300 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95">
                 <ChevronRight size={20} />
               </button>
             </div>
@@ -171,13 +171,13 @@ export const Maintenance: React.FC = () => {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-zinc-900 rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-violet-100 dark:border-zinc-800 max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-violet-100 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Create Maintenance Request</h3>
+              <h3 className="text-xl font-bold text-zinc-900">Create Maintenance Request</h3>
               <button 
                 onClick={() => setShowAddModal(false)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                className="text-zinc-400 hover:text-zinc-600 transition-colors"
               >
                 <X size={20} />
               </button>
@@ -245,7 +245,7 @@ export const Maintenance: React.FC = () => {
                 <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Photo / Video (Optional)</label>
                 <div className="flex items-center gap-4">
                   {requestForm.image_url && (
-                    <div className="w-16 h-16 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden border border-zinc-200">
                       <img src={requestForm.image_url || null} alt="Preview" className="w-full h-full object-cover" />
                     </div>
                   )}

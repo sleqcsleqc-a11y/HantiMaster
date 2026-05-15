@@ -168,8 +168,8 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">Portfolio</h3>
-          <p className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Real Estate Assets</p>
+          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Portfolio</h3>
+          <p className="text-2xl font-bold text-zinc-900 tracking-tight">Real Estate Assets</p>
         </div>
         
         {hasPermission('PROPERTY_MANAGEMENT', 'create') && (
@@ -188,13 +188,13 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-zinc-900 rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-violet-100 dark:border-zinc-800 max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-violet-100 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Add New Property</h3>
+              <h3 className="text-xl font-bold text-zinc-900">Add New Property</h3>
               <button 
                 onClick={() => setShowAddProperty(false)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                className="text-zinc-400 hover:text-zinc-600 transition-colors"
               >
                 <X size={20} />
               </button>
@@ -208,7 +208,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
                     required
                     value={propertyForm.name}
                     onChange={e => setPropertyForm({...propertyForm, name: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-violet-100 rounded-xl text-sm text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
                   />
                 </div>
                 <div>
@@ -216,7 +216,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
                   <select 
                     value={propertyForm.type}
                     onChange={e => setPropertyForm({...propertyForm, type: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-violet-100 rounded-xl text-sm text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
                   >
                     <option value="Residential">Residential</option>
                     <option value="Commercial">Commercial</option>
@@ -231,7 +231,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
                   required
                   value={propertyForm.address}
                   onChange={e => setPropertyForm({...propertyForm, address: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                  className="w-full px-4 py-2.5 bg-zinc-50 border border-violet-100 rounded-xl text-sm text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -242,7 +242,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
                     required
                     value={propertyForm.property_value}
                     onChange={e => setPropertyForm({...propertyForm, property_value: Number(e.target.value)})}
-                    className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-violet-100 rounded-xl text-sm text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
                   />
                 </div>
                 <div>
@@ -250,7 +250,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
                   <select 
                     value={propertyForm.owner_id}
                     onChange={e => setPropertyForm({...propertyForm, owner_id: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-violet-100 rounded-xl text-sm text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
                   >
                     <option value="">Select an owner...</option>
                     {owners.map(o => (
@@ -275,7 +275,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
                   <textarea 
                     value={propertyForm.description}
                     onChange={e => setPropertyForm({...propertyForm, description: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-violet-100 rounded-xl text-sm text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
                     rows={2}
                   />
                 </div>
@@ -299,7 +299,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                           isSelected 
                             ? 'bg-violet-600 text-white shadow-md' 
-                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                            : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
                         }`}
                       >
                         {amenity}
@@ -311,7 +311,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
               <div>
                 <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Property Image</label>
                 <div className="space-y-4">
-                  <div className="w-full h-48 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center overflow-hidden bg-zinc-50 dark:bg-zinc-800/50 relative group">
+                  <div className="w-full h-48 rounded-xl border-2 border-dashed border-zinc-200 flex items-center justify-center overflow-hidden bg-zinc-50 relative group">
                     {(localPreview || propertyForm.image_url) ? (
                       <>
                         <img src={localPreview || propertyForm.image_url || undefined} alt="Preview" className="w-full h-full object-cover" />
@@ -336,7 +336,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
                     />
                     <label 
                       htmlFor="property-image-upload"
-                      className={`inline-block px-6 py-3 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-all ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      className={`inline-block px-6 py-3 bg-violet-50 text-violet-700 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-violet-100 transition-all ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {uploading ? 'Uploading...' : 'Choose Image'}
                     </label>
@@ -353,7 +353,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
       )}
 
       <div className="vintsy-card p-6 mb-12 space-y-4">
-        <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">
+        <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-400 mb-2">
           <Filter size={16} />
           Advanced Search
         </div>
@@ -365,7 +365,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
               placeholder="Search by name or address..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400"
+              className="w-full pl-9 pr-4 py-2.5 bg-white/50 border border-violet-100 rounded-xl text-xs text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400"
             />
           </div>
           <div className="flex gap-2">
@@ -374,20 +374,20 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
               placeholder="Min Price" 
               value={minPrice}
               onChange={(e) => setMinPrice(e.target.value)}
-              className="w-full px-4 py-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400"
+              className="w-full px-4 py-2.5 bg-white/50 border border-violet-100 rounded-xl text-xs text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400"
             />
             <input 
               type="number" 
               placeholder="Max Price" 
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
-              className="w-full px-4 py-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400"
+              className="w-full px-4 py-2.5 bg-white/50 border border-violet-100 rounded-xl text-xs text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400"
             />
           </div>
           <select 
             value={occupancyStatus}
             onChange={(e) => setOccupancyStatus(e.target.value)}
-            className="w-full px-4 py-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all appearance-none cursor-pointer"
+            className="w-full px-4 py-2.5 bg-white/50 border border-violet-100 rounded-xl text-xs text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all appearance-none cursor-pointer"
           >
             <option value="All">All Occupancy</option>
             <option value="Fully Occupied">Fully Occupied</option>
@@ -398,7 +398,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full px-4 py-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all appearance-none cursor-pointer"
+            className="w-full px-4 py-2.5 bg-white/50 border border-violet-100 rounded-xl text-xs text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all appearance-none cursor-pointer"
           >
             <option value="All">All Status</option>
             <option value="Active">Active</option>
@@ -409,14 +409,14 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
             <select 
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="w-full px-4 py-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all appearance-none cursor-pointer"
+              className="w-full px-4 py-2.5 bg-white/50 border border-violet-100 rounded-xl text-xs text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all appearance-none cursor-pointer"
             >
               {propertyTypes.map(type => <option key={type} value={type}>{type}</option>)}
             </select>
             <select 
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-full px-4 py-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all appearance-none cursor-pointer"
+              className="w-full px-4 py-2.5 bg-white/50 border border-violet-100 rounded-xl text-xs text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all appearance-none cursor-pointer"
             >
               <option value="name">Sort: Name</option>
               <option value="units">Sort: Units</option>
@@ -425,7 +425,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
             </select>
             <button 
               onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-              className="p-2.5 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-zinc-500 dark:text-zinc-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+              className="p-2.5 bg-white/50 border border-violet-100 rounded-xl text-zinc-500 hover:text-violet-600 transition-colors"
               title={`Sort ${sortDirection === 'asc' ? 'Ascending' : 'Descending'}`}
             >
               <ArrowUpDown size={16} className={sortDirection === 'desc' ? 'rotate-180 transition-transform' : 'transition-transform'} />
@@ -453,7 +453,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+                <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400">
                   <Building2 size={48} />
                 </div>
               )}
@@ -474,27 +474,27 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
             </div>
             
             <div className="p-8 space-y-6">
-              <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-xs font-medium">
-                <MapPin size={14} className="text-violet-700 dark:text-violet-400" />
+              <div className="flex items-center gap-2 text-zinc-500 text-xs font-medium">
+                <MapPin size={14} className="text-violet-700" />
                 <span>{property.address}</span>
               </div>
               
-              <div className="grid grid-cols-3 gap-4 pt-6 border-t border-violet-100/50 dark:border-zinc-800">
+              <div className="grid grid-cols-3 gap-4 pt-6 border-t border-violet-100/50">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Units</span>
-                  <p className="text-sm font-bold text-zinc-900 dark:text-white">{property.unit_count} Units</p>
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Units</span>
+                  <p className="text-sm font-bold text-zinc-900">{property.unit_count} Units</p>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Occupancy</span>
-                  <p className="text-sm font-bold text-violet-700 dark:text-violet-400">{Math.round(property.occupancy_rate ?? 0)}%</p>
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Occupancy</span>
+                  <p className="text-sm font-bold text-violet-700">{Math.round(property.occupancy_rate ?? 0)}%</p>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Value</span>
-                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">${((property.property_value ?? 0) / 1000000).toFixed(1)}M</p>
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Value</span>
+                  <p className="text-sm font-bold text-emerald-600">${((property.property_value ?? 0) / 1000000).toFixed(1)}M</p>
                 </div>
               </div>
 
-              <button className="w-full vintsy-button-secondary text-[10px] uppercase tracking-widest py-3.5 group-hover:bg-violet-700 group-hover:text-white group-hover:border-violet-700 dark:group-hover:bg-violet-600 dark:group-hover:border-violet-600 transition-all duration-300 shadow-sm hover:shadow-lg">
+              <button className="w-full vintsy-button-secondary text-[10px] uppercase tracking-widest py-3.5 group-hover:bg-violet-700 group-hover:text-white group-hover:border-violet-700 transition-all duration-300 shadow-sm hover:shadow-lg">
                 View Details
               </button>
             </div>

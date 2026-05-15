@@ -69,12 +69,12 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeModule
   }, [user?.role_name]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex">
+    <div className="min-h-screen bg-zinc-50 flex">
       {/* Sidebar */}
       <motion.aside 
         initial={false}
         animate={{ width: isSidebarOpen ? 280 : 80 }}
-        className="bg-white dark:bg-zinc-900/80 backdrop-blur-xl border-r border-zinc-200 dark:border-zinc-800 flex flex-col sticky top-0 h-screen z-50"
+        className="bg-white border-r border-zinc-200 flex flex-col sticky top-0 h-screen z-50"
       >
         <div className="p-6 flex items-center justify-between">
           <AnimatePresence mode="wait">
@@ -88,13 +88,13 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeModule
                 <div className="w-8 h-8 bg-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-violet-600/20">
                   <Shield size={18} />
                 </div>
-                <span className="font-bold text-zinc-900 dark:text-white tracking-tight">Admin Center</span>
+                <span className="font-bold text-zinc-900 tracking-tight">Admin Center</span>
               </motion.div>
             )}
           </AnimatePresence>
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-400 transition-colors"
+            className="p-2 hover:bg-zinc-100 rounded-xl text-zinc-400 transition-colors"
           >
             <ChevronLeft size={18} className={`transition-transform duration-300 ${!isSidebarOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -104,7 +104,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeModule
           {menuItems.map((section, idx) => (
             <div key={idx} className="space-y-2">
               {isSidebarOpen && (
-                <p className="px-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+                <p className="px-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
                   {section.section}
                 </p>
               )}
@@ -116,7 +116,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeModule
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group ${
                       activeModule === item.id 
                         ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20' 
-                        : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white'
+                        : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'
                     }`}
                   >
                     <item.icon size={20} className={activeModule === item.id ? 'text-white' : 'group-hover:scale-110 transition-transform'} />
@@ -128,10 +128,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeModule
           ))}
         </nav>
 
-        <div className="p-4 border-t border-zinc-100 dark:border-zinc-800">
+        <div className="p-4 border-t border-zinc-100">
           <button 
             onClick={onExit}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all group"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-zinc-500 hover:bg-zinc-100 transition-all group"
           >
             <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
             {isSidebarOpen && <span className="text-sm font-bold">Exit Admin</span>}
@@ -142,12 +142,12 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeModule
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-40 px-8 flex items-center justify-between">
+        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-zinc-200 sticky top-0 z-40 px-8 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight capitalize">
+            <h2 className="text-xl font-bold text-zinc-900 tracking-tight capitalize">
               {activeModule.replace('-', ' ')}
             </h2>
-            <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-800" />
+            <div className="h-4 w-px bg-zinc-200" />
             <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
               <Activity size={12} className="text-emerald-500" />
               System Healthy
@@ -155,19 +155,19 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeModule
           </div>
 
           <div className="flex items-center gap-6">
-            <button className="relative p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">
+            <button className="relative p-2 text-zinc-400 hover:text-zinc-900 transition-colors">
               <Bell size={20} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-zinc-900" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
             </button>
             <button 
               onClick={onProfileClick}
-              className="flex items-center gap-3 pl-6 border-l border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 p-2 rounded-2xl transition-all group"
+              className="flex items-center gap-3 pl-6 border-l border-zinc-200 hover:bg-zinc-50 p-2 rounded-2xl transition-all group"
             >
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-zinc-900 dark:text-white group-hover:text-violet-600 transition-colors">{user?.first_name} {user?.last_name}</p>
+                <p className="text-sm font-bold text-zinc-900 group-hover:text-violet-600 transition-colors">{user?.first_name} {user?.last_name}</p>
                 <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{user?.role_name}</p>
               </div>
-              <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 border border-zinc-200 dark:border-zinc-700 group-hover:bg-violet-600 group-hover:text-white transition-all">
+              <div className="w-10 h-10 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-400 border border-zinc-200 group-hover:bg-violet-600 group-hover:text-white transition-all">
                 <User size={20} />
               </div>
             </button>
@@ -188,15 +188,15 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeModule
           </AnimatePresence>
         </main>
 
-        <footer className="h-12 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 px-8 flex items-center justify-between text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+        <footer className="h-12 bg-white border-t border-zinc-200 px-8 flex items-center justify-between text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
           <div className="flex items-center gap-4">
             <span>System Status: <span className="text-emerald-500">Operational</span></span>
-            <span className="h-3 w-px bg-zinc-200 dark:bg-zinc-800" />
+            <span className="h-3 w-px bg-zinc-200" />
             <span>Version: 2.4.0-governance</span>
           </div>
           <div className="flex items-center gap-2">
             <Shield size={12} className="text-violet-500" />
-            Security Indicator: <span className="text-zinc-900 dark:text-white">High</span>
+            Security Indicator: <span className="text-zinc-900">High</span>
           </div>
         </footer>
       </div>

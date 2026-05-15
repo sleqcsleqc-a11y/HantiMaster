@@ -299,7 +299,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
   if (loading || !property) {
     return (
       <div className="p-8 flex items-center justify-center h-full">
-        <div className="text-violet-600 dark:text-violet-400 animate-pulse uppercase tracking-widest text-xs font-bold">Loading Property Details...</div>
+        <div className="text-violet-600 animate-pulse uppercase tracking-widest text-xs font-bold">Loading Property Details...</div>
       </div>
     );
   }
@@ -311,43 +311,43 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
         <div className="space-y-4">
           <button 
             onClick={onBack}
-            className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors text-xs uppercase tracking-widest font-bold"
+            className="flex items-center gap-2 text-zinc-500 hover:text-violet-600 transition-colors text-xs uppercase tracking-widest font-bold"
             data-html2canvas-ignore
           >
             <ArrowLeft size={14} />
             Back to Portfolio
           </button>
           <div>
-            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">{property.type}</h3>
-            <h2 className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight flex items-center gap-4">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">{property.type}</h3>
+            <h2 className="text-4xl font-bold text-zinc-900 tracking-tight flex items-center gap-4">
               {property.name}
               <div className="flex gap-2">
                 <span className={`text-[10px] px-3 py-1 rounded-full uppercase tracking-widest font-bold border ${
-                  property.status === 'For Sale' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800' :
-                  property.status === 'Sold' ? 'bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700' :
-                  property.status === 'Rented' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' :
-                  property.status === 'Under Maintenance' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' :
-                  'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
+                  property.status === 'For Sale' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                  property.status === 'Sold' ? 'bg-zinc-100 text-zinc-700 border-zinc-200' :
+                  property.status === 'Rented' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                  property.status === 'Under Maintenance' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                  'bg-emerald-50 text-emerald-700 border-emerald-200'
                 }`}>
                   {property.status || 'Active'}
                 </span>
                 {property.is_furnished && (
-                  <span className="text-[10px] px-3 py-1 rounded-full uppercase tracking-widest font-bold border bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
+                  <span className="text-[10px] px-3 py-1 rounded-full uppercase tracking-widest font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
                     Furnished
                   </span>
                 )}
               </div>
             </h2>
-            <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-sm mt-2">
-              <MapPin size={14} className="text-violet-600 dark:text-violet-400" />
+            <div className="flex items-center gap-2 text-zinc-500 text-sm mt-2">
+              <MapPin size={14} className="text-violet-600" />
               <span>{property.address}</span>
             </div>
             {property.owner_name && (
-              <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-sm mt-1">
+              <div className="flex items-center gap-2 text-zinc-500 text-sm mt-1">
                 <span className="font-bold">Owner:</span> 
                 <button 
                   onClick={() => property.owner_id && onSelectOwner(property.owner_id)}
-                  className="text-violet-600 dark:text-violet-400 hover:underline cursor-pointer"
+                  className="text-violet-600 hover:underline cursor-pointer"
                 >
                   {property.owner_name}
                 </button>
@@ -366,7 +366,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
           {hasPermission('PROPERTY_MANAGEMENT', 'edit') && (
             <button 
               onClick={() => setIsEditing(!isEditing)}
-              className={`vintsy-button-secondary flex items-center gap-2 text-[10px] uppercase tracking-widest ${isEditing ? 'bg-zinc-100 dark:bg-zinc-800 border-violet-500 text-violet-600' : ''}`}
+              className={`vintsy-button-secondary flex items-center gap-2 text-[10px] uppercase tracking-widest ${isEditing ? 'bg-zinc-100 border-violet-500 text-violet-600' : ''}`}
             >
               <Edit3 size={14} />
               {isEditing ? 'Cancel Editing' : 'Edit Property'}
@@ -390,12 +390,12 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
           {isEditing ? (
             <div className="vintsy-card p-8 space-y-8">
               <div className="flex justify-between items-center mb-4">
-                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Edit Basic Details</h4>
+                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Edit Basic Details</h4>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Property Name</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Property Name</label>
                   <input 
                     type="text" 
                     value={editForm.name}
@@ -404,7 +404,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Type</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Type</label>
                   <select 
                     value={editForm.type}
                     onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
@@ -416,7 +416,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                   </select>
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Address</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Address</label>
                   <input 
                     type="text" 
                     value={editForm.address}
@@ -425,7 +425,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Property Value ($)</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Property Value ($)</label>
                   <input 
                     type="number" 
                     value={editForm.property_value || ''}
@@ -444,7 +444,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                   <label htmlFor="edit_is_furnished_inline" className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Is Furnished?</label>
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Description</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Description</label>
                   <textarea 
                     value={editForm.description || ''}
                     onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
@@ -453,7 +453,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Owner</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Owner</label>
                   <select 
                     value={editForm.owner_id || ''}
                     onChange={(e) => setEditForm({ ...editForm, owner_id: Number(e.target.value) })}
@@ -467,8 +467,8 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                 </div>
               </div>
 
-              <div className="pt-8 border-t border-zinc-100 dark:border-zinc-800">
-                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-6">Amenities</h4>
+              <div className="pt-8 border-t border-zinc-100">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-6">Amenities</h4>
                 <div className="flex flex-wrap gap-2">
                   {availableAmenities.map(amenity => {
                     const currentAmenities = JSON.parse(editForm.amenities || '[]');
@@ -486,7 +486,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
                           isSelected 
                             ? 'bg-violet-600 text-white border-violet-700 shadow-lg shadow-violet-600/20' 
-                            : 'bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                            : 'bg-zinc-50 text-zinc-500 border-zinc-200 hover:bg-zinc-100'
                         }`}
                       >
                         {amenity}
@@ -496,10 +496,10 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                 </div>
               </div>
 
-              <div className="pt-8 border-t border-zinc-100 dark:border-zinc-800">
-                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-6">Main Property Image</h4>
+              <div className="pt-8 border-t border-zinc-100">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-6">Main Property Image</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                  <div className="aspect-video rounded-2xl overflow-hidden border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center bg-zinc-50 dark:bg-zinc-800/50 relative group">
+                  <div className="aspect-video rounded-2xl overflow-hidden border-2 border-dashed border-zinc-200 flex items-center justify-center bg-zinc-50 relative group">
                     {(localPreview || editForm.image_url) ? (
                       <img src={localPreview || editForm.image_url || undefined} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
@@ -528,7 +528,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                 </div>
               </div>
 
-              <div className="pt-8 border-t border-zinc-100 dark:border-zinc-800 flex flex-col md:flex-row gap-4">
+              <div className="pt-8 border-t border-zinc-100 flex flex-col md:flex-row gap-4">
                 <button 
                   onClick={handleUpdateProperty}
                   className="flex-1 vintsy-button-primary py-4 text-xs uppercase tracking-widest shadow-xl shadow-violet-600/20"
@@ -550,8 +550,8 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
           ) : (
             <>
               <div className="vintsy-card p-8">
-                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-4">Description</h4>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-4">Description</h4>
+                <p className="text-sm text-zinc-600 whitespace-pre-wrap">
                   {property.description || 'No description provided.'}
                 </p>
               </div>
@@ -559,11 +559,11 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
               {/* Gallery */}
               <div className="vintsy-card p-8">
                 <div className="flex justify-between items-center mb-8">
-                  <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Image Gallery</h4>
+                  <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Image Gallery</h4>
                   {hasPermission('PROPERTY_MANAGEMENT', 'edit') && (
                     <button 
                       onClick={() => setShowAddImage(true)}
-                      className="text-[10px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-widest flex items-center gap-2 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
+                      className="text-[10px] font-bold text-violet-600 uppercase tracking-widest flex items-center gap-2 hover:text-violet-700 transition-colors"
                     >
                       <Upload size={12} />
                       Upload Image
@@ -571,7 +571,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                   )}
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="aspect-video rounded-2xl overflow-hidden border border-violet-100 dark:border-zinc-800 group relative shadow-md">
+                  <div className="aspect-video rounded-2xl overflow-hidden border border-violet-100 group relative shadow-md">
                     {property.image_url ? (
                       <img 
                         src={property.image_url} 
@@ -580,14 +580,14 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+                      <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400">
                         <Building2 size={32} />
                       </div>
                     )}
                     <div className="absolute top-3 left-3 px-2.5 py-1 bg-violet-700 text-white text-[8px] font-bold uppercase rounded-lg shadow-xl">Main</div>
                   </div>
                   {images.map((img) => (
-                    <div key={img.id} className="aspect-video rounded-2xl overflow-hidden border border-violet-100 dark:border-zinc-800 group shadow-md relative">
+                    <div key={img.id} className="aspect-video rounded-2xl overflow-hidden border border-violet-100 group shadow-md relative">
                       {img.image_url ? (
                         <img 
                           src={img.image_url} 
@@ -596,7 +596,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                           referrerPolicy="no-referrer"
                         />
                       ) : (
-                        <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+                        <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400">
                           <ImageIcon size={32} />
                         </div>
                       )}
@@ -607,7 +607,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                             setImageForm({ image_url: img.image_url });
                             setShowAddImage(true);
                           }}
-                          className="absolute top-3 right-3 p-2 bg-white/90 dark:bg-zinc-900/90 text-violet-600 dark:text-violet-400 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-violet-50 dark:hover:bg-zinc-800"
+                          className="absolute top-3 right-3 p-2 bg-white/90 text-violet-600 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-violet-50"
                         >
                           <Edit3 size={14} />
                         </button>
@@ -619,17 +619,17 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
 
               {/* Amenities */}
               <div className="vintsy-card p-8">
-                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8">Amenities</h4>
+                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8">Amenities</h4>
                 <div className="flex flex-wrap gap-3">
                   {property.amenities && JSON.parse(property.amenities).length > 0 ? (
                     JSON.parse(property.amenities).map((amenity: string) => (
-                      <span key={amenity} className="px-4 py-2 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 text-xs font-bold rounded-xl border border-violet-100 dark:border-violet-800/30 flex items-center gap-2">
+                      <span key={amenity} className="px-4 py-2 bg-violet-50 text-violet-700 text-xs font-bold rounded-xl border border-violet-100 flex items-center gap-2">
                         <CheckCircle2 size={14} />
                         {amenity}
                       </span>
                     ))
                   ) : (
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">No amenities listed.</p>
+                    <p className="text-sm text-zinc-500">No amenities listed.</p>
                   )}
                 </div>
               </div>
@@ -639,11 +639,11 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
           {/* Documents */}
           <div className="vintsy-card p-8">
             <div className="flex justify-between items-center mb-8">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Property Documents</h4>
+              <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Property Documents</h4>
               {(hasPermission('PROPERTY_MANAGEMENT', 'edit') || user?.role_name === 'Property Owner') && (
                 <button 
                   onClick={() => setShowAddDocument(true)}
-                  className="text-[10px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-widest flex items-center gap-2 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
+                  className="text-[10px] font-bold text-violet-600 uppercase tracking-widest flex items-center gap-2 hover:text-violet-700 transition-colors"
                 >
                   <Upload size={12} />
                   Upload Document
@@ -652,13 +652,13 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {documents.map(doc => (
-                <div key={doc.id} className="p-4 rounded-xl border border-violet-50 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 flex items-center justify-between group">
+                <div key={doc.id} className="p-4 rounded-xl border border-violet-50 bg-zinc-50/50 flex items-center justify-between group">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center">
                       <FileText size={20} />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-zinc-900 dark:text-white">{doc.name}</p>
+                      <p className="text-sm font-bold text-zinc-900">{doc.name}</p>
                       <p className="text-[10px] text-zinc-500 uppercase tracking-widest">{doc.type} • {new Date(doc.uploaded_at).toLocaleDateString()}</p>
                     </div>
                   </div>
@@ -682,10 +682,10 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
 
           {/* Units Table */}
           <div className="vintsy-card">
-            <div className="p-8 border-b border-violet-50 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="p-8 border-b border-violet-50 flex flex-col md:flex-row justify-between items-center gap-4">
               <div>
-                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Units Inventory</h4>
-                <div className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mt-1">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Units Inventory</h4>
+                <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
                   Total: {filteredAndSortedUnits.length} Units
                 </div>
               </div>
@@ -718,7 +718,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                 </select>
                 <button 
                   onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-                  className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                  className="p-2 bg-zinc-100 rounded-xl hover:bg-zinc-200 transition-colors"
                 >
                   {sortDirection === 'asc' ? '↑' : '↓'}
                 </button>
@@ -727,38 +727,38 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-violet-50/50 dark:bg-zinc-800/50 border-b border-violet-50 dark:border-zinc-800">
-                    <th className="px-8 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Unit #</th>
-                    <th className="px-8 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Tenant</th>
-                    <th className="px-8 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Rent Amount</th>
-                    <th className="px-8 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Status</th>
+                  <tr className="bg-violet-50/50 border-b border-violet-50">
+                    <th className="px-8 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Unit #</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Tenant</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Rent Amount</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Status</th>
                     <th className="px-8 py-4"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-violet-50 dark:divide-zinc-800">
+                <tbody className="divide-y divide-violet-50">
                   {filteredAndSortedUnits.map((unit) => (
                     <tr 
                       key={unit.id} 
                       onClick={() => handleUnitClick(unit)}
-                      className="hover:bg-violet-50/20 dark:hover:bg-zinc-800/30 transition-all duration-300 group cursor-pointer"
+                      className="hover:bg-violet-50/20 transition-all duration-300 group cursor-pointer"
                     >
-                      <td className="px-8 py-5 text-sm font-bold text-zinc-900 dark:text-white">Unit {unit.unit_number}</td>
-                      <td className="px-8 py-5 text-sm text-zinc-600 dark:text-zinc-400">
-                        {unit.tenant_name || <span className="text-zinc-300 dark:text-zinc-600 italic">Vacant</span>}
+                      <td className="px-8 py-5 text-sm font-bold text-zinc-900">Unit {unit.unit_number}</td>
+                      <td className="px-8 py-5 text-sm text-zinc-600">
+                        {unit.tenant_name || <span className="text-zinc-300 italic">Vacant</span>}
                       </td>
-                      <td className="px-8 py-5 text-sm font-bold text-zinc-900 dark:text-white">${unit.rent_amount.toLocaleString()}</td>
+                      <td className="px-8 py-5 text-sm font-bold text-zinc-900">${unit.rent_amount.toLocaleString()}</td>
                       <td className="px-8 py-5">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
                           unit.status === 'Occupied' 
-                            ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800' 
-                            : 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border-violet-100 dark:border-violet-800'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                            : 'bg-violet-50 text-violet-700 border-violet-100'
                         }`}>
                           {unit.status === 'Occupied' ? <CheckCircle2 size={10} /> : <Circle size={10} />}
                           {unit.status}
                         </span>
                       </td>
                       <td className="px-8 py-5 text-right">
-                        <button className="text-zinc-300 dark:text-zinc-600 hover:text-violet-700 dark:hover:text-violet-400 transition-colors">
+                        <button className="text-zinc-300 hover:text-violet-700 transition-colors">
                           <Edit3 size={16} />
                         </button>
                       </td>
@@ -773,34 +773,34 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
         {/* Sidebar Stats */}
         <div className="space-y-6">
           <div className="vintsy-card p-8">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8">Performance</h4>
+            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8">Performance</h4>
             <div className="space-y-8">
               <div className="space-y-2">
                 <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
-                  <span className="text-zinc-500 dark:text-zinc-400">Occupancy Rate</span>
-                  <span className="text-zinc-900 dark:text-white">{Math.round(property.occupancy_rate ?? 0)}%</span>
+                  <span className="text-zinc-500">Occupancy Rate</span>
+                  <span className="text-zinc-900">{Math.round(property.occupancy_rate ?? 0)}%</span>
                 </div>
-                <div className="h-1.5 w-full bg-violet-50 dark:bg-zinc-800 rounded-full overflow-hidden border border-violet-100 dark:border-zinc-700">
+                <div className="h-1.5 w-full bg-violet-50 rounded-full overflow-hidden border border-violet-100">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${property.occupancy_rate ?? 0}%` }}
-                    className="h-full bg-violet-600 dark:bg-violet-500"
+                    className="h-full bg-violet-600"
                   />
                 </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-violet-50/30 dark:bg-zinc-800/50 border border-violet-50 dark:border-zinc-800 rounded-xl">
-                  <p className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Total Units</p>
-                  <p className="text-xl font-bold text-zinc-900 dark:text-white">{property.unit_count}</p>
+                <div className="p-4 bg-violet-50/30 border border-violet-50 rounded-xl">
+                  <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total Units</p>
+                  <p className="text-xl font-bold text-zinc-900">{property.unit_count}</p>
                 </div>
-                <div className="p-4 bg-violet-50/30 dark:bg-zinc-800/50 border border-violet-50 dark:border-zinc-800 rounded-xl">
-                  <p className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Type</p>
-                  <p className="text-sm font-bold text-zinc-900 dark:text-white">{property.type}</p>
+                <div className="p-4 bg-violet-50/30 border border-violet-50 rounded-xl">
+                  <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Type</p>
+                  <p className="text-sm font-bold text-zinc-900">{property.type}</p>
                 </div>
-                <div className="col-span-2 p-4 bg-violet-50/30 dark:bg-zinc-800/50 border border-violet-50 dark:border-zinc-800 rounded-xl">
-                  <p className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Property Value</p>
-                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">${(property.property_value ?? 0).toLocaleString()}</p>
+                <div className="col-span-2 p-4 bg-violet-50/30 border border-violet-50 rounded-xl">
+                  <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Property Value</p>
+                  <p className="text-xl font-bold text-emerald-600">${(property.property_value ?? 0).toLocaleString()}</p>
                 </div>
               </div>
             </div>
@@ -853,13 +853,13 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
               className="relative w-full max-w-lg vintsy-card p-8 shadow-2xl"
             >
               <div className="flex justify-between items-center mb-8">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Add New Unit</h3>
-                <button onClick={() => setShowAddUnit(false)} className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"><X size={20} /></button>
+                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Add New Unit</h3>
+                <button onClick={() => setShowAddUnit(false)} className="text-zinc-400 hover:text-zinc-900 transition-colors"><X size={20} /></button>
               </div>
               <form onSubmit={handleAddUnit} className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Unit Number</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Unit Number</label>
                     <input 
                       type="text" 
                       required
@@ -870,7 +870,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Monthly Rent</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Monthly Rent</label>
                     <input 
                       type="number" 
                       required
@@ -881,7 +881,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Initial Status</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Initial Status</label>
                   <select 
                     value={unitForm.status}
                     onChange={(e) => setUnitForm({ ...unitForm, status: e.target.value as any })}
@@ -915,14 +915,14 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
               className="relative w-full max-w-lg vintsy-card p-8 shadow-2xl"
             >
               <div className="flex justify-between items-center mb-8">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Upload Gallery Image</h3>
-                <button onClick={() => setShowAddImage(false)} className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"><X size={20} /></button>
+                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Upload Gallery Image</h3>
+                <button onClick={() => setShowAddImage(false)} className="text-zinc-400 hover:text-zinc-900 transition-colors"><X size={20} /></button>
               </div>
               <form onSubmit={handleAddImage} className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Gallery Image</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Gallery Image</label>
                   <div className="space-y-4">
-                    <div className="w-full h-48 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center overflow-hidden bg-zinc-50 dark:bg-zinc-800/50 relative group">
+                    <div className="w-full h-48 rounded-xl border-2 border-dashed border-zinc-200 flex items-center justify-center overflow-hidden bg-zinc-50 relative group">
                       {(localPreview || imageForm.image_url) ? (
                         <>
                           <img src={localPreview || imageForm.image_url || null} alt="Preview" className="w-full h-full object-cover" />
@@ -932,7 +932,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                         </>
                       ) : (
                         <div className="text-center">
-                          <ImageIcon size={32} className="mx-auto text-zinc-300 dark:text-zinc-600 mb-2" />
+                          <ImageIcon size={32} className="mx-auto text-zinc-300 mb-2" />
                           <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">No image selected</p>
                         </div>
                       )}
@@ -947,7 +947,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                       />
                       <label 
                         htmlFor="gallery-image-upload"
-                        className={`inline-block px-6 py-3 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-all ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`inline-block px-6 py-3 bg-violet-50 text-violet-700 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-violet-100 transition-all ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         {uploading ? 'Uploading...' : 'Choose Image'}
                       </label>
@@ -977,7 +977,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
               className="relative w-full max-w-lg vintsy-card p-8 shadow-2xl"
             >
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Upload Document</h3>
+                <h3 className="text-xl font-bold text-zinc-900">Upload Document</h3>
                 <button onClick={() => setShowAddDocument(false)} className="text-zinc-400 hover:text-zinc-600 transition-colors">
                   <X size={20} />
                 </button>
@@ -1056,7 +1056,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
               className="relative w-full max-w-lg vintsy-card p-8 shadow-2xl"
             >
               <div className="flex justify-between items-center mb-8">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400">
                   {isUnitEditMode ? 'Edit Unit Details' : `Unit ${selectedUnit.unit_number} Details`}
                 </h3>
                 <div className="flex gap-2">
@@ -1068,7 +1068,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                       Edit
                     </button>
                   )}
-                  <button onClick={() => setIsUnitModalOpen(false)} className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"><X size={20} /></button>
+                  <button onClick={() => setIsUnitModalOpen(false)} className="text-zinc-400 hover:text-zinc-900 transition-colors"><X size={20} /></button>
                 </div>
               </div>
 
@@ -1076,7 +1076,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                 <form onSubmit={handleSaveUnitDetails} className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Unit Number</label>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Unit Number</label>
                       <input 
                         type="text" 
                         value={unitEditForm.unit_number || ''}
@@ -1086,7 +1086,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Rent Amount</label>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Rent Amount</label>
                       <input 
                         type="number" 
                         value={unitEditForm.rent_amount}
@@ -1095,7 +1095,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Status</label>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Status</label>
                       <select 
                         value={unitEditForm.status}
                         onChange={e => setUnitEditForm({...unitEditForm, status: e.target.value as any})}
@@ -1107,11 +1107,11 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                     </div>
                   </div>
 
-                  <div className="space-y-4 pt-4 border-t border-violet-50 dark:border-zinc-800">
+                  <div className="space-y-4 pt-4 border-t border-violet-50">
                     <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-500">Tenant Information</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">First Name</label>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">First Name</label>
                         <input 
                           type="text" 
                           value={unitEditForm.tenant_first_name}
@@ -1121,7 +1121,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Last Name</label>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Last Name</label>
                         <input 
                           type="text" 
                           value={unitEditForm.tenant_last_name}
@@ -1132,7 +1132,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Notes</label>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Notes</label>
                       <textarea 
                         value={unitEditForm.notes || ''}
                         onChange={e => setUnitEditForm({...unitEditForm, notes: e.target.value})}
@@ -1154,45 +1154,45 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                       <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Current Status</p>
                       <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
                         selectedUnit.status === 'Occupied' 
-                          ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800' 
-                          : 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border-violet-100 dark:border-violet-800'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                          : 'bg-violet-50 text-violet-700 border-violet-100'
                       }`}>
                         {selectedUnit.status}
                       </span>
                     </div>
                     <div>
                       <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Monthly Rent</p>
-                      <p className="text-lg font-bold text-zinc-900 dark:text-white">${selectedUnit.rent_amount.toLocaleString()}</p>
+                      <p className="text-lg font-bold text-zinc-900">${selectedUnit.rent_amount.toLocaleString()}</p>
                     </div>
                   </div>
 
-                  <div className="pt-6 border-t border-violet-50 dark:border-zinc-800">
+                  <div className="pt-6 border-t border-violet-50">
                     <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-4">Tenant Details</h4>
                     {selectedUnit.tenant_name ? (
                       <div className="space-y-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 flex items-center justify-center font-bold text-xs">
+                          <div className="w-10 h-10 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center font-bold text-xs">
                             {selectedUnit.tenant_name.split(' ').map(n => n[0]).join('')}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-zinc-900 dark:text-white">{selectedUnit.tenant_name}</p>
+                            <p className="text-sm font-bold text-zinc-900">{selectedUnit.tenant_name}</p>
                             <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Active Tenant</p>
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Lease Start</p>
-                            <p className="text-sm font-medium text-zinc-900 dark:text-white">{selectedUnit.lease_start ? new Date(selectedUnit.lease_start).toLocaleDateString() : 'N/A'}</p>
+                            <p className="text-sm font-medium text-zinc-900">{selectedUnit.lease_start ? new Date(selectedUnit.lease_start).toLocaleDateString() : 'N/A'}</p>
                           </div>
                           <div>
                             <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Lease End</p>
-                            <p className="text-sm font-medium text-zinc-900 dark:text-white">{selectedUnit.lease_end ? new Date(selectedUnit.lease_end).toLocaleDateString() : 'N/A'}</p>
+                            <p className="text-sm font-medium text-zinc-900">{selectedUnit.lease_end ? new Date(selectedUnit.lease_end).toLocaleDateString() : 'N/A'}</p>
                           </div>
                         </div>
                         {selectedUnit.notes && (
                           <div>
                             <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Notes</p>
-                            <p className="text-sm text-zinc-600 dark:text-zinc-400 italic">{selectedUnit.notes}</p>
+                            <p className="text-sm text-zinc-600 italic">{selectedUnit.notes}</p>
                           </div>
                         )}
                       </div>

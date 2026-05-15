@@ -8,10 +8,10 @@ import { Task } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
 const priorityColors = {
-  Emergency: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-100 dark:border-red-800',
-  High: 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border-orange-100 dark:border-orange-800',
-  Medium: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800',
-  Low: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-100 dark:border-zinc-700',
+  Emergency: 'bg-red-50 text-red-700 border-red-100',
+  High: 'bg-orange-50 text-orange-700 border-orange-100',
+  Medium: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+  Low: 'bg-zinc-50 text-zinc-500 border-zinc-100',
 };
 
 const columns = ['Pending', 'In Progress', 'Completed'] as const;
@@ -30,6 +30,7 @@ export const Tasks: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [assigneeFilter, setAssigneeFilter] = useState('All');
+  const [overdueOnly, setOverdueOnly] = useState(false);
   const [minCostFilter, setMinCostFilter] = useState<number | ''>('');
   const [maxCostFilter, setMaxCostFilter] = useState<number | ''>('');
   const [sortField, setSortField] = useState<'due_date' | 'priority' | 'status'>('due_date');
@@ -175,6 +176,37 @@ export const Tasks: React.FC = () => {
     }
   };
 
+  const handleSendBulkReminders = async () => {
+    const overdueTasks = reminders.filter(r => r.reminderType === 'overdue');
+    if (overdueTasks.length === 0) return;
+
+    let successCount = 0;
+    for (const task of overdueTasks) {
+      const assigneeUser = users.find(u => `${u.first_name} ${u.last_name}` === task.assignee);
+      if (assigneeUser && user) {
+        try {
+          await api.sendMessage({
+            sender_id: user.id,
+            sender_type: 'System',
+            receiver_id: assigneeUser.id,
+            receiver_type: 'User',
+            content: `URGENT Reminder: Task "${task.title}" is OVERDUE. It was due on ${task.due_date}.`,
+            timestamp: new Date().toISOString(),
+            read: false
+          });
+          successCount++;
+        } catch (e) {
+          console.error('Failed to send bulk reminder:', e);
+        }
+      }
+    }
+
+    setShowNotification({
+      title: 'Bulk Reminders Sent',
+      message: `Sent ${successCount} in-app reminders to assignees of overdue tasks.`
+    });
+  };
+
   const priorityOrder = { Emergency: 0, High: 1, Medium: 2, Low: 3 };
   const statusOrder = { Pending: 0, 'In Progress': 1, Completed: 2 };
 
@@ -183,6 +215,10 @@ export const Tasks: React.FC = () => {
       if (statusFilter !== 'All' && t.status !== statusFilter) return false;
       if (priorityFilter !== 'All' && t.priority !== priorityFilter) return false;
       if (assigneeFilter !== 'All' && t.assignee !== assigneeFilter) return false;
+      if (overdueOnly) {
+        const isOverdue = getDueDateStatus(t.due_date, t.status) === 'overdue';
+        if (!isOverdue) return false;
+      }
       if (minCostFilter !== '' && (t.cost || 0) < minCostFilter) return false;
       if (maxCostFilter !== '' && (t.cost || 0) > maxCostFilter) return false;
       return true;
@@ -214,11 +250,18 @@ export const Tasks: React.FC = () => {
 
   const chartData = useMemo(() => {
     const statuses = ['Pending', 'In Progress', 'Completed'];
+    // For the pie chart distribution, we want to show distribution relative to priority/assignee filters but NOT the status filter itself
+    const distributionBase = tasks.filter(t => {
+      if (priorityFilter !== 'All' && t.priority !== priorityFilter) return false;
+      if (assigneeFilter !== 'All' && t.assignee !== assigneeFilter) return false;
+      return true;
+    });
+
     return statuses.map(status => ({
       name: status,
-      value: processedTasks.filter(t => t.status === status).length
+      value: distributionBase.filter(t => t.status === status).length
     }));
-  }, [processedTasks]);
+  }, [tasks, priorityFilter, assigneeFilter]);
 
   const costData = useMemo(() => {
     return processedTasks.slice(0, 10).map(t => ({
@@ -274,20 +317,20 @@ export const Tasks: React.FC = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="mb-8 p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-2xl flex items-center justify-between shadow-lg shadow-red-500/10"
+            className="mb-8 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center justify-between shadow-lg shadow-red-500/10"
           >
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center">
                 <Bell size={20} />
               </div>
               <div>
-                <p className="text-sm font-bold text-zinc-900 dark:text-white">{showNotification.title}</p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">{showNotification.message}</p>
+                <p className="text-sm font-bold text-zinc-900">{showNotification.title}</p>
+                <p className="text-xs text-zinc-500">{showNotification.message}</p>
               </div>
             </div>
             <button 
               onClick={() => setShowNotification(null)}
-              className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+              className="p-2 text-zinc-400 hover:text-zinc-600 transition-colors"
             >
               <X size={20} />
             </button>
@@ -297,26 +340,26 @@ export const Tasks: React.FC = () => {
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">Operations</h3>
-          <p className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Task Management</p>
+          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Operations</h3>
+          <p className="text-2xl font-bold text-zinc-900 tracking-tight">Task Management</p>
         </div>
         <div className="flex gap-3">
-          <div className="flex bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl p-1 shadow-sm">
+          <div className="flex bg-white/50 border border-violet-100 rounded-xl p-1 shadow-sm">
             <button 
               onClick={() => setView('board')}
-              className={`p-2 rounded-lg transition-colors ${view === 'board' ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'}`}
+              className={`p-2 rounded-lg transition-colors ${view === 'board' ? 'bg-violet-100 text-violet-700' : 'text-zinc-400 hover:text-zinc-600'}`}
             >
               <LayoutGrid size={16} />
             </button>
             <button 
               onClick={() => setView('list')}
-              className={`p-2 rounded-lg transition-colors ${view === 'list' ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'}`}
+              className={`p-2 rounded-lg transition-colors ${view === 'list' ? 'bg-violet-100 text-violet-700' : 'text-zinc-400 hover:text-zinc-600'}`}
             >
               <List size={16} />
             </button>
             <button 
               onClick={() => setView('report')}
-              className={`p-2 rounded-lg transition-colors flex items-center gap-2 px-3 ${view === 'report' ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'}`}
+              className={`p-2 rounded-lg transition-colors flex items-center gap-2 px-3 ${view === 'report' ? 'bg-violet-100 text-violet-700' : 'text-zinc-400 hover:text-zinc-600'}`}
             >
               <span className="text-[10px] font-bold uppercase tracking-widest">Report</span>
             </button>
@@ -333,9 +376,17 @@ export const Tasks: React.FC = () => {
 
       {reminders.length > 0 && (
         <div className="mb-8">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-4">
-            <AlertCircle size={16} className="text-orange-500" />
-            Reminders & Alerts
+          <div className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-widest text-zinc-400 mb-4">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={16} className="text-orange-500" />
+              Reminders & Alerts
+            </div>
+            <button 
+              onClick={handleSendBulkReminders}
+              className="text-[9px] px-3 py-1 bg-violet-100 text-violet-700 rounded-full hover:bg-violet-200 transition-colors border border-violet-200"
+            >
+              Bulk Notify Overdue
+            </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {reminders.slice(0, 3).map(reminder => (
@@ -345,8 +396,8 @@ export const Tasks: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 className={`p-4 rounded-2xl border flex items-center gap-4 ${
                   reminder.reminderType === 'overdue' 
-                    ? 'bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30' 
-                    : 'bg-orange-50/50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/30'
+                    ? 'bg-red-50/50 border-red-100' 
+                    : 'bg-orange-50/50 border-orange-100'
                 }`}
               >
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
@@ -355,7 +406,7 @@ export const Tasks: React.FC = () => {
                   {reminder.reminderType === 'overdue' ? <AlertCircle size={20} /> : <Clock size={20} />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">{reminder.title}</p>
+                  <p className="text-sm font-bold text-zinc-900 truncate">{reminder.title}</p>
                   <p className={`text-[10px] font-bold uppercase tracking-widest ${
                     reminder.reminderType === 'overdue' ? 'text-red-600' : 'text-orange-600'
                   }`}>
@@ -364,7 +415,7 @@ export const Tasks: React.FC = () => {
                 </div>
                 <button 
                   onClick={() => handleSendReminder(reminder)}
-                  className="p-2 bg-white dark:bg-zinc-800 rounded-lg shadow-sm text-zinc-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+                  className="p-2 bg-white rounded-lg shadow-sm text-zinc-400 hover:text-violet-600 transition-colors"
                   title="Send Reminder"
                 >
                   <Bell size={16} />
@@ -377,109 +428,125 @@ export const Tasks: React.FC = () => {
 
       <div className="vintsy-card p-6 mb-8 space-y-4">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+          <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-400">
             <Filter size={16} />
             Filters & Sorting
           </div>
-          <button 
-            onClick={() => {
-              setStatusFilter('All');
-              setPriorityFilter('All');
-              setAssigneeFilter('All');
-              setMinCostFilter('');
-              setMaxCostFilter('');
-              setSortField('due_date');
-              setSortDirection('asc');
-            }}
-            className="text-[10px] font-bold uppercase tracking-widest text-violet-600 dark:text-violet-400 hover:underline"
-          >
-            Reset
-          </button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Status</label>
-            <select 
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="vintsy-input w-full appearance-none"
+            <button 
+              onClick={() => {
+                setStatusFilter('All');
+                setPriorityFilter('All');
+                setAssigneeFilter('All');
+                setOverdueOnly(false);
+                setMinCostFilter('');
+                setMaxCostFilter('');
+                setSortField('due_date');
+                setSortDirection('asc');
+              }}
+              className="text-[10px] font-bold uppercase tracking-widest text-violet-600 hover:underline"
             >
-              <option value="All">All Statuses</option>
-              <option value="Pending">Pending</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Completed">Completed</option>
-            </select>
+              Reset
+            </button>
           </div>
-          <div>
-            <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Priority</label>
-            <select 
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-              className="vintsy-input w-full appearance-none"
-            >
-              <option value="All">All Priorities</option>
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-              <option value="Emergency">Emergency</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Assignee</label>
-            <select 
-              value={assigneeFilter}
-              onChange={(e) => setAssigneeFilter(e.target.value)}
-              className="vintsy-input w-full appearance-none"
-            >
-              <option value="All">All Assignees</option>
-              {uniqueAssignees.map(a => (
-                <option key={a} value={a}>{a}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Estimated Cost Range</label>
-            <div className="flex gap-2">
-              <input 
-                type="number" 
-                placeholder="Min"
-                value={minCostFilter}
-                onChange={(e) => setMinCostFilter(e.target.value ? Number(e.target.value) : '')}
-                className="vintsy-input w-full"
-              />
-              <input 
-                type="number" 
-                placeholder="Max"
-                value={maxCostFilter}
-                onChange={(e) => setMaxCostFilter(e.target.value ? Number(e.target.value) : '')}
-                className="vintsy-input w-full"
-              />
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Status</label>
+              <select 
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="vintsy-input w-full appearance-none"
+              >
+                <option value="All">All Statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Priority</label>
+              <select 
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value)}
+                className="vintsy-input w-full appearance-none"
+              >
+                <option value="All">All Priorities</option>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+                <option value="Emergency">Emergency</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Assignee</label>
+              <select 
+                value={assigneeFilter}
+                onChange={(e) => setAssigneeFilter(e.target.value)}
+                className="vintsy-input w-full appearance-none"
+              >
+                <option value="All">All Assignees</option>
+                {uniqueAssignees.map(a => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Deadline Filter</label>
+              <div className="flex items-center gap-2 h-10 px-4 bg-zinc-50 rounded-xl border border-violet-100">
+                <input 
+                  type="checkbox"
+                  id="overdue-only"
+                  checked={overdueOnly}
+                  onChange={(e) => setOverdueOnly(e.target.checked)}
+                  className="rounded border-zinc-300 text-violet-600 focus:ring-violet-500 h-4 w-4"
+                />
+                <label htmlFor="overdue-only" className="text-xs font-bold text-zinc-600 cursor-pointer">Overdue Only</label>
+              </div>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Estimated Cost Range</label>
+              <div className="flex gap-2">
+                <input 
+                  type="number" 
+                  placeholder="Min"
+                  value={minCostFilter}
+                  onChange={(e) => setMinCostFilter(e.target.value ? Number(e.target.value) : '')}
+                  className="vintsy-input w-full"
+                />
+                <input 
+                  type="number" 
+                  placeholder="Max"
+                  value={maxCostFilter}
+                  onChange={(e) => setMaxCostFilter(e.target.value ? Number(e.target.value) : '')}
+                  className="vintsy-input w-full"
+                />
+              </div>
             </div>
           </div>
-          <div>
-            <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Sort By</label>
-            <select 
-              value={sortField}
-              onChange={(e) => setSortField(e.target.value as any)}
-              className="vintsy-input w-full appearance-none"
-            >
-              <option value="due_date">Due Date</option>
-              <option value="priority">Priority</option>
-              <option value="status">Status</option>
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Sort By</label>
+              <select 
+                value={sortField}
+                onChange={(e) => setSortField(e.target.value as any)}
+                className="vintsy-input w-full appearance-none"
+              >
+                <option value="due_date">Due Date</option>
+                <option value="priority">Priority</option>
+                <option value="status">Status</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Order</label>
+              <select 
+                value={sortDirection}
+                onChange={(e) => setSortDirection(e.target.value as any)}
+                className="vintsy-input w-full appearance-none"
+              >
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Order</label>
-            <select 
-              value={sortDirection}
-              onChange={(e) => setSortDirection(e.target.value as any)}
-              className="vintsy-input w-full appearance-none"
-            >
-              <option value="asc">Ascending</option>
-              <option value="desc">Descending</option>
-            </select>
-          </div>
-        </div>
       </div>
 
       {showAddTask && (
@@ -487,16 +554,16 @@ export const Tasks: React.FC = () => {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-zinc-900 rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-violet-100 dark:border-zinc-800 max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-violet-100 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{editingTask ? 'Task Details & Edit' : 'Create New Task'}</h3>
+              <h3 className="text-xl font-bold text-zinc-900">{editingTask ? 'Task Details & Edit' : 'Create New Task'}</h3>
               <button 
                 onClick={() => {
                   setShowAddTask(false);
                   setEditingTask(null);
                 }}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                className="text-zinc-400 hover:text-zinc-600 transition-colors"
               >
                 <X size={20} />
               </button>
@@ -617,40 +684,40 @@ export const Tasks: React.FC = () => {
         <div className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="vintsy-card p-4">
-              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Total Tasks</p>
-              <h4 className="text-2xl font-bold text-zinc-900 dark:text-white">{processedTasks.length}</h4>
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Total Tasks</p>
+              <h4 className="text-2xl font-bold text-zinc-900">{processedTasks.length}</h4>
             </div>
             <div className="vintsy-card p-4">
-              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Pending</p>
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Pending</p>
               <h4 className="text-2xl font-bold text-zinc-500">{processedTasks.filter(t => t.status === 'Pending').length}</h4>
             </div>
             <div className="vintsy-card p-4">
-              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">In Progress</p>
-              <h4 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{processedTasks.filter(t => t.status === 'In Progress').length}</h4>
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">In Progress</p>
+              <h4 className="text-2xl font-bold text-indigo-600">{processedTasks.filter(t => t.status === 'In Progress').length}</h4>
             </div>
             <div className="vintsy-card p-4">
-              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Completed</p>
-              <h4 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{processedTasks.filter(t => t.status === 'Completed').length}</h4>
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Completed</p>
+              <h4 className="text-2xl font-bold text-emerald-600">{processedTasks.filter(t => t.status === 'Completed').length}</h4>
             </div>
             <div className="vintsy-card p-4">
-              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Total Estimated Cost</p>
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Total Estimated Cost</p>
               <div className="flex items-center gap-2">
-                <DollarSign size={16} className="text-violet-600 dark:text-violet-400" />
-                <h4 className="text-2xl font-bold text-zinc-900 dark:text-white">{totalCost.toLocaleString()}</h4>
+                <DollarSign size={16} className="text-violet-600" />
+                <h4 className="text-2xl font-bold text-zinc-900">{totalCost.toLocaleString()}</h4>
               </div>
             </div>
             <div className="vintsy-card p-4">
-              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Time Spent</p>
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Time Spent</p>
               <div className="flex items-center gap-2">
-                <Timer size={16} className="text-orange-600 dark:text-orange-400" />
-                <h4 className="text-2xl font-bold text-zinc-900 dark:text-white">{totalTime}h</h4>
+                <Timer size={16} className="text-orange-600" />
+                <h4 className="text-2xl font-bold text-zinc-900">{totalTime}h</h4>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="vintsy-card p-6">
-              <h4 className="text-sm font-bold text-zinc-900 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+              <h4 className="text-sm font-bold text-zinc-900 mb-6 uppercase tracking-widest flex items-center gap-2">
                 <PieChartIcon size={16} />
                 Status Distribution
               </h4>
@@ -681,19 +748,19 @@ export const Tasks: React.FC = () => {
             </div>
 
             <div className="vintsy-card p-6">
-              <h4 className="text-sm font-bold text-zinc-900 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+              <h4 className="text-sm font-bold text-zinc-900 mb-6 uppercase tracking-widest flex items-center gap-2">
                 <BarChart3 size={16} />
                 Estimated Cost & Time Analysis
               </h4>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={costData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                     <XAxis dataKey="name" stroke="#71717a" fontSize={10} tickLine={false} axisLine={false} />
                     <YAxis stroke="#71717a" fontSize={10} tickLine={false} axisLine={false} />
                     <Tooltip 
-                      cursor={{ fill: 'rgba(139, 92, 246, 0.1)' }}
-                      contentStyle={{ backgroundColor: '#18181b', border: 'none', borderRadius: '8px', color: '#fff' }}
+                      cursor={{ fill: 'rgba(139, 92, 246, 0.05)' }}
+                      contentStyle={{ backgroundColor: '#fff', border: '1px solid #f3f4f6', borderRadius: '8px', color: '#18181b' }}
                     />
                     <Legend />
                     <Bar dataKey="cost" name="Estimated Cost ($)" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
@@ -705,32 +772,32 @@ export const Tasks: React.FC = () => {
           </div>
           
           <div className="vintsy-card p-6">
-            <h4 className="text-sm font-bold text-zinc-900 dark:text-white mb-6 uppercase tracking-widest">Task Breakdown</h4>
+            <h4 className="text-sm font-bold text-zinc-900 mb-6 uppercase tracking-widest">Task Breakdown</h4>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-violet-50/20 dark:bg-zinc-800/20 border-b border-violet-100 dark:border-zinc-800">
-                    <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Task</th>
-                    <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Status</th>
-                    <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Estimated Cost</th>
-                    <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Time Spent</th>
+                  <tr className="bg-violet-50/20 border-b border-violet-100">
+                    <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Task</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Status</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Estimated Cost</th>
+                    <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Time Spent</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-violet-50 dark:divide-zinc-800">
+                <tbody className="divide-y divide-violet-50">
                   {processedTasks.map(task => (
-                    <tr key={task.id} className="hover:bg-violet-50/20 dark:hover:bg-zinc-800/30 transition-colors">
-                      <td className="px-6 py-4 text-sm font-bold text-zinc-900 dark:text-white">{task.title}</td>
+                    <tr key={task.id} className="hover:bg-violet-50/20 transition-colors">
+                      <td className="px-6 py-4 text-sm font-bold text-zinc-900">{task.title}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
-                          task.status === 'Completed' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800' : 
-                          task.status === 'In Progress' ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800' :
-                          'bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-100 dark:border-zinc-700'
+                          task.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 
+                          task.status === 'In Progress' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
+                          'bg-zinc-50 text-zinc-500 border-zinc-100'
                         }`}>
                           {task.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">${(task.cost || 0).toLocaleString()}</td>
-                      <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">{task.time_spent || 0}h</td>
+                      <td className="px-6 py-4 text-sm text-zinc-600">${(task.cost || 0).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-sm text-zinc-600">{task.time_spent || 0}h</td>
                     </tr>
                   ))}
                 </tbody>
@@ -746,8 +813,8 @@ export const Tasks: React.FC = () => {
             {columns.map(columnId => (
               <div key={columnId} className="flex flex-col gap-4">
                 <div className="flex items-center justify-between px-2">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{columnId}</h4>
-                  <span className="w-6 h-6 rounded-full bg-violet-100 dark:bg-zinc-800 text-violet-700 dark:text-zinc-400 flex items-center justify-center text-[10px] font-bold">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-500">{columnId}</h4>
+                  <span className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-[10px] font-bold">
                     {processedTasks.filter(t => t.status === columnId).length}
                   </span>
                 </div>
@@ -757,31 +824,30 @@ export const Tasks: React.FC = () => {
                       ref={provided.innerRef}
                       {...provided.droppableProps}
                       className={`flex-1 min-h-[500px] rounded-2xl p-4 transition-colors ${
-                        snapshot.isDraggingOver ? 'bg-violet-50/50 dark:bg-zinc-800/50 border-2 border-dashed border-violet-200 dark:border-zinc-700' : 'bg-zinc-50/50 dark:bg-zinc-900/20 border-2 border-transparent'
+                        snapshot.isDraggingOver ? 'bg-violet-50/50 border-2 border-dashed border-violet-200' : 'bg-zinc-50/50 border-2 border-transparent'
                       }`}
                     >
                       {processedTasks.filter(t => t.status === columnId).map((task, index) => {
                         const dueStatus = getDueDateStatus(task.due_date, task.status);
                         return (
-                        // @ts-ignore
                         <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
                           {(provided, snapshot) => (
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              className={`vintsy-card p-5 mb-4 cursor-grab active:cursor-grabbing relative overflow-hidden ${
+                               className={`vintsy-card p-5 mb-4 cursor-grab active:cursor-grabbing relative overflow-hidden ${
                                 snapshot.isDragging ? 'shadow-2xl scale-105 rotate-2' : ''
-                              } ${dueStatus === 'overdue' ? 'border-red-200 dark:border-red-900/50' : dueStatus === 'soon' ? 'border-orange-200 dark:border-orange-900/50' : ''}`}
+                              } ${dueStatus === 'overdue' ? 'border-red-200' : dueStatus === 'soon' ? 'border-orange-200' : ''}`}
                             >
                               {dueStatus === 'overdue' && (
-                                <div className="absolute top-0 right-0 w-12 h-12 bg-red-50 dark:bg-red-900/20 rounded-bl-3xl flex items-start justify-end p-2">
-                                  <AlertCircle size={14} className="text-red-600 dark:text-red-400" />
+                                <div className="absolute top-0 right-0 w-12 h-12 bg-red-50 rounded-bl-3xl flex items-start justify-end p-2">
+                                  <AlertCircle size={14} className="text-red-600" />
                                 </div>
                               )}
                               {dueStatus === 'soon' && (
-                                <div className="absolute top-0 right-0 w-12 h-12 bg-orange-50 dark:bg-orange-900/20 rounded-bl-3xl flex items-start justify-end p-2">
-                                  <Clock size={14} className="text-orange-600 dark:text-orange-400" />
+                                <div className="absolute top-0 right-0 w-12 h-12 bg-orange-50 rounded-bl-3xl flex items-start justify-end p-2">
+                                  <Clock size={14} className="text-orange-600" />
                                 </div>
                               )}
                               <div className="flex justify-between items-start mb-3">
@@ -795,10 +861,10 @@ export const Tasks: React.FC = () => {
                                   <MoreVertical size={14} />
                                 </button>
                               </div>
-                              <h5 className="text-sm font-bold text-zinc-900 dark:text-white mb-4 leading-snug pr-6">{task.title}</h5>
-                              <div className="flex items-center justify-between pt-4 border-t border-violet-50 dark:border-zinc-800">
+                              <h5 className="text-sm font-bold text-zinc-900 mb-4 leading-snug pr-6">{task.title}</h5>
+                              <div className="flex items-center justify-between pt-4 border-t border-violet-50">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 flex items-center justify-center font-bold text-[10px]" title={task.assignee}>
+                                  <div className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center font-bold text-[10px]" title={task.assignee}>
                                     {task.assignee?.charAt(0)}
                                   </div>
                                   {task.status !== 'Completed' && (
@@ -811,13 +877,13 @@ export const Tasks: React.FC = () => {
                                     </button>
                                   )}
                                 </div>
-                                <div className={`flex items-center gap-1.5 text-[10px] font-medium ${dueStatus === 'overdue' ? 'text-red-600 dark:text-red-400 font-bold' : dueStatus === 'soon' ? 'text-orange-600 dark:text-orange-400 font-bold' : 'text-zinc-500'}`}>
+                                <div className={`flex items-center gap-1.5 text-[10px] font-medium ${dueStatus === 'overdue' ? 'text-red-600 font-bold' : dueStatus === 'soon' ? 'text-orange-600 font-bold' : 'text-zinc-500'}`}>
                                   <Calendar size={12} />
                                   <span>{new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                                 </div>
                               </div>
                               {(task.cost > 0 || task.time_spent > 0) && (
-                                <div className="mt-3 pt-3 border-t border-violet-50/50 dark:border-zinc-800/50 flex items-center gap-4 text-[9px] font-bold uppercase tracking-widest text-zinc-400">
+                                <div className="mt-3 pt-3 border-t border-violet-50/50 flex items-center gap-4 text-[9px] font-bold uppercase tracking-widest text-zinc-400">
                                   {task.cost > 0 && (
                                     <div className="flex items-center gap-1" title="Estimated Cost">
                                       <DollarSign size={10} className="text-violet-600/50" />
@@ -851,16 +917,16 @@ export const Tasks: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-violet-50/20 dark:bg-zinc-800/20 border-b border-violet-100 dark:border-zinc-800">
-                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.15em]">Task</th>
-                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.15em]">Assignee</th>
-                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.15em]">Due Date</th>
-                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.15em]">Priority</th>
-                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.15em]">Metrics</th>
-                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.15em]">Status</th>
+                <tr className="bg-violet-50/20 border-b border-violet-100">
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em]">Task</th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em]">Assignee</th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em]">Due Date</th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em]">Priority</th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em]">Metrics</th>
+                  <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em]">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-violet-50 dark:divide-zinc-800">
+              <tbody className="divide-y divide-violet-50">
                 {processedTasks.map((task, index) => {
                   const dueStatus = getDueDateStatus(task.due_date, task.status);
                   return (
@@ -870,15 +936,15 @@ export const Tasks: React.FC = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
                     onClick={() => openEditTask(task)}
-                    className={`hover:bg-violet-50/20 dark:hover:bg-zinc-800/30 transition-all duration-300 group cursor-pointer ${dueStatus === 'overdue' ? 'bg-red-50/30 dark:bg-red-900/10' : dueStatus === 'soon' ? 'bg-orange-50/30 dark:bg-orange-900/10' : ''}`}
+                    className={`hover:bg-violet-50/20 transition-all duration-300 group cursor-pointer ${dueStatus === 'overdue' ? 'bg-red-50/30' : dueStatus === 'soon' ? 'bg-orange-50/30' : ''}`}
                   >
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-4">
-                        <button className="text-zinc-300 dark:text-zinc-600 hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
+                        <button className="text-zinc-300 hover:text-violet-600 transition-colors">
                           {task.status === 'Completed' ? <CheckCircle2 size={20} className="text-emerald-500" /> : <Circle size={20} />}
                         </button>
                         <div className="flex flex-col">
-                          <p className={`text-sm font-bold ${task.status === 'Completed' ? 'text-zinc-400 dark:text-zinc-600 line-through' : 'text-zinc-900 dark:text-white'}`}>
+                          <p className={`text-sm font-bold ${task.status === 'Completed' ? 'text-zinc-400 line-through' : 'text-zinc-900'}`}>
                             {task.title}
                           </p>
                           {dueStatus === 'overdue' && <span className="text-[9px] font-bold text-red-600 uppercase tracking-widest mt-1 flex items-center gap-1"><AlertCircle size={10} /> Overdue</span>}
@@ -888,10 +954,10 @@ export const Tasks: React.FC = () => {
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 flex items-center justify-center font-bold text-[10px] border border-violet-200 dark:border-violet-800 shadow-sm" title={task.assignee}>
+                        <div className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center font-bold text-[10px] border border-violet-200 shadow-sm" title={task.assignee}>
                           {task.assignee?.charAt(0)}
                         </div>
-                        <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{task.assignee}</span>
+                        <span className="text-xs font-medium text-zinc-600">{task.assignee}</span>
                         {task.status !== 'Completed' && (
                           <button 
                             onClick={() => handleSendReminder(task)}
@@ -904,8 +970,8 @@ export const Tasks: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                      <div className={`flex items-center gap-2 text-xs font-medium ${dueStatus === 'overdue' ? 'text-red-600 dark:text-red-400 font-bold' : dueStatus === 'soon' ? 'text-orange-600 dark:text-orange-400 font-bold' : 'text-zinc-500 dark:text-zinc-400'}`}>
-                        <Calendar size={14} className={dueStatus ? '' : 'text-violet-700 dark:text-violet-400'} />
+                      <div className={`flex items-center gap-2 text-xs font-medium ${dueStatus === 'overdue' ? 'text-red-600 font-bold' : dueStatus === 'soon' ? 'text-orange-600 font-bold' : 'text-zinc-500'}`}>
+                        <Calendar size={14} className={dueStatus ? '' : 'text-violet-700'} />
                         <span>{new Date(task.due_date).toLocaleDateString()}</span>
                       </div>
                     </td>
@@ -934,10 +1000,10 @@ export const Tasks: React.FC = () => {
                     <td className="px-8 py-6">
                       <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
                         task.status === 'Completed' 
-                          ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800' 
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                           : task.status === 'In Progress'
-                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-800'
-                          : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-100 dark:border-zinc-700'
+                          ? 'bg-blue-50 text-blue-700 border-blue-100'
+                          : 'bg-zinc-50 text-zinc-500 border-zinc-100'
                       }`}>
                         {task.status}
                       </span>

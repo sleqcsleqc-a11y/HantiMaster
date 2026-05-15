@@ -224,13 +224,13 @@ export const Communication: React.FC = () => {
     <div className="p-8 max-w-7xl mx-auto h-[calc(100vh-5rem)] flex flex-col">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">Portal</h3>
-          <p className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Tenant Communication</p>
+          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Portal</h3>
+          <p className="text-2xl font-bold text-zinc-900 tracking-tight">Tenant Communication</p>
         </div>
         <div className="flex items-center gap-4">
           <button 
             onClick={requestNotificationPermission}
-            className={`p-2.5 rounded-xl transition-colors border ${notificationsEnabled ? 'bg-violet-100 border-violet-200 text-violet-600 dark:bg-violet-900/40 dark:border-violet-800 dark:text-violet-400' : 'bg-white/50 border-violet-100 text-zinc-400 hover:text-violet-600 dark:bg-zinc-800/50 dark:border-zinc-700 dark:hover:text-violet-400'}`}
+            className={`p-2.5 rounded-xl transition-colors border ${notificationsEnabled ? 'bg-violet-100 border-violet-200 text-violet-600' : 'bg-white/50 border-violet-100 text-zinc-400 hover:text-violet-600'}`}
             title={notificationsEnabled ? 'Notifications Enabled' : 'Enable Notifications'}
           >
             <Bell size={16} />
@@ -256,20 +256,20 @@ export const Communication: React.FC = () => {
 
       <div className="flex-1 vintsy-card flex overflow-hidden">
         {/* Sidebar */}
-        <div className="w-80 border-r border-violet-50 dark:border-zinc-800 flex flex-col bg-white/50 dark:bg-zinc-900/50">
-          <div className="p-4 border-b border-violet-50 dark:border-zinc-800 space-y-4">
+        <div className="w-80 border-r border-violet-50 flex flex-col bg-white/50">
+          <div className="p-4 border-b border-violet-50 space-y-4">
             {user?.role_name !== 'Tenant' && (
-              <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
+              <div className="flex bg-zinc-100 p-1 rounded-xl">
                 <button 
                   onClick={() => { setActiveTab('Tenants'); setActiveChat(null); }}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors ${activeTab === 'Tenants' ? 'bg-white dark:bg-zinc-700 text-violet-600 dark:text-violet-400 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors ${activeTab === 'Tenants' ? 'bg-white text-violet-600 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}
                 >
                   <Users size={14} />
                   Tenants
                 </button>
                 <button 
                   onClick={() => { setActiveTab('Owners'); setActiveChat(null); }}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors ${activeTab === 'Owners' ? 'bg-white dark:bg-zinc-700 text-violet-600 dark:text-violet-400 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors ${activeTab === 'Owners' ? 'bg-white text-violet-600 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}
                 >
                   <Building2 size={14} />
                   Owners
@@ -283,7 +283,7 @@ export const Communication: React.FC = () => {
                 placeholder="Search contacts..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-white dark:bg-zinc-800 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400"
+                className="w-full pl-9 pr-4 py-2 bg-white border border-violet-100 rounded-xl text-xs text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400"
               />
             </div>
           </div>
@@ -292,25 +292,25 @@ export const Communication: React.FC = () => {
               <div 
                 key={chat.id}
                 onClick={() => setActiveChat({ id: chat.id, type: chat.type })}
-                className={`p-4 border-b border-violet-50 dark:border-zinc-800 cursor-pointer transition-all duration-300 ${
+                className={`p-4 border-b border-violet-50 cursor-pointer transition-all duration-300 ${
                   activeChat?.id === chat.id && activeChat?.type === chat.type
-                    ? 'bg-violet-50/50 dark:bg-zinc-800/50 border-l-4 border-l-violet-600' 
-                    : 'hover:bg-violet-50/30 dark:hover:bg-zinc-800/30 border-l-4 border-l-transparent'
+                    ? 'bg-violet-50/50 border-l-4 border-l-violet-600' 
+                    : 'hover:bg-violet-50/30 border-l-4 border-l-transparent'
                 }`}
               >
                 <div className="flex justify-between items-start mb-1">
-                  <h4 className="text-sm font-bold text-zinc-900 dark:text-white">{chat.name}</h4>
-                  <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">{chat.time}</span>
+                  <h4 className="text-sm font-bold text-zinc-900">{chat.name}</h4>
+                  <span className="text-[10px] text-zinc-400 font-medium">{chat.time}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate pr-4">{chat.lastMessage}</p>
+                  <p className="text-xs text-zinc-500 truncate pr-4">{chat.lastMessage}</p>
                   {chat.unread > 0 && (
                     <span className="w-4 h-4 rounded-full bg-violet-600 text-white text-[9px] font-bold flex items-center justify-center">
                       {chat.unread}
                     </span>
                   )}
                 </div>
-                <p className="text-[9px] text-violet-600 dark:text-violet-400 font-bold uppercase tracking-widest mt-2">{chat.subtext}</p>
+                <p className="text-[9px] text-violet-600 font-bold uppercase tracking-widest mt-2">{chat.subtext}</p>
               </div>
             ))}
             {conversations.length === 0 && (
@@ -322,20 +322,20 @@ export const Communication: React.FC = () => {
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col bg-white/30 dark:bg-zinc-800/30">
+        <div className="flex-1 flex flex-col bg-white/30">
           {activeChat && activeChatDetails ? (
             <>
-              <div className="p-6 border-b border-violet-50 dark:border-zinc-800 flex justify-between items-center bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md">
+              <div className="p-6 border-b border-violet-50 flex justify-between items-center bg-white/50 backdrop-blur-md">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-violet-700 dark:bg-violet-900/40 text-white dark:text-violet-400 flex items-center justify-center font-bold text-xs border border-violet-800 dark:border-violet-800 shadow-md">
+                  <div className="w-10 h-10 rounded-xl bg-violet-700 text-white flex items-center justify-center font-bold text-xs border border-violet-800 shadow-md">
                     {activeChatDetails.initials}
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white">{activeChatDetails.name}</h4>
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-widest font-medium">{activeChatDetails.subtext}</p>
+                    <h4 className="text-sm font-bold text-zinc-900">{activeChatDetails.name}</h4>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-medium">{activeChatDetails.subtext}</p>
                   </div>
                 </div>
-                <button className="text-zinc-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
+                <button className="text-zinc-400 hover:text-violet-600 transition-colors">
                   <MoreVertical size={18} />
                 </button>
               </div>
@@ -354,11 +354,11 @@ export const Communication: React.FC = () => {
                         <div className={`max-w-[70%] p-4 rounded-2xl shadow-sm ${
                           isMe 
                             ? 'bg-violet-600 text-white rounded-tr-sm' 
-                            : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white border border-violet-100 dark:border-zinc-700 rounded-tl-sm'
+                            : 'bg-white text-zinc-900 border border-violet-100 rounded-tl-sm'
                         }`}>
                           <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                         </div>
-                        <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium mt-2 px-1">
+                        <span className="text-[10px] text-zinc-400 font-medium mt-2 px-1">
                           {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </motion.div>
@@ -373,9 +373,9 @@ export const Communication: React.FC = () => {
                 </div>
               </div>
 
-              <form onSubmit={handleSendMessage} className="p-4 border-t border-violet-50 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md">
+              <form onSubmit={handleSendMessage} className="p-4 border-t border-violet-50 bg-white/50 backdrop-blur-md">
                 <div className="flex items-center gap-3">
-                  <button type="button" className="p-2.5 text-zinc-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors bg-white dark:bg-zinc-800 border border-violet-100 dark:border-zinc-700 rounded-xl shadow-sm hover:shadow-md">
+                  <button type="button" className="p-2.5 text-zinc-400 hover:text-violet-600 transition-colors bg-white border border-violet-100 rounded-xl shadow-sm hover:shadow-md">
                     <Paperclip size={18} />
                   </button>
                   <input 
@@ -383,7 +383,7 @@ export const Communication: React.FC = () => {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="Type your message..." 
-                    className="flex-1 px-4 py-2.5 bg-white dark:bg-zinc-800 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400 shadow-sm"
+                    className="flex-1 px-4 py-2.5 bg-white border border-violet-100 rounded-xl text-sm text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400 shadow-sm"
                   />
                   <button 
                     type="submit"
@@ -396,7 +396,7 @@ export const Communication: React.FC = () => {
               </form>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-zinc-400 dark:text-zinc-500 text-sm font-medium">
+            <div className="flex-1 flex items-center justify-center text-zinc-400 text-sm font-medium">
               Select a conversation to start messaging
             </div>
           )}
@@ -410,13 +410,13 @@ export const Communication: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-zinc-900 rounded-2xl p-8 max-w-lg w-full shadow-2xl border border-violet-100 dark:border-zinc-800"
+              className="bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl border border-violet-100"
             >
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">New Message</h3>
+                <h3 className="text-xl font-bold text-zinc-900">New Message</h3>
                 <button 
                   onClick={() => setShowNewMessageModal(false)}
-                  className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                  className="text-zinc-400 hover:text-zinc-600 transition-colors"
                 >
                   <X size={20} />
                 </button>
@@ -428,7 +428,7 @@ export const Communication: React.FC = () => {
                     value={newMessageRecipient}
                     onChange={e => setNewMessageRecipient(e.target.value)}
                     required
-                    className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-violet-100 rounded-xl text-sm text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
                   >
                     <option value="">Select a recipient...</option>
                     <optgroup label="Tenants">
@@ -454,7 +454,7 @@ export const Communication: React.FC = () => {
                     onChange={e => setNewMessageContent(e.target.value)}
                     required
                     rows={4}
-                    className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all resize-none"
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-violet-100 rounded-xl text-sm text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all resize-none"
                     placeholder="Type your message here..."
                   />
                 </div>
@@ -462,7 +462,7 @@ export const Communication: React.FC = () => {
                   <button 
                     type="button"
                     onClick={() => setShowNewMessageModal(false)}
-                    className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                    className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-700 transition-colors"
                   >
                     Cancel
                   </button>

@@ -51,24 +51,24 @@ export const TenantLease: React.FC = () => {
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
       <div className="mb-12">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">Documentation</h3>
-        <p className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Lease & Documents</p>
+        <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Documentation</h3>
+        <p className="text-2xl font-bold text-zinc-900 tracking-tight">Lease & Documents</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Lease Summary */}
         <div className="lg:col-span-1 space-y-6">
           <div className="vintsy-card p-8">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8">Lease Summary</h4>
+            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8">Lease Summary</h4>
             <div className="space-y-6">
               {leaseTerms.map((term) => (
                 <div key={term.label} className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center text-violet-600 dark:text-violet-400">
+                  <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600">
                     <term.icon size={18} />
                   </div>
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{term.label}</p>
-                    <p className="text-sm font-bold text-zinc-900 dark:text-white">{term.value}</p>
+                    <p className="text-sm font-bold text-zinc-900">{term.value}</p>
                   </div>
                 </div>
               ))}
@@ -82,15 +82,15 @@ export const TenantLease: React.FC = () => {
             </button>
           </div>
 
-          <div className="vintsy-card p-8 bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30">
-            <div className="flex items-center gap-3 mb-4 text-emerald-700 dark:text-emerald-400">
+          <div className="vintsy-card p-8 bg-emerald-50 border-emerald-100">
+            <div className="flex items-center gap-3 mb-4 text-emerald-700">
               <ShieldCheck size={20} />
               <h4 className="text-sm font-bold uppercase tracking-widest">Renter's Insurance</h4>
             </div>
-            <p className="text-xs text-emerald-800 dark:text-emerald-300 font-medium leading-relaxed mb-6">
+            <p className="text-xs text-emerald-800 font-medium leading-relaxed mb-6">
               Your insurance policy is active and expires on Dec 31, 2023.
             </p>
-            <button className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1">
+            <button className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1">
               Update Policy <ExternalLink size={12} />
             </button>
           </div>
@@ -100,7 +100,7 @@ export const TenantLease: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           <div className="vintsy-card p-8">
             <div className="flex justify-between items-center mb-8">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Shared Documents</h4>
+              <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Shared Documents</h4>
               <button className="text-xs font-bold text-violet-600 hover:underline">Upload New</button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -115,14 +115,14 @@ export const TenantLease: React.FC = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="p-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700 rounded-2xl flex items-center justify-between group hover:border-violet-300 dark:hover:border-violet-500 transition-all"
+                  className="p-4 bg-zinc-50 border border-zinc-100 rounded-2xl flex items-center justify-between group hover:border-violet-300 transition-all"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-700 border border-zinc-100 dark:border-zinc-600 flex items-center justify-center text-zinc-400 group-hover:text-violet-600 transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-zinc-100 flex items-center justify-center text-zinc-400 group-hover:text-violet-600 transition-colors">
                       <FileText size={18} />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-zinc-900 dark:text-white truncate max-w-[120px]">{doc.name}</p>
+                      <p className="text-xs font-bold text-zinc-900 truncate max-w-[120px]">{doc.name}</p>
                       <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{doc.size} • {doc.date}</p>
                     </div>
                   </div>
@@ -144,14 +144,14 @@ export const TenantLease: React.FC = () => {
           </div>
 
           <div className="vintsy-card p-8">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-6">Community Notices</h4>
+            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-6">Community Notices</h4>
             <div className="space-y-4">
-              <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+              <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="w-2 h-2 bg-violet-600 rounded-full" />
-                  <p className="text-xs font-bold text-zinc-900 dark:text-white">Trash Collection Update</p>
+                  <p className="text-xs font-bold text-zinc-900">Trash Collection Update</p>
                 </div>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                <p className="text-xs text-zinc-500 leading-relaxed">
                   Due to the holiday, trash collection will be delayed by one day this week.
                 </p>
               </div>
@@ -167,7 +167,7 @@ export const TenantLease: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-10 max-w-3xl w-full shadow-2xl border border-violet-100 dark:border-zinc-800 max-h-[80vh] overflow-y-auto"
+              className="bg-white rounded-[2.5rem] p-10 max-w-3xl w-full shadow-2xl border border-violet-100 max-h-[80vh] overflow-y-auto"
             >
               <div className="flex justify-between items-center mb-8">
                 <div className="flex items-center gap-4">
@@ -175,33 +175,33 @@ export const TenantLease: React.FC = () => {
                     <FileText size={24} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">{viewingDoc.name}</h3>
+                    <h3 className="text-xl font-bold text-zinc-900 tracking-tight">{viewingDoc.name}</h3>
                     <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Document Preview • {viewingDoc.size}</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setViewingDoc(null)}
-                  className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                  className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-700 transition-colors"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="p-8 bg-zinc-50 dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800 min-h-[300px]">
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
+              <div className="p-8 bg-zinc-50 rounded-3xl border border-zinc-100 min-h-[300px]">
+                <p className="text-sm text-zinc-600 leading-relaxed font-medium">
                   {viewingDoc.content}
                 </p>
                 <div className="mt-8 space-y-4">
-                  <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded-full w-3/4 animate-pulse" />
-                  <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded-full w-1/2 animate-pulse" />
-                  <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded-full w-5/6 animate-pulse" />
+                  <div className="h-4 bg-zinc-200 rounded-full w-3/4 animate-pulse" />
+                  <div className="h-4 bg-zinc-200 rounded-full w-1/2 animate-pulse" />
+                  <div className="h-4 bg-zinc-200 rounded-full w-5/6 animate-pulse" />
                 </div>
               </div>
 
               <div className="flex gap-4 mt-10">
                 <button 
                   onClick={() => setViewingDoc(null)}
-                  className="flex-1 py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                  className="flex-1 py-4 bg-zinc-100 text-zinc-900 rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all"
                 >
                   Close Preview
                 </button>

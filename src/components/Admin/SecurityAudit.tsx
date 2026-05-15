@@ -58,7 +58,7 @@ export const SecurityAudit: React.FC = () => {
     <div className="space-y-6">
       {/* Tabs & Controls */}
       <div className="vintsy-card p-6 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-2xl border border-zinc-200 dark:border-zinc-700 w-full md:w-auto">
+        <div className="flex bg-zinc-100 p-1.5 rounded-2xl border border-zinc-200 w-full md:w-auto">
           {[
             { id: 'alerts', label: 'Security Alerts', icon: ShieldAlert },
             { id: 'audit', label: 'Audit Logs', icon: History },
@@ -68,8 +68,8 @@ export const SecurityAudit: React.FC = () => {
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex-1 md:flex-none flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
                 activeTab === tab.id 
-                  ? 'bg-white dark:bg-zinc-700 text-violet-700 dark:text-violet-400 shadow-sm' 
-                  : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                  ? 'bg-white text-violet-700 shadow-sm' 
+                  : 'text-zinc-500 hover:text-zinc-700'
               }`}
             >
               <tab.icon size={14} />
@@ -85,10 +85,10 @@ export const SecurityAudit: React.FC = () => {
               placeholder="Search logs..." 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
+              className="w-full pl-10 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
             />
           </div>
-          <button className="flex items-center gap-2 px-6 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all">
+          <button className="flex items-center gap-2 px-6 py-2.5 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all">
             <Download size={14} />
             Export
           </button>
@@ -105,7 +105,7 @@ export const SecurityAudit: React.FC = () => {
             className="space-y-4"
           >
             {alerts.map(alert => (
-              <div key={alert.id} className="vintsy-card p-6 flex items-center gap-6 group hover:border-red-200 dark:hover:border-red-800 transition-all">
+              <div key={alert.id} className="vintsy-card p-6 flex items-center gap-6 group hover:border-red-200 transition-all">
                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border shadow-sm group-hover:scale-110 transition-transform ${
                   alert.risk === 'Critical' ? 'bg-red-50 text-red-600 border-red-100' :
                   alert.risk === 'High' ? 'bg-orange-50 text-orange-600 border-orange-100' :
@@ -115,7 +115,7 @@ export const SecurityAudit: React.FC = () => {
                 </div>
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center gap-3">
-                    <h4 className="text-base font-bold text-zinc-900 dark:text-white">{alert.type}</h4>
+                    <h4 className="text-base font-bold text-zinc-900">{alert.type}</h4>
                     <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
                       alert.risk === 'Critical' ? 'bg-red-600 text-white border-red-600' :
                       alert.risk === 'High' ? 'bg-orange-50 text-orange-700 border-orange-100' :
@@ -124,7 +124,7 @@ export const SecurityAudit: React.FC = () => {
                       {alert.risk} Risk
                     </span>
                   </div>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400 font-medium">{alert.description}</p>
+                  <p className="text-sm text-zinc-600 font-medium">{alert.description}</p>
                   <div className="flex items-center gap-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
                     <span className="flex items-center gap-1"><User size={12} /> {alert.user}</span>
                     <span className="flex items-center gap-1"><Clock size={12} /> {new Date(alert.timestamp).toLocaleString()}</span>
@@ -132,7 +132,7 @@ export const SecurityAudit: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-[10px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all">
+                  <button className="px-4 py-2 rounded-xl border border-zinc-200 text-[10px] font-bold uppercase tracking-widest text-zinc-600 hover:bg-zinc-50 transition-all">
                     Ignore
                   </button>
                   <button className="px-4 py-2 rounded-xl bg-zinc-900 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-all shadow-lg">
@@ -153,7 +153,7 @@ export const SecurityAudit: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="bg-zinc-50 dark:bg-zinc-800/50 text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                  <tr className="bg-zinc-50 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
                     <th className="px-8 py-5">Timestamp</th>
                     <th className="px-8 py-5">User</th>
                     <th className="px-8 py-5">Action</th>
@@ -162,25 +162,25 @@ export const SecurityAudit: React.FC = () => {
                     <th className="px-8 py-5 text-right">Details</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                <tbody className="divide-y divide-zinc-100">
                   {filteredLogs.map(log => (
-                    <tr key={log.id} className="group hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
-                      <td className="px-8 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                    <tr key={log.id} className="group hover:bg-zinc-50 transition-colors">
+                      <td className="px-8 py-5 text-xs font-bold text-zinc-500">
                         {new Date(log.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                       </td>
                       <td className="px-8 py-5">
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+                          <div className="w-6 h-6 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-400">
                             <User size={12} />
                           </div>
-                          <span className="text-xs font-bold text-zinc-900 dark:text-white">{log.user_name || 'System'}</span>
+                          <span className="text-xs font-bold text-zinc-900">{log.user_name || 'System'}</span>
                         </div>
                       </td>
                       <td className="px-8 py-5">
-                        <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{log.action}</span>
+                        <span className="text-xs font-medium text-zinc-700">{log.action}</span>
                       </td>
                       <td className="px-8 py-5">
-                        <span className="px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-[9px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                        <span className="px-2 py-0.5 rounded-lg bg-zinc-100 text-[9px] font-bold uppercase tracking-widest text-zinc-600 border border-zinc-200">
                           {log.entity_type}
                         </span>
                       </td>

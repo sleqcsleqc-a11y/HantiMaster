@@ -210,13 +210,13 @@ export const UserGovernance: React.FC = () => {
           <motion.div 
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex-1 w-full bg-violet-50 dark:bg-violet-900/10 p-4 rounded-2xl border border-violet-100 dark:border-violet-800 flex items-center justify-between"
+            className="flex-1 w-full bg-violet-50 p-4 rounded-2xl border border-violet-100 flex items-center justify-between"
           >
             <div className="flex items-center gap-4">
-              <span className="text-xs font-bold text-violet-700 dark:text-violet-400">
+              <span className="text-xs font-bold text-violet-700">
                 {selectedUserIds.length} users selected
               </span>
-              <div className="h-4 w-px bg-violet-200 dark:bg-violet-800" />
+              <div className="h-4 w-px bg-violet-200" />
               <button 
                 onClick={() => handleBulkStatusUpdate('Active')}
                 className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest hover:underline"
@@ -245,7 +245,7 @@ export const UserGovernance: React.FC = () => {
               placeholder="Search users by name, email, or role..." 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
+              className="w-full pl-12 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
             />
           </div>
         )}
@@ -253,7 +253,7 @@ export const UserGovernance: React.FC = () => {
           <select 
             value={roleFilter}
             onChange={e => setRoleFilter(e.target.value)}
-            className="px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-xs font-bold focus:outline-none transition-all"
+            className="px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-xs font-bold focus:outline-none transition-all"
           >
             <option value="All">All Roles</option>
             {roles.map(role => <option key={role.id} value={role.name}>{role.name}</option>)}
@@ -261,7 +261,7 @@ export const UserGovernance: React.FC = () => {
           <select 
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
-            className="px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-xs font-bold focus:outline-none transition-all"
+            className="px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-xs font-bold focus:outline-none transition-all"
           >
             <option value="All">All Status</option>
             <option value="Active">Active</option>
@@ -287,7 +287,7 @@ export const UserGovernance: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-zinc-50 dark:bg-zinc-800/50 text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+              <tr className="bg-zinc-50 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
                 <th className="px-8 py-5 w-12">
                   <input 
                     type="checkbox" 
@@ -314,11 +314,11 @@ export const UserGovernance: React.FC = () => {
                 <th className="px-8 py-5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <tbody className="divide-y divide-zinc-100">
               {filteredUsers.map(u => (
                 <tr 
                   key={u.id} 
-                  className={`group hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer ${selectedUserIds.includes(u.id) ? 'bg-violet-50/50 dark:bg-violet-900/10' : ''}`}
+                  className={`group hover:bg-zinc-50 transition-colors cursor-pointer ${selectedUserIds.includes(u.id) ? 'bg-violet-50/50' : ''}`}
                   onClick={() => handleSelectUser(u)}
                 >
                   <td className="px-8 py-5" onClick={e => e.stopPropagation()}>
@@ -334,45 +334,45 @@ export const UserGovernance: React.FC = () => {
                       <div className="relative">
                         <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm shadow-sm ${
                           u.role_name === 'System Administrator' 
-                            ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' 
-                            : 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400'
+                            ? 'bg-zinc-900 text-white' 
+                            : 'bg-violet-100 text-violet-700'
                         }`}>
                           {u.first_name?.[0]}{u.last_name?.[0]}
                         </div>
                         {u.role_name === 'System Administrator' && (
-                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[8px] text-zinc-900">
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full border-2 border-white flex items-center justify-center text-[8px] text-zinc-900">
                             ★
                           </div>
                         )}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white group-hover:text-violet-600 transition-colors flex items-center gap-2">
+                        <p className="text-sm font-bold text-zinc-900 group-hover:text-violet-600 transition-colors flex items-center gap-2">
                           {u.first_name} {u.last_name}
                           {u.status === 'Locked' && <AlertCircle size={12} className="text-red-500" />}
                         </p>
-                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">{u.email}</p>
+                        <p className="text-[10px] text-zinc-500 font-medium">{u.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-8 py-5">
                     <div className="space-y-1">
-                      <span className="px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-[9px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                      <span className="px-2 py-0.5 rounded-lg bg-zinc-100 text-[9px] font-bold uppercase tracking-widest text-zinc-600 border border-zinc-200">
                         {u.role_name}
                       </span>
-                      <p className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-bold">{u.property_scope} Scope</p>
+                      <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">{u.property_scope} Scope</p>
                     </div>
                   </td>
                   <td className="px-8 py-5">
                     <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
                       u.status === 'Active' 
-                        ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800' 
-                        : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-100 dark:border-red-800'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                        : 'bg-red-50 text-red-700 border-red-100'
                     }`}>
                       {u.status}
                     </span>
                   </td>
                   <td className="px-8 py-5">
-                    <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                    <div className="flex items-center gap-2 text-xs text-zinc-500">
                       <Clock size={14} className="text-zinc-300" />
                       {u.last_login ? new Date(u.last_login).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Never'}
                     </div>
@@ -385,7 +385,7 @@ export const UserGovernance: React.FC = () => {
                       >
                         {u.status === 'Active' ? <Lock size={16} /> : <Unlock size={16} />}
                       </button>
-                      <button className="p-2 rounded-xl text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-violet-600 transition-colors">
+                      <button className="p-2 rounded-xl text-zinc-400 hover:bg-zinc-100 hover:text-violet-600 transition-colors">
                         <MoreVertical size={16} />
                       </button>
                     </div>
@@ -412,12 +412,12 @@ export const UserGovernance: React.FC = () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl z-[90] overflow-hidden"
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-3xl shadow-2xl z-[90] overflow-hidden"
             >
               <div className="p-8 space-y-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">Add New User</h3>
-                  <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-400">
+                  <h3 className="text-xl font-bold text-zinc-900 tracking-tight">Add New User</h3>
+                  <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-zinc-100 rounded-xl text-zinc-400">
                     <X size={20} />
                   </button>
                 </div>
@@ -430,7 +430,7 @@ export const UserGovernance: React.FC = () => {
                         type="text" 
                         value={addForm.first_name}
                         onChange={e => setAddForm({...addForm, first_name: e.target.value})}
-                        className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm"
+                        className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm"
                       />
                     </div>
                     <div className="space-y-1">
@@ -440,7 +440,7 @@ export const UserGovernance: React.FC = () => {
                         type="text" 
                         value={addForm.last_name}
                         onChange={e => setAddForm({...addForm, last_name: e.target.value})}
-                        className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm"
+                        className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm"
                       />
                     </div>
                   </div>
@@ -451,7 +451,7 @@ export const UserGovernance: React.FC = () => {
                       type="email" 
                       value={addForm.email}
                       onChange={e => setAddForm({...addForm, email: e.target.value})}
-                      className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm"
+                      className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm"
                     />
                   </div>
                   <div className="space-y-1">
@@ -461,7 +461,7 @@ export const UserGovernance: React.FC = () => {
                       placeholder="Default: welcome123"
                       value={addForm.password}
                       onChange={e => setAddForm({...addForm, password: e.target.value})}
-                      className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm"
+                      className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -470,7 +470,7 @@ export const UserGovernance: React.FC = () => {
                       <select 
                         value={addForm.role_id}
                         onChange={e => setAddForm({...addForm, role_id: parseInt(e.target.value)})}
-                        className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold"
+                        className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold"
                       >
                         {roles.map(role => <option key={role.id} value={role.id}>{role.name}</option>)}
                       </select>
@@ -480,7 +480,7 @@ export const UserGovernance: React.FC = () => {
                       <select 
                         value={addForm.property_scope}
                         onChange={e => setAddForm({...addForm, property_scope: e.target.value as any})}
-                        className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold"
+                        className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-bold"
                       >
                         <option value="Assigned">Assigned</option>
                         <option value="Global">Global</option>
@@ -513,25 +513,25 @@ export const UserGovernance: React.FC = () => {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 w-full max-w-xl bg-white dark:bg-zinc-900 shadow-2xl z-[70] overflow-y-auto"
+              className="fixed top-0 right-0 bottom-0 w-full max-w-xl bg-white shadow-2xl z-[70] overflow-y-auto"
             >
               <div className="p-8 space-y-8">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">User Profile Panel</h3>
+                  <h3 className="text-xl font-bold text-zinc-900 tracking-tight">User Profile Panel</h3>
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={() => setIsEditing(!isEditing)}
                       className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
                         isEditing 
-                          ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400' 
-                          : 'bg-violet-50 dark:bg-violet-900/20 text-violet-600 border border-violet-100 dark:border-violet-800'
+                          ? 'bg-zinc-100 text-zinc-600' 
+                          : 'bg-violet-50 text-violet-600 border border-violet-100'
                       }`}
                     >
                       {isEditing ? 'Cancel' : 'Edit Profile'}
                     </button>
                     <button 
                       onClick={() => setIsDrawerOpen(false)}
-                      className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-400 transition-colors"
+                      className="p-2 hover:bg-zinc-100 rounded-xl text-zinc-400 transition-colors"
                     >
                       <X size={20} />
                     </button>
@@ -539,13 +539,13 @@ export const UserGovernance: React.FC = () => {
                 </div>
 
                 {/* Header Info */}
-                <div className="flex items-center gap-6 p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800">
+                <div className="flex items-center gap-6 p-6 bg-zinc-50 rounded-3xl border border-zinc-100">
                   <div className="w-20 h-20 rounded-3xl bg-violet-600 flex items-center justify-center text-white text-2xl font-bold shadow-xl shadow-violet-600/20">
                     {selectedUser.first_name?.[0]}{selectedUser.last_name?.[0]}
                   </div>
                   <div className="flex-1">
-                    <h4 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">{selectedUser.first_name} {selectedUser.last_name}</h4>
-                    <p className="text-zinc-500 dark:text-zinc-400 flex items-center gap-2 text-sm mt-1">
+                    <h4 className="text-2xl font-bold text-zinc-900 tracking-tight">{selectedUser.first_name} {selectedUser.last_name}</h4>
+                    <p className="text-zinc-500 flex items-center gap-2 text-sm mt-1">
                       <Mail size={14} />
                       {selectedUser.email}
                     </p>
@@ -569,7 +569,7 @@ export const UserGovernance: React.FC = () => {
                     <motion.div 
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
-                      className="vintsy-card p-6 space-y-6 border-violet-200 dark:border-violet-800 bg-violet-50/10"
+                      className="vintsy-card p-6 space-y-6 border-violet-200 bg-violet-50/10"
                     >
                       <h5 className="text-[10px] font-bold text-violet-600 uppercase tracking-widest">Edit User Configuration</h5>
                       <div className="grid grid-cols-2 gap-4">
@@ -578,7 +578,7 @@ export const UserGovernance: React.FC = () => {
                           <select 
                             value={editForm.status}
                             onChange={e => setEditForm({...editForm, status: e.target.value})}
-                            className="w-full px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-bold"
+                            className="w-full px-4 py-2 bg-white border border-zinc-200 rounded-xl text-xs font-bold"
                           >
                             <option value="Active">Active</option>
                             <option value="Suspended">Suspended</option>
@@ -591,7 +591,7 @@ export const UserGovernance: React.FC = () => {
                           <select 
                             value={editForm.role_id}
                             onChange={e => setEditForm({...editForm, role_id: parseInt(e.target.value)})}
-                            className="w-full px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-bold"
+                            className="w-full px-4 py-2 bg-white border border-zinc-200 rounded-xl text-xs font-bold"
                           >
                             {roles.map(role => <option key={role.id} value={role.id}>{role.name}</option>)}
                           </select>
@@ -615,13 +615,13 @@ export const UserGovernance: React.FC = () => {
                     <div className="space-y-2">
                       {selectedUser.properties?.length > 0 ? (
                         selectedUser.properties.map((prop: any) => (
-                          <div key={prop.id} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-800">
-                            <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">{prop.name}</span>
+                          <div key={prop.id} className="flex items-center justify-between p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+                            <span className="text-xs font-bold text-zinc-700">{prop.name}</span>
                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{prop.type}</span>
                           </div>
                         ))
                       ) : (
-                        <p className="text-xs text-zinc-500 italic p-4 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">
+                        <p className="text-xs text-zinc-500 italic p-4 text-center border border-dashed border-zinc-200 rounded-xl">
                           No specific property access assigned.
                         </p>
                       )}
@@ -640,10 +640,10 @@ export const UserGovernance: React.FC = () => {
                           <div key={act.id} className="flex gap-4">
                             <div className="mt-1">
                               <div className="w-2 h-2 rounded-full bg-violet-500" />
-                              <div className="w-px h-full bg-zinc-100 dark:bg-zinc-800 mx-auto mt-1" />
+                              <div className="w-px h-full bg-zinc-100 mx-auto mt-1" />
                             </div>
                             <div>
-                              <p className="text-xs font-bold text-zinc-900 dark:text-white">{act.action}</p>
+                              <p className="text-xs font-bold text-zinc-900">{act.action}</p>
                               <p className="text-[10px] text-zinc-500 mt-1">
                                 {new Date(act.timestamp).toLocaleString()} • {act.entity_type}
                               </p>
@@ -670,15 +670,15 @@ export const UserGovernance: React.FC = () => {
                       ].map((perm) => {
                         const currentOverride = selectedUser.overrides?.find((o: any) => o.module === perm.module && o.action === perm.action);
                         return (
-                          <div key={`${perm.module}-${perm.action}`} className="flex justify-between items-center p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                          <div key={`${perm.module}-${perm.action}`} className="flex justify-between items-center p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
                             <div>
-                              <p className="text-xs font-bold text-zinc-900 dark:text-white">{perm.label}</p>
+                              <p className="text-xs font-bold text-zinc-900">{perm.label}</p>
                               <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">{perm.module}</p>
                             </div>
                             <select 
                               value={currentOverride?.override_type || 'Inherit'}
                               onChange={(e) => handleUpdateOverride(perm.module, perm.action, e.target.value)}
-                              className="px-3 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-[10px] font-bold uppercase tracking-widest focus:outline-none"
+                              className="px-3 py-1.5 bg-white border border-zinc-200 rounded-xl text-[10px] font-bold uppercase tracking-widest focus:outline-none"
                             >
                               <option value="Inherit">Inherit</option>
                               <option value="Grant">Grant</option>
@@ -697,19 +697,19 @@ export const UserGovernance: React.FC = () => {
                       Security & Access Status
                     </h5>
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                      <div className="flex justify-between items-center p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
                         <div className="flex items-center gap-3">
                           <Lock size={16} className="text-zinc-400" />
-                          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">MFA Status</span>
+                          <span className="text-sm font-medium text-zinc-700">MFA Status</span>
                         </div>
                         <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Enabled</span>
                       </div>
-                      <div className="flex justify-between items-center p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                      <div className="flex justify-between items-center p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
                         <div className="flex items-center gap-3">
                           <History size={16} className="text-zinc-400" />
-                          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Last Login</span>
+                          <span className="text-sm font-medium text-zinc-700">Last Login</span>
                         </div>
-                        <span className="text-xs font-bold text-zinc-900 dark:text-white">
+                        <span className="text-xs font-bold text-zinc-900">
                           {selectedUser.last_login ? new Date(selectedUser.last_login).toLocaleDateString() : 'Never'}
                         </span>
                       </div>
@@ -717,7 +717,7 @@ export const UserGovernance: React.FC = () => {
                   </div>
 
                   {/* Danger Zone */}
-                  <div className="p-6 rounded-3xl border border-red-100 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/5 space-y-4">
+                  <div className="p-6 rounded-3xl border border-red-100 bg-red-50/30 space-y-4">
                     <h5 className="text-[10px] font-bold text-red-600 uppercase tracking-widest flex items-center gap-2">
                       <AlertCircle size={12} />
                       Danger Zone
@@ -733,7 +733,7 @@ export const UserGovernance: React.FC = () => {
                       >
                         {selectedUser.status === 'Active' ? 'Suspend Account' : 'Activate Account'}
                       </button>
-                      <button className="flex-1 px-4 py-3 rounded-2xl border border-red-200 dark:border-red-800 text-[10px] font-bold uppercase tracking-widest text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all">
+                      <button className="flex-1 px-4 py-3 rounded-2xl border border-red-200 text-[10px] font-bold uppercase tracking-widest text-red-600 hover:bg-red-50 transition-all">
                         Terminate User
                       </button>
                     </div>

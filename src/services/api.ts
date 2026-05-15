@@ -133,12 +133,12 @@ export const api = {
     return { id: data.id };
   },
   async getProperties(userId?: string): Promise<Property[]> {
-    let query = supabase.from('properties').select('*, owners(first_name, last_name), units(*), media_assets!image_asset_id(storage_path)');
+    let query = supabase.from('properties').select('*, owner:owners(first_name, last_name), units(*)');
     
     if (userId) {
-      const { data: profile } = await supabase.from('profiles').select('property_scope, owner_id, roles(name)').eq('id', userId).single();
+      const { data: profile } = await supabase.from('profiles').select('property_scope, owner_id, role:roles(name)').eq('id', userId).single();
       
-      const roleName = Array.isArray(profile?.roles) ? (profile?.roles[0] as any)?.name : (profile?.roles as any)?.name;
+      const roleName = Array.isArray(profile?.role) ? (profile?.role[0] as any)?.name : (profile?.role as any)?.name;
 
       if (roleName === 'Property Owner' && profile?.owner_id) {
          query = query.eq('owner_id', profile.owner_id);
@@ -147,22 +147,17 @@ export const api = {
     
     const { data, error } = await query;
     if (error) throw error;
-    return data.map(p => {
-      let imageUrl = p.image_url;
-      if (p.media_assets) {
-        const { data: { publicUrl } } = supabase.storage.from('hanti-assets').getPublicUrl(p.media_assets.storage_path);
-        imageUrl = publicUrl;
-      }
-      
-      const units = p.units || [];
-      const occupiedUnits = units.filter((u: any) => u.status === 'Occupied').length;
-      const occupancyRate = units.length > 0 ? (occupiedUnits / units.length) * 100 : 0;
+    return (data || []).map(p => {
+      const imageUrl = p.image_url;
+      const unitsArray = p.units || [];
+      const occupiedUnits = unitsArray.filter((u: any) => u.status === 'Occupied').length;
+      const occupancyRate = unitsArray.length > 0 ? (occupiedUnits / unitsArray.length) * 100 : 0;
 
       return {
         ...p,
         image_url: imageUrl,
-        owner_name: p.owners ? `${p.owners.first_name} ${p.owners.last_name}` : undefined,
-        unit_count: units.length,
+        owner_name: p.owner ? `${(p.owner as any).first_name} ${(p.owner as any).last_name}` : undefined,
+        unit_count: unitsArray.length,
         occupancy_rate: occupancyRate
       };
     });
@@ -170,33 +165,37 @@ export const api = {
   async getProperty(id: number): Promise<Property> {
     const { data, error } = await supabase
       .from('properties')
-      .select('*, owners(first_name, last_name, email, phone), units(*), media_assets!image_asset_id(storage_path)')
+      .select('*, owner:owners(first_name, last_name, email, phone), units(*)')
       .eq('id', id)
       .single();
     if (error) throw error;
     
-    let imageUrl = data.image_url;
-    if (data.media_assets) {
-      const { data: { publicUrl } } = supabase.storage.from('hanti-assets').getPublicUrl(data.media_assets.storage_path);
-      imageUrl = publicUrl;
-    }
-
-    const units = data.units || [];
-    const occupiedUnits = units.filter((u: any) => u.status === 'Occupied').length;
-    const occupancyRate = units.length > 0 ? (occupiedUnits / units.length) * 100 : 0;
+    const imageUrl = data.image_url;
+    const unitsArray = data.units || [];
+    const occupiedUnits = unitsArray.filter((u: any) => u.status === 'Occupied').length;
+    const occupancyRate = unitsArray.length > 0 ? (occupiedUnits / unitsArray.length) * 100 : 0;
 
     return {
       ...data,
       image_url: imageUrl,
-      owner_name: data.owners ? `${data.owners.first_name} ${data.owners.last_name}` : undefined,
-      owner_email: data.owners?.email,
-      owner_phone: data.owners?.phone,
-      unit_count: units.length,
+      owner_name: data.owner ? `${(data.owner as any).first_name} ${(data.owner as any).last_name}` : undefined,
+      owner_email: (data.owner as any)?.email,
+      owner_phone: (data.owner as any)?.phone,
+      unit_count: unitsArray.length,
       occupancy_rate: occupancyRate
     };
   },
   async updateProperty(id: number, data: Partial<Property>, adminId?: string): Promise<{ success: boolean }> {
-    const { error } = await supabase.from('properties').update(data).eq('id', id);
+    const sanitizedData: any = {};
+    const validFields = ['name', 'address', 'type', 'image_url', 'image_asset_id', 'property_value', 'owner_id', 'status', 'amenities', 'is_furnished', 'description'];
+    
+    validFields.forEach(field => {
+      if ((data as any)[field] !== undefined) {
+        sanitizedData[field] = (data as any)[field];
+      }
+    });
+
+    const { error } = await supabase.from('properties').update(sanitizedData).eq('id', id);
     if (error) throw error;
     
     if (adminId) {
@@ -210,7 +209,16 @@ export const api = {
     return { success: true };
   },
   async createProperty(data: Partial<Property>, adminId?: string): Promise<{ id: number }> {
-    const { data: prop, error } = await supabase.from('properties').insert(data).select().single();
+    const sanitizedData: any = {};
+    const validFields = ['name', 'address', 'type', 'image_url', 'image_asset_id', 'property_value', 'owner_id', 'status', 'amenities', 'is_furnished', 'description'];
+    
+    validFields.forEach(field => {
+      if ((data as any)[field] !== undefined) {
+        sanitizedData[field] = (data as any)[field];
+      }
+    });
+
+    const { data: prop, error } = await supabase.from('properties').insert(sanitizedData).select().single();
     if (error) throw error;
 
     if (adminId) {
@@ -269,7 +277,7 @@ export const api = {
   async getPropertyDocuments(propertyId: number): Promise<PropertyDocument[]> {
     const { data, error } = await supabase.from('property_documents').select('*').eq('property_id', propertyId);
     if (error) {
-      if (error.code === 'PGRST205') {
+      if (error.code === 'PGRST205' || error.code === 'PGRST204' || error.code === '42P01') {
         console.warn('property_documents table not found, returning empty array');
         return [];
       }
@@ -610,27 +618,21 @@ export const api = {
     return profile;
   },
   getCurrentUser: async (userId: string) => {
-    const { data, error } = await supabase.from('profiles').select('*, roles(name), media_assets!avatar_asset_id(storage_path)').eq('id', userId).single();
+    const { data, error } = await supabase.from('profiles').select('*, role:roles(name)').eq('id', userId).single();
     if (error) throw error;
     
-    let avatarUrl = data.avatar_url;
-    if (data.media_assets) {
-      const { data: { publicUrl } } = supabase.storage.from('hanti-assets').getPublicUrl(data.media_assets.storage_path);
-      avatarUrl = publicUrl;
-    }
+    const roleName = Array.isArray(data.role) ? (data.role[0] as any)?.name : (data.role as any)?.name;
+    const avatarUrl = data.avatar_url;
 
-    return { ...data, role_name: data.roles?.name, avatar_url: avatarUrl };
+    return { ...data, role_name: roleName, avatar_url: avatarUrl };
   },
   getUsers: async () => {
-    const { data, error } = await supabase.from('profiles').select('*, roles(name), media_assets!avatar_asset_id(storage_path)');
+    const { data, error } = await supabase.from('profiles').select('*, role:roles(name)');
     if (error) throw error;
-    return data.map(u => {
-      let avatarUrl = u.avatar_url;
-      if (u.media_assets) {
-        const { data: { publicUrl } } = supabase.storage.from('hanti-assets').getPublicUrl(u.media_assets.storage_path);
-        avatarUrl = publicUrl;
-      }
-      return { ...u, role_name: u.roles?.name, avatar_url: avatarUrl };
+    return (data || []).map(u => {
+      const roleName = Array.isArray(u.role) ? (u.role[0] as any)?.name : (u.role as any)?.name;
+      const avatarUrl = u.avatar_url;
+      return { ...u, role_name: roleName, avatar_url: avatarUrl };
     });
   },
   getRoles: async () => {
@@ -956,11 +958,17 @@ export const api = {
     if (filters?.owner_id) query = query.eq('owner_id', filters.owner_id);
 
     const { data, error } = await query;
-    if (error) throw error;
-    return data?.map((d: any) => ({
+    if (error) {
+      if (error.code === 'PGRST205' || error.code === '42P01') {
+        return [];
+      }
+      throw error;
+    }
+    return (data || []).map((d: any) => ({
       ...d,
-      signatures: d.document_signatures
-    })) || [];
+      signatures: d.document_signatures,
+      placeholders_data: typeof d.placeholders_data === 'string' ? JSON.parse(d.placeholders_data) : (d.placeholders_data || {})
+    }));
   },
 
   async getLegalDocument(id: number): Promise<LegalDocument> {
@@ -972,18 +980,37 @@ export const api = {
     if (error) throw error;
     return {
       ...data,
-      signatures: data.document_signatures
+      signatures: data.document_signatures,
+      placeholders_data: typeof data.placeholders_data === 'string' ? JSON.parse(data.placeholders_data) : (data.placeholders_data || {})
     };
   },
 
   async createLegalDocument(data: Partial<LegalDocument>): Promise<{ id: number }> {
-    const { data: doc, error } = await supabase.from('legal_documents').insert(data).select().single();
+    const sanitizedData: any = {};
+    const validFields = ['template_id', 'property_id', 'unit_id', 'tenant_id', 'owner_id', 'title', 'content_en', 'content_so', 'placeholders_data', 'status', 'version', 'file_url', 'asset_id', 'created_by'];
+    
+    validFields.forEach(field => {
+      if ((data as any)[field] !== undefined) {
+        sanitizedData[field] = (data as any)[field];
+      }
+    });
+
+    const { data: doc, error } = await supabase.from('legal_documents').insert(sanitizedData).select().single();
     if (error) throw error;
     return { id: doc.id };
   },
 
   async updateLegalDocument(id: number, data: Partial<LegalDocument>): Promise<{ success: boolean }> {
-    const { error } = await supabase.from('legal_documents').update(data).eq('id', id);
+    const sanitizedData: any = {};
+    const validFields = ['template_id', 'property_id', 'unit_id', 'tenant_id', 'owner_id', 'title', 'content_en', 'content_so', 'placeholders_data', 'status', 'version', 'file_url', 'asset_id', 'updated_at'];
+    
+    validFields.forEach(field => {
+      if ((data as any)[field] !== undefined) {
+        sanitizedData[field] = (data as any)[field];
+      }
+    });
+
+    const { error } = await supabase.from('legal_documents').update(sanitizedData).eq('id', id);
     if (error) throw error;
     return { success: true };
   },
@@ -1000,47 +1027,800 @@ export const api = {
         category: 'Lease',
         name_en: 'Residential Tenancy Agreement',
         name_so: 'Heshiiska Kirada Guriga',
-        content_en: '# RESIDENTIAL TENANCY AGREEMENT\n\nThis Agreement is made on {{date}} between:\n\n**LANDLORD:** {{landlord_name}}\n**TENANT:** {{tenant_name}}\n\n### 1. PROPERTY\nThe Landlord agrees to rent to the Tenant the property located at: {{property_address}}.\n\n### 2. TERM\nThe lease begins on {{lease_start}} and ends on {{lease_end}}.\n\n### 3. RENT\nThe monthly rent is ${{rent_amount}}, payable on the {{payment_day}} of each month.',
-        content_so: '# HESHIISKA KIRADA GURIGA\n\nHeshiiskan waxaa la kala saxiixday {{date}} inta u dhaxaysa:\n\n**MULKIILAHA:** {{landlord_name}}\n**KIREYSTAHA:** {{tenant_name}}\n\n### 1. HANTIDA\nMulkiiluhu wuxuu ogolaaday inuu kireeyo kireystaha guriga ku yaal: {{property_address}}.\n\n### 2. MUDDADA\nKiradu waxay bilaabmaysaa {{lease_start}} waxayna ku dhammaanaysaa {{lease_end}}.\n\n### 3. KIRADA\nKirada bishii waa ${{rent_amount}}, oo la bixinayo {{payment_day}} ee bil kasta.',
-        placeholders: ['date', 'landlord_name', 'tenant_name', 'property_address', 'lease_start', 'lease_end', 'rent_amount', 'payment_day']
+        content_en: `# RESIDENTIAL TENANCY AGREEMENT
+
+**DATE:** {{date}}
+**TENANCY REFERENCE:** {{reference_no}}
+
+### 1. THE PARTIES
+This Residential Tenancy Agreement is entered into by:
+**THE LANDLORD:** {{landlord_name}}
+**THE TENANT:** {{tenant_name}}
+**AUTHORIZED OCCUPANTS:** {{occupants_list}}
+
+### 2. THE PROPERTY
+The Landlord let to the Tenant the property located at:
+**ADDRESS:** {{property_address}}
+**UNIT/SUITE:** {{unit_number}}
+**INVENTORY STATUS:** {{inventory_status}} (Furnished/Unfurnished)
+
+### 3. TERM & DURATION
+The tenancy shall be for a fixed term of **{{lease_duration}} months**, commencing on **{{lease_start}}** and terminating on **{{lease_end}}**.
+Upon expiry, the parties may negotiate a renewal or the tenancy may convert to a month-to-month basis as per local laws.
+
+### 4. RENT & PAYMENTS
+* **Monthly Base Rent:** \${{rent_amount}}
+* **Payment Due Date:** On or before the {{payment_day}} day of each calendar month.
+* **Late Fee:** A late fee of \${{late_fee}} shall apply if rent is not received within {{grace_period}} days of the due date.
+* **Preferred Payment Method:** {{payment_method}}
+
+### 5. SECURITY DEPOSIT
+The Tenant shall pay a Security Deposit of **\${{security_deposit}}** upon signing. This deposit will be held by the Landlord as security for the performance of the Tenant's obligations and will be refunded within {{return_days}} days of termination, less any deductions for unpaid rent or damages beyond normal wear and tear.
+
+### 6. UTILITIES & SERVICES
+* **Landlord Responsibility:** {{landlord_utilities}} (e.g., Water, Waste Management)
+* **Tenant Responsibility:** {{tenant_utilities}} (e.g., Electricity, Internet, Gas)
+
+### 7. MAINTENANCE & REPAIRS
+* **Tenant Duties:** Keep premises clean, sanitary, and in good condition. Report any defects immediately.
+* **Landlord Duties:** Maintain structural integrity, exterior, and essential services (plumbing, wiring, HVAC).
+* **Emergency Access:** The Landlord may enter without notice in case of emergency. For routine inspections, {{notice_for_entry}} hours notice will be given.
+
+### 8. RULES & CONDUCT
+* **Subletting:** Prohibited without written Landlord consent.
+* **Pets:** {{pet_policy}}
+* **Smoking:** {{smoking_policy}}
+* **Noises:** Tenant shall not disturb the peace of neighbors.
+
+### 9. TERMINATION & NOTICES
+Either party may terminate this agreement by providing **{{notice_period}} days** written notice before the end of the term.
+
+### 10. GOVERNING LAW
+This agreement shall be governed by and construed in accordance with the Laws of the Federal Republic of Somalia.
+
+**SIGNATURES:**
+
+**Landlord/Agent:** ________________________  Date: __________
+
+**Tenant:** ________________________  Date: __________`,
+        content_so: `# HESHIISKA KIRADA GURIGA (DEEGAANKA)
+
+**TAARIIKHDA:** {{date}}
+**TIXRAACA:** {{reference_no}}
+
+### 1. DHINACYADA HESHIISKA
+Heshiiskan waxaa kal saxiixday:
+**MULKIILAHA:** {{landlord_name}}
+**KIREYSTAHA:** {{tenant_name}}
+**DADKA DEGEN:** {{occupants_list}}
+
+### 2. HANTIDA / GURIGA
+Mulkiiluhu wuxuu u kireeyay Kireystaha guriga ku yaal:
+**CINWAANKA:** {{property_address}}
+**LAMBARKA GURIGA:** {{unit_number}}
+**XAALADDA GURIGA:** {{inventory_status}} (Qalabaysan/Aan qalabaysnayn)
+
+### 3. MUDDADA HESHIISKA
+Heshiiska kiradu waa mid go'an oo socon doona muddo **{{lease_duration}} bilood ah**, oo ka bilaabanaysa **{{lease_start}}** kuna dhammaanaysa **{{lease_end}}**.
+
+### 4. KIRADA & LACAG BIXINTA
+* **Kirada Bishii:** \${{rent_amount}}
+* **Xilliga Lacag-bixinta:** Maalinta {{payment_day}} ee bil kasta.
+* **Ganaaxa Dib-u-dhaca:** Ganaax dhan \${{late_fee}} ayaa lagu soo rogi doonaa haddii kirada la waayo {{grace_period}} maalmood gudahood.
+* **Habka Lacag-bixinta:** {{payment_method}}
+
+### 5. DHIBOOMADKA (DEPOSIT)
+Kireystuhu waa inuu bixiyo dhiboomad dhan **\${{security_deposit}}**. Lacagtan waxaa loo hayn doonaa dammaanad ahaan, waxaana lagu soo celin doonaa {{return_days}} maalmood gudahood marka guriga laga guuro, marka laga reebo wixii khasaare ah ama kire aan la bixin.
+
+### 6. ADEEGYADA (BIYAHA & KONTOROOLKA)
+* **Mas'uuliyadda Mulkiilaha:** {{landlord_utilities}}
+* **Mas'uuliyadda Kireystaha:** {{tenant_utilities}}
+
+### 7. DAYACTIRKA
+* **Kireystaha:** Waa inuu guriga u hayo si nadiif ah oo nidaamsan.
+* **Mulkiilaha:** Waxaa mas'uul ka yahay dhismaha iyo nidaamyada waaweyn (tuubooyinka, korontada).
+* **Gelitaanka Guriga:** Mulkiiluhu wuxuu geli karaa guriga ogeysiis {{notice_for_entry}} saacadood ah ka dib.
+
+### 8. XEERARKA GURIGA
+* **Kireynta kale:** Reebban iyada oo aan oggolaansho qoraal ah laga helin.
+* **Xayawaanka:** {{pet_policy}}
+* **Sigaar-cabidda:** {{smoking_policy}}
+
+### 9. JOOJINTA HESHIISKA
+Labadaba dhinac waxay joojin karaan heshiiska iyagoo bixinaya ogeysiis qoraal ah oo {{notice_period}} maalmood ah.
+
+### 10. SHARCIGA LAGU DHAQMAYO
+Heshiiskan waxaa lagu maamuli doonaa sharciyada Jamhuuriyadda Federaalka Soomaaliya.
+
+**SAXIIXADA:**
+
+**Mulkiilaha:** ________________________  Taariikh: __________
+
+**Kireystaha:** ________________________  Taariikh: __________`,
+        placeholders: ['date', 'reference_no', 'landlord_name', 'tenant_name', 'occupants_list', 'property_address', 'unit_number', 'inventory_status', 'lease_duration', 'lease_start', 'lease_end', 'rent_amount', 'payment_day', 'late_fee', 'grace_period', 'payment_method', 'security_deposit', 'return_days', 'landlord_utilities', 'tenant_utilities', 'notice_for_entry', 'notice_period', 'pet_policy', 'smoking_policy']
       },
       {
         category: 'Lease',
         name_en: 'Commercial Lease Agreement',
         name_so: 'Heshiiska Kirada Ganacsiga',
-        content_en: '# COMMERCIAL LEASE AGREEMENT\n\n**BUSINESS NAME:** {{business_name}}\n**REGISTRATION NO:** {{registration_number}}\n\n### 1. PREMISES\nThe Premises are located at {{property_address}}, Parcel #{{parcel_number}}.\n\n### 2. USE OF PREMISES\nThe Tenant shall use the Premises for {{business_activity}} purpose only.',
-        content_so: '# HESHIISKA KIRADA GANACSIGA\n\n**MAGACA GANACSIGA:** {{business_name}}\n**LAMBARKA DIIWAANGELINTA:** {{registration_number}}\n\n### 1. DHISMAHA\nDhismahu wuxuu ku yaal {{property_address}}, Booska #{{parcel_number}}.\n\n### 2. ISTICMAALKA DHISMAHA\nKireystuhu wuxuu u isticmaali doonaa dhismaha ujeedo {{business_activity}} oo kaliya.',
-        placeholders: ['business_name', 'registration_number', 'property_address', 'parcel_number', 'business_activity']
+        content_en: `# COMMERCIAL LEASE AGREEMENT
+
+**DATE:** {{date}}
+**LEASE REFERENCE:** {{reference_no}}
+
+### 1. PARTIES
+**THE LANDLORD:** {{landlord_name}}
+**THE TENANT:** {{business_name}} (Represented by {{tenant_name}})
+**REGISTRATION/TIN:** {{registration_number}}
+
+### 2. THE PREMISES
+The Landlord hereby leases to the Tenant the commercial space located at:
+**ADDRESS:** {{property_address}}
+**SQ FOOTAGE/METERS:** {{total_area}}
+**PARCEL/PLOT:** {{parcel_number}}
+
+### 3. TERM & RENEWAL
+* **Initial Term:** {{lease_duration}} years, commencing on {{lease_start}} and expiring on {{lease_end}}.
+* **Option to Renew:** The Tenant has the option to renew for an additional {{renewal_term}} years by providing written notice at least {{notice_days}} days before expiry.
+
+### 4. RENT & ESCALATION
+* **Initial Monthly Rent:** \${{rent_amount}}
+* **Annual Escalation:** The rent shall increase by {{rent_escalation_pc}}% on each anniversary of the commencement date.
+* **Triple Net (NNN) Obligations:** Tenant is responsible for {{tenant_extra_costs}} (Property Taxes, Insurance, Maintenance).
+
+### 5. USE & PERMITTED ACTIVITY
+The Premises shall be used exclusively for: **{{business_activity}}**. The Tenant shall obtain all necessary business licenses and permits required by local authorities in Somalia.
+
+### 6. FIXTURES & ALTERATIONS
+The Tenant may install trade fixtures provided they do not damage the structure. Any significant structural alterations require written Landlord approval and must comply with Somalia construction standards.
+
+### 7. MAINTENANCE & UTILITIES
+* **Landlord:** Responsible for structural integrity, roof, and exterior walls.
+* **Tenant:** Responsible for interior systems, HVAC, plumbing fixtures, and all utilities including {{utilities_list}}.
+
+### 8. INSURANCE & INDEMNIFICATION
+Tenant shall maintain Commercial General Liability insurance of at least \${{insurance_amount}}. Tenant agrees to indemnify and hold Landlord harmless from any claims arising from Tenant's use of the premises.
+
+### 9. DEFAULT & TERMINATION
+* **Grace Period:** {{default_days}} days for rent payments.
+* **Default:** If default occurs, Landlord may re-enter the premises, change locks, and pursue legal remedies as per the Laws of the Federal Republic of Somalia.
+
+### 10. GOVERNING LAW
+Any disputes arising from this agreement shall be settled through arbitration in Mogadishu, Somalia.
+
+**SIGNATURES:**
+
+**Landlord:** ________________________  Date: __________
+
+**Tenant:** ________________________  Date: __________ (Official Seal)`,
+        content_so: `# HESHIISKA KIRADA GANACSIGA
+
+**TAARIIKHDA:** {{date}}
+**TIXRAACA:** {{reference_no}}
+
+### 1. DHINACYADA HESHIISKA
+**MULKIILAHA:** {{landlord_name}}
+**KIREYSTAHA:** {{business_name}} (Waxaana matalaya {{tenant_name}})
+**LAMBARKA DIIWAANGELINTA/TIN:** {{registration_number}}
+
+### 2. DHISMAHA / GOOBTA
+Mulkiiluhu wuxuu u kireeyay Kireystaha goobta ganacsiga ee ku taal:
+**CINWAANKA:** {{property_address}}
+**MUDDADA DHISMAHA:** {{total_area}}
+**LAMBARKA BOOSKA:** {{parcel_number}}
+
+### 3. MUDDADA & CUSBOONAYSIINTA
+* **Muddada Hore:** {{lease_duration}} sano, oo ka bilaabanaysa {{lease_start}} kuna dhammaanaysa {{lease_end}}.
+* **Ikhtiyaarka Cusboonaysiinta:** Kireystuhu wuxuu xaq u leeyahay inuu cusboonaysiiyo muddo {{renewal_term}} sano ah haddii uu bixiyo ogeysiis {{notice_days}} maalmood ka hor dhammaadka.
+
+### 4. KIRADA & KORDHINTA
+* **Kirada Bishii:** \${{rent_amount}}
+* **Kordhinta Sannadlaha ah:** Kirada waxaa lagu kordhin doonaa {{rent_escalation_pc}}% sannad kasta.
+* **Mas'uuliyadaha Dheeraadka ah:** Kireystaha ayaa mas'uul ka ah {{tenant_extra_costs}} (Canshuurta, Caymiska, iyo Dayactirka).
+
+### 5. ISTICMAALKA GOOBTA
+Goobta waxaa loo isticmaali doonaa oo kaliya: **{{business_activity}}**. Kireystuhu waa inuu haystaa dhammaan liisammada ganacsi ee looga baahan yahay dalka.
+
+### 6. WAX KA BEDDELKA DHISMAHA
+Kireystaha ma samayn karo wax beddel dhismeed ah isaga oo aan ogolaansho qoraal ah ka helin mulkiilaha. Qalabka ganacsiga ee lagu rakibo waa inaanu waxyeello u geysan dhismaha rasmiga ah.
+
+### 7. DAYACTIRKA & ADEEGYADA
+* **Mulkiilaha:** Mas'uul ka ah dhismaha guud, saqafka, iyo darbiyada dibadda.
+* **Kireystaha:** Mas'uul ka ah gudaha, tuubooyinka, iyo adeegyada sida {{utilities_list}}.
+
+### 8. CAYMISKA (INSURANCE)
+Kireystaha waa inuu haystaa caymiska ganacsiga oo ugu yaraan dhan \${{insurance_amount}}.
+
+### 9. JABINTA HESHIISKA
+* **Muddada Sugitaanka:** {{default_days}} maalmood oo loogu talagalay bixinta kirada.
+* **Ganaaxa:** Haddii heshiiska la jabiyo, Mulkiiluhu wuxuu xaq u leeyahay inuu dib u la wareego dhismaha.
+
+### 10. SHARCIGA LAGU DHAQMAYO
+Wixii khilaaf ah ee ka dhasha heshiiskan waxaa lagu xallin doonaa garoobnimo (arbitration) magaalada Muqdisho.
+
+**SAXIIXADA:**
+
+**Mulkiilaha:** ________________________  Taariikh: __________
+
+**Kireystaha:** ________________________  Taariikh: __________ (Shaabadda shirkadda)`,
+        placeholders: ['date', 'reference_no', 'landlord_name', 'business_name', 'tenant_name', 'registration_number', 'property_address', 'total_area', 'parcel_number', 'lease_duration', 'lease_start', 'lease_end', 'renewal_term', 'notice_days', 'rent_amount', 'rent_escalation_pc', 'tenant_extra_costs', 'business_activity', 'utilities_list', 'insurance_amount', 'default_days']
+      },
+      {
+        category: 'Legal',
+        name_en: 'Investment Property Management Agreement',
+        name_so: 'Heshiiska Maamulka Hantida Maalgashiga',
+        content_en: `# INVESTMENT PROPERTY MANAGEMENT AGREEMENT
+
+**DATE:** {{date}}
+**AGREEMENT NO:** {{agreement_no}}
+
+### 1. PARTIES
+This Agreement is between:
+**THE OWNER:** {{owner_name}} (Address: {{owner_address}})
+**THE MANAGER:** {{manager_name}} (Hanti Property Management)
+
+### 2. APPOINTMENT OF AGENT
+The Owner hereby appoints the Manager as the exclusive agent to manage, lease, and operate the Property located at:
+**PROPERTY:** {{property_name}} ({{property_address}})
+
+### 3. RESPONSIBILITIES OF MANAGER
+The Manager shall:
+* **Leasing:** Advertise vacancies, screen tenants, and execute lease agreements.
+* **Financials:** Collect rents, pay expenses, and provide monthly financial reports.
+* **Maintenance:** Oversee routine repairs up to a budget of \${{maintenance_threshold}} without prior approval.
+* **Legal:** Initiate eviction proceedings if necessary on behalf of the Owner.
+
+### 4. FEES & COMPENSATION
+* **Management Fee:** {{management_fee_pc}}% of gross monthly rental income.
+* **Leasing Fee:** {{leasing_fee_pc}}% of one month's rent for each new tenant.
+* **Administrative Setup:** A one-time fee of \${{setup_fee}}.
+
+### 5. FINANCIAL DISBURSEMENTS
+The Manager shall remit the net proceeds to the Owner on or before the {{remittance_day}} of each month via {{payment_method}}.
+
+### 6. TERM & TERMINATION
+This agreement shall commence on {{start_date}} and continue for {{term_months}} months. Either party may terminate with {{notice_period}} days written notice.
+
+### 7. INDEMNIFICATION
+The Owner agrees to indemnify the Manager from liability for damage or injuries resulting from the condition of the Property, provided the Manager acted in good faith.
+
+### 8. GOVERNING LAW
+This agreement is governed by the laws of the Federal Republic of Somalia.
+
+**SIGNATURES:**
+
+**Owner:** ________________________  Date: __________
+
+**Manager:** ________________________  Date: __________`,
+        content_so: `# HESHIISKA MAAMULKA HANTIDA MAALGASHIGA
+
+**TAARIIKHDA:** {{date}}
+**LAMBARKA HESHIISKA:** {{agreement_no}}
+
+### 1. DHINACYADA HESHIISKA
+Heshiiskani wuxuu u dhexeeyaa:
+**MULKIILAHA:** {{owner_name}}
+**MAAMULAHA:** {{manager_name}} (Hanti Property Management)
+
+### 2. MAGACAABISTA WAKIILKA
+Mulkiiluhu wuxuu halkan ku magacaabayaa Maamulaha inuu noqdo wakiilka gaarka ah ee maamulaya, kireynaya, kana shaqaysiinaya hantida ku taal:
+**HANTIDA:** {{property_name}} ({{property_address}})
+
+### 3. MAS'UULIYADDA MAAMULAHA
+Maamulaha waxaa laga rabaa:
+* **Kireynta:** Inuu xayaysiiyo boosaska bannaan, baaro kireystayaasha, oo saxiixo heshiisyada.
+* **Maaliyadda:** Inuu soo ururiyo kirada, bixiyo kharashyada, oo soo gudbiyo warbixinnada bishii.
+* **Dayactirka:** Inuu kormeero dayactirka ilaa miisaaniyad dhan \${{maintenance_threshold}}.
+
+### 4. KHIDMADDA & MAGDOWGA
+* **Khidmadda Maamulka:** {{management_fee_pc}}% ee wadarta kirada bishii.
+* **Khidmadda Kireynta:** {{leasing_fee_pc}}% oo kirada bisha koowaad ah kireyste kasta oo cusub.
+* **Diyaarinta:** Lacag hal mar ah oo dhan \${{setup_fee}}.
+
+### 5. GUDBINTA LACAGTA
+Maamulaha waa inuu lacagta saafiga ah ugu gudbiyaa Mulkiilaha maalinta {{remittance_day}} ee bishii.
+
+### 6. MUDDADA & JOOJINTA
+Heshiiskani wuxuu bilaabmayaa {{start_date}} wuxuuna soconayaa {{term_months}} bilood. Labada dhinac waxay ku joojin karaan heshiiska ogeysiis {{notice_period}} maalmood ah.
+
+### 7. SHARCIGA LAGU DHAQMAYO
+Heshiiskani wuxuu hoos imaanayaa sharciyada Jamhuuriyadda Federaalka Soomaaliya.
+
+**SAXIIXADA:**
+
+**Mulkiilaha:** ________________________  Taariikh: __________
+
+**Maamulaha:** ________________________  Taariikh: __________`,
+        placeholders: ['date', 'agreement_no', 'owner_name', 'owner_address', 'manager_name', 'property_name', 'property_address', 'maintenance_threshold', 'management_fee_pc', 'leasing_fee_pc', 'setup_fee', 'remittance_day', 'payment_method', 'start_date', 'term_months', 'notice_period']
       },
       {
         category: 'Notice',
         name_en: 'Notice of Rent Due',
         name_so: 'Ogeysiiska Lacagta Kirada ah',
-        content_en: '# NOTICE OF RENT DUE\n\nDate: {{date}}\n\nTo: {{tenant_name}}\n\nThis is to notify you that your rent for {{period}} is now due. Please ensure payment of ${{amount}} is made by {{due_date}}.',
-        content_so: '# OGEYSIISKA LACAGTA KIRADA AH\n\nTaariikhda: {{date}}\n\nKu: {{tenant_name}}\n\nTani waxay kugu ogeysiinaysaa in kiradaada ee muddada {{period}} ay hadda tahay mid la bixin karo. Fadlan hubi in lacagta dhan ${{amount}} la bixiyo ka hor {{due_date}}.',
-        placeholders: ['date', 'tenant_name', 'period', 'amount', 'due_date']
+        content_en: `# NOTICE OF RENT DUE
+
+**DATE:** {{date}}
+**TO:** {{tenant_name}}
+**PROPERTY:** {{property_address}}
+
+Dear Tenant,
+
+This is a formal reminder that your rent for the period **{{period}}** is now due.
+
+* **Rent Amount:** \${{amount}}
+* **Late Fee (if applicable):** \${{late_fee}}
+* **Total Due:** \${{total_amount}}
+* **Due Date:** {{due_date}}
+
+Please ensure that payment is made using the authorized payment method ({{payment_method}}). If you have already made this payment, please disregard this notice and provide us with the transaction receipt.
+
+Failure to pay by the due date may result in late fees as per your tenancy agreement.
+
+Sincerely,
+Management`,
+        content_so: `# OGEYSIISKA LACAGTA KIRADA AH
+
+**TAARIIKHDA:** {{date}}
+**KU:** {{tenant_name}}
+**GURIGA:** {{property_address}}
+
+Mudane/Marwo,
+
+Kani waa xusuusin rasmi ah oo ku saabsan in kiradii aad ku lahayd muddada **{{period}}** ay hadda tahay mid la bixin karo.
+
+* **Cadadka Kirada:** \${{amount}}
+* **Ganaaxa dib-u-dhaca (haddii ay jirto):** \${{late_fee}}
+* **Warta guud ee la bixinayo:** \${{total_amount}}
+* **Xilliga ugu dambeeya:** {{due_date}}
+
+Fadlan hubi in lacagta lagu bixiyo habka loo oggolaaday ee ah ({{payment_method}}). Haddii aad mar hore bixisay lacagtan, fadlan iska indha tir ogeysiiskan oo noo soo dir rasiidka lacag bixinta.
+
+Bixin la'aanta lacagta waqtigeeda waxay keeni kartaa ganaaxyo sida ku cad heshiiskaaga kirada.
+
+Mahadsanid,
+Maamulka`,
+        placeholders: ['date', 'tenant_name', 'property_address', 'period', 'amount', 'late_fee', 'total_amount', 'due_date', 'payment_method']
       },
       {
         category: 'Notice',
         name_en: 'Late Payment Notice',
         name_so: 'Ogeysiiska Dib-u-dhaca Lacagta',
-        content_en: '# LATE PAYMENT NOTICE\n\nURGENT: Your rent payment is overdue by {{days}} days. A late fee of ${{late_fee}} has been applied.',
-        content_so: '# OGEYSIISKA DIB-U-DHACA LACAGTA\n\nDEGDEG: Lacag bixinta kiradaadu waxay dib u dhacday {{days}} maalmood. Ganaax dhan ${{late_fee}} ayaa lagugu soo rogay.',
-        placeholders: ['days', 'late_fee']
+        content_en: `# FINAL NOTICE: LATE PAYMENT
+
+**DATE:** {{date}}
+**TO:** {{tenant_name}}
+**DAYS OVERDUE:** {{days}}
+
+**URGENT:** Your rent payment is severely overdue. Despite previous reminders, we have not received your payment for the period of {{period}}.
+
+* **Principal Amount:** \${{rent_amount}}
+* **Accumulated Late Fees:** \${{late_fee}}
+* **TOTAL OUTSTANDING:** \${{total_remaining}}
+
+Failure to settle the full balance within **{{grace_period_days}} days** of this notice will result in:
+1. Legal action to recover the debt.
+2. Commencement of eviction proceedings.
+3. Reporting of delinquency to credit authorities.
+
+Please contact the management office immediately at {{contact_phone}} to arrange payment.
+
+Sincerely,
+Legal Department`,
+        content_so: `# OGEYSIISKA UGU DAMBEEYA: DIB-U-DHACA LACAGTA
+
+**TAARIIKHDA:** {{date}}
+**KU:** {{tenant_name}}
+**MAALMAHA DIB LOO DHACAY:** {{days}}
+
+**DEGDEG:** Lacag bixinta kiradaadu si xun bay dib u dhacaday. In kasta oo xusuusino hore laguu soo diray, haddana uma aanan helin lacagtaadii muddada {{period}}.
+
+* **Cadadka Kirada:** \${{rent_amount}}
+* **Ganaaxa isbiirsaday:** \${{late_fee}}
+* **WARTA GUUD EE LAGU LEEYAHAY:** \${{total_remaining}}
+
+Bixin la'aanta warta guud muddo **{{grace_period_days}} maalmood** gudahood ah waxay keeni doontaa:
+1. Dacwad sharci ah oo lagu soo celinayo lacagta.
+2. Bilaabidda habraaca guriceeriska.
+3. In lagu soo wargeliyo hay'adaha ku habboon.
+
+Fadlan si degdeg ah ula xiriir xafiiska maamulka {{contact_phone}} si aad u qabanqaabiso lacag bixinta.
+
+Mahadsanid,
+Waaxda Sharciga`,
+        placeholders: ['date', 'tenant_name', 'days', 'period', 'rent_amount', 'late_fee', 'total_remaining', 'grace_period_days', 'contact_phone']
       },
       {
         category: 'Financial',
         name_en: 'Rent Receipt',
         name_so: 'Rasiidka Kirada (Boono)',
-        content_en: '# RENT RECEIPT\n\nReceived from: {{tenant_name}}\nAmount: ${{amount}}\nFor: {{period}}\nMethod: {{payment_method}}',
-        content_so: '# RASIIDKA KIRADA (BOONO)\n\nLaga helay: {{tenant_name}}\nCadadka: ${{amount}}\nUjeedada: {{period}}\nHabka: {{payment_method}}',
-        placeholders: ['tenant_name', 'amount', 'period', 'payment_method']
+        content_en: `# OFFICIAL RENT RECEIPT
+
+**RECEIPT NO:** {{receipt_number}}
+**DATE:** {{date}}
+
+This is to acknowledge the official receipt of payment from:
+**TENANT:** {{tenant_name}}
+
+* **Amount Paid:** \${{amount}}
+* **For Period:** {{period}}
+* **Property:** {{property_address}}
+* **Unit:** {{unit_number}}
+
+**PAYMENT DETAILS:**
+* **Method:** {{payment_method}}
+* **Reference:** {{reference_number}}
+* **Balance Remaining:** \${{balance}}
+
+Thank you for your prompt payment.
+
+Issued by: {{issued_by}}`,
+        content_so: `# RASIIDKA KIRADA (BOONO)
+
+**LAMBARKA RASIIDKA:** {{receipt_number}}
+**TAARIIKHDA:** {{date}}
+
+Tani waxay caddaynaysaa in lacag laga helay:
+**KIREYSTAHA:** {{tenant_name}}
+
+* **Cadadka la bixiyey:** \${{amount}}
+* **Muddada:** {{period}}
+* **Guriga:** {{property_address}}
+* **Lambarka Guriga:** {{unit_number}}
+
+**FAAHFAAHINTA LACAG BIXINTA:**
+* **Habka:** {{payment_method}}
+* **Tixraaca:** {{reference_number}}
+* **Warta hartay:** \${{balance}}
+
+Waad ku mahadsan tahay lacag bixintaada degdegga ah.
+
+Waxaa soo saaray: {{issued_by}}`,
+        placeholders: ['receipt_number', 'date', 'tenant_name', 'amount', 'period', 'property_address', 'unit_number', 'payment_method', 'reference_number', 'balance', 'issued_by']
+      },
+      {
+        category: 'Financial',
+        name_en: 'Security Deposit Return Statement',
+        name_so: 'Bayaanka Soo Celinta Dhiboomadka',
+        content_en: `# SECURITY DEPOSIT RETURN STATEMENT
+
+**DATE:** {{date}}
+**TO:** {{tenant_name}}
+**FORWARDING ADDRESS:** {{forwarding_address}}
+
+### 1. SUMMARY OF ACCOUNT
+The following is a breakdown of your security deposit held for the property at **{{property_address}}**, Unit **{{unit_number}}**.
+
+* **Original Deposit Amount:** \${{original_deposit}}
+* **Interest Earned (if any):** \${{interest_earned}}
+* **TOTAL CREDITS:** \${{total_credits}}
+
+### 2. DEDUCTIONS & CHARGES
+* **Unpaid Rent:** \${{unpaid_rent}}
+* **Cleaning Fees:** \${{cleaning_charges}}
+* **Damages (Beyond Wear & Tear):** \${{damage_charges}}
+* **Other Charges ({{other_desc}}):** \${{other_charges}}
+* **TOTAL DEDUCTIONS:** \${{total_deductions}}
+
+### 3. FINAL DISPOSITION
+* **NET REFUND AMOUNT:** **\${{refund_amount}}**
+* **AMOUNT OWED TO LANDLORD (if negative):** \${{amount_owed}}
+
+### 4. EXPLANATION OF DAMAGES
+{{damage_explanation}}
+
+### 5. PAYMENT INFORMATION
+Your refund check (No: {{check_number}}) is enclosed herewith. Please acknowledge receipt.
+
+**Issued by:** ________________________ (Management)`,
+        content_so: `# BAYAANKA SOO CELINTA DHIBOOMADKA (DEPOSIT)
+
+**TAARIIKHDA:** {{date}}
+**KU:** {{tenant_name}}
+
+### 1. KOOBIDDA KOONTADA
+Kani waa faahfaahinta dhiboomadkii laguu hayay ee guriga **{{property_address}}**, Lambarka **{{unit_number}}**.
+
+* **Cadadka Deposit-ka:** \${{original_deposit}}
+* **WARTA GUUD:** \${{total_credits}}
+
+### 2. LACAG-KA-GOOSASHADA
+* **Kiro aan la bixin:** \${{unpaid_rent}}
+* **Kharashka Nadiifinta:** \${{cleaning_charges}}
+* **Waxyeellada Guriga:** \${{damage_charges}}
+* **Kharashyo kale ({{other_desc}}):** \${{other_charges}}
+* **WARTA LAGA GOOYEY:** \${{total_deductions}}
+
+### 3. GO'AANKA UGU DAMBEEYA
+* **NET REFUND (Lacagta lagu soo celinayo):** **\${{refund_amount}}**
+
+**Waxaa soo saaray:** ________________________ (Maamulka)`,
+        placeholders: ['date', 'tenant_name', 'forwarding_address', 'property_address', 'unit_number', 'original_deposit', 'interest_earned', 'total_credits', 'unpaid_rent', 'cleaning_charges', 'damage_charges', 'other_desc', 'other_charges', 'total_deductions', 'refund_amount', 'amount_owed', 'damage_explanation', 'check_number']
+      },
+      {
+        category: 'Legal',
+        name_en: 'Investment Property Sale Agreement',
+        name_so: 'Heshiiska Iibka Hantida Maalgashiga',
+        content_en: `# INVESTMENT PROPERTY PURCHASE & SALE AGREEMENT
+
+**DATE:** {{date}}
+**PURCHASE REF:** {{purchase_ref}}
+
+### 1. PARTIES
+**THE SELLER:** {{seller_name}} (Address: {{seller_address}})
+**THE BUYER:** {{buyer_name}} (Address: {{buyer_address}})
+
+### 2. PROPERTY DESCRIPTION
+The Seller agrees to sell and the Buyer agrees to buy the investment property located at:
+**ADDRESS:** {{property_address}}
+**LEGAL DESCRIPTION:** {{legal_description}}
+**ZONING:** {{zoning_type}}
+
+### 3. PURCHASE PRICE & FINANCING
+* **Total Purchase Price:** \${{purchase_price}}
+* **Earnest Money Deposit:** \${{earnest_money}}
+* **Balance at Closing:** \${{closing_balance}}
+* **Financing Terms:** {{financing_details}}
+
+### 4. DUE DILIGENCE PERIOD
+The Buyer shall have {{due_diligence_days}} days to conduct inspections, reviews of leases, and financial audits. Buyer may terminate this agreement if results are unsatisfactory.
+
+### 5. REVENUE & EXPENSE PRORATION
+All rental income and operating expenses shall be prorated as of the date of closing. Existing security deposits amounting to \${{total_deposits}} shall be transferred to the Buyer.
+
+### 6. REPRESENTATIONS & WARRANTIES
+The Seller represents that:
+* They have clear title to the property.
+* There are no undisclosed environmental hazards.
+* All existing lease agreements are valid and in full force.
+
+### 7. CLOSING DATE
+Closing shall take place on or before **{{closing_date}}** at the offices of {{closing_agent}}.
+
+### 8. GOVERNING LAW
+This agreement is governed by the laws of the Federal Republic of Somalia.
+
+**SIGNATURES:**
+
+**Seller:** ________________________  Date: __________
+
+**Buyer:** ________________________  Date: __________`,
+        content_so: `# HESHIISKA IIBKA HANTIDA MAALGASHIGA
+
+**TAARIIKHDA:** {{date}}
+
+### 1. DHINACYADA HESHIISKA
+**IIBIYAHA:** {{seller_name}}
+**IBSADAHA:** {{buyer_name}}
+
+### 2. FAAHFAAHINTA HANTIDA
+Iibiyaha wuxuu ogolaaday inuu iibiyo, Ibsadaha wuxuu ogolaaday inuu iibsado hantida ku taal:
+**CINWAANKA:** {{property_address}}
+**FAAHFAAHINTA SHARCIGA AH:** {{legal_description}}
+
+### 3. QIIMAHA IIBKA
+* **Qiimaha Guud:** \${{purchase_price}}
+* **Lacag dammaanad ah:** \${{earnest_money}}
+* **Xilliga kama dambaysta ah:** {{closing_date}}
+
+### 4. SHURUUDAHA KALE
+Heshiiskani wuxuu hoos imaanayaa sharciyada Jamhuuriyadda Federaalka Soomaaliya.
+
+**SAXIIXADA:**
+
+**Iibiyaha:** ________________________  Taariikh: __________
+
+**Ibsadaha:** ________________________  Taariikh: __________`,
+        placeholders: ['date', 'purchase_ref', 'seller_name', 'seller_address', 'buyer_name', 'buyer_address', 'property_address', 'legal_description', 'zoning_type', 'purchase_price', 'earnest_money', 'closing_balance', 'financing_details', 'due_diligence_days', 'total_deposits', 'closing_date', 'closing_agent']
+      },
+      {
+        category: 'Operational',
+        name_en: 'Property Inspection Checklist',
+        name_so: 'Liiska Kormeerka Hantida (Checklist)',
+        content_en: `# PROPERTY INSPECTION CHECKLIST (MOVE-IN/MOVE-OUT)
+
+**DATE:** {{date}}
+**PROPERTY:** {{property_address}}
+**UNIT:** {{unit_number}}
+**TENANT:** {{tenant_name}}
+**INSPECTION TYPE:** {{inspection_type}} (Move-In / Move-Out)
+
+### 1. GENERAL CONDITION
+* **Entry/Hallway:** {{entry_status}}
+* **Living Room:** {{living_room_status}}
+* **Kitchen:** {{kitchen_status}}
+* **Bedrooms:** {{bedroom_status}}
+* **Bathrooms:** {{bathroom_status}}
+
+### 2. APPLIANCES & SYSTEMS
+* **Refrigerator:** {{fridge_status}}
+* **Stove/Oven:** {{stove_status}}
+* **Water/Plumbing:** {{plumbing_status}}
+* **Electrical/Lights:** {{electrical_status}}
+* **AC/Heating:** {{hvac_status}}
+
+### 3. WALLS, FLOORS & WINDOWS
+* **Paint Condition:** {{paint_status}}
+* **Flooring/Carpets:** {{floor_status}}
+* **Windows/Locks:** {{window_status}}
+
+### 4. SMOKE DETECTORS & SAFETY
+* **Smoke Alarms:** {{smoke_alarm_status}}
+* **Keys Provided:** {{keys_issued}}
+
+### 5. NOTES & PHOTOGRAPHS
+**COMMENTS:** {{inspection_notes}}
+**PHOTOS ATTACHED:** {{photos_attached}} (Yes/No)
+
+### 6. SIGN-OFF
+The parties agree that this checklist accurately reflects the condition of the premises as of the date above.
+
+**Tenant Signature:** ____________________
+**Manager Signature:** ____________________`,
+        content_so: `# LIISKA KORMEERKA HANTIDA (CHECKLIST)
+
+**TAARIIKHDA:** {{date}}
+**GURIGA:** {{property_address}}
+**TENANT:** {{tenant_name}}
+
+### 1. XAALADDA GUUD
+* **Irridda/Hoolka:** {{entry_status}}
+* **Fadhiga:** {{living_room_status}}
+* **Jikada:** {{kitchen_status}}
+* **Qolalka Hurdada:** {{bedroom_status}}
+* **Musqulaha:** {{bathroom_status}}
+
+### 2. QALABKA & NIDAAMYADA
+* **Talaajadda:** {{fridge_status}}
+* **Shooladda:** {{stove_status}}
+* **Biyaha/Tuubooyinka:** {{plumbing_status}}
+* **Korontada/Nuurka:** {{electrical_status}}
+
+### 3. DARBIYADA & DHULKA
+* **Rinjiga:** {{paint_status}}
+* **Dabaqa/Roogga:** {{floor_status}}
+* **Daaqadaha/Qufulada:** {{window_status}}
+
+### 4. AMNIGA 
+* **Hallaashka Qiiqa (Smoke Alarms):** {{smoke_alarm_status}}
+* **Furayaasha la bixiyey:** {{keys_issued}}
+
+### 5. SAXIIX
+**Kireystaha:** ____________________
+**Maamulaha:** ____________________`,
+        placeholders: ['date', 'property_address', 'unit_number', 'tenant_name', 'inspection_type', 'entry_status', 'living_room_status', 'kitchen_status', 'bedroom_status', 'bathroom_status', 'fridge_status', 'stove_status', 'plumbing_status', 'electrical_status', 'hvac_status', 'paint_status', 'floor_status', 'window_status', 'smoke_alarm_status', 'keys_issued', 'inspection_notes', 'photos_attached']
+      },
+      {
+        category: 'Lease',
+        name_en: 'Lease Renewal Amendment',
+        name_so: 'Lifaaqa Cusboonaysiinta Kirada',
+        content_en: `# LEASE RENEWAL AMENDMENT
+
+**DATE:** {{date}}
+**ORIGINAL LEASE REF:** {{original_lease_ref}}
+
+### 1. PARTIES
+This Amendment is made between **{{landlord_name}}** (Landlord) and **{{tenant_name}}** (Tenant) regarding the lease for **{{property_address}}**, Unit **{{unit_number}}**.
+
+### 2. EXTENSION OF TERM
+The parties agree to extend the term of the original lease for an additional period of **{{renewal_duration}} months**, starting on **{{new_start_date}}** and expiring on **{{new_end_date}}**.
+
+### 3. MODIFICATION OF RENT
+Effective from {{new_start_date}}, the monthly rent shall be adjusted as follows:
+* **Current Rent:** \${{old_rent}}
+* **New Base Rent:** \${{new_rent}}
+* **Payment Terms:** Same as the original lease unless specified: {{rent_notes}}.
+
+### 4. OTHER AMENDMENTS
+The following terms are also modified:
+* **Security Deposit:** {{deposit_adjustment}}
+* **Parking/Utilities:** {{other_modifications}}
+
+### 5. RATIFICATION
+All other terms and conditions of the original Lease Agreement remain in full force and effect, except as modified by this Amendment.
+
+**SIGNATURES:**
+
+**Landlord:** ________________________  Date: __________
+
+**Tenant:** ________________________  Date: __________`,
+        content_so: `# LIFAAQA CUSBOONAYSIINTA KIRADA (HESHIISKA MUDDO KORDHINTA)
+
+**TAARIIKHDA:** {{date}}
+**TIXRAAC-KA HESHIISKII HORE:** {{original_lease_ref}}
+
+### 1. DHINACYADA
+Heshiiskani wuxuu u dhexeeyaa **{{landlord_name}}** (Mulkiilaha) iyo **{{tenant_name}}** (Kireystaha) ee ku saabsan guriga **{{property_address}}**, Lambarka **{{unit_number}}**.
+
+### 2. KORDHINTA MUDDADA
+Dhinacyadu waxay ku heshiiyeen in mudada heshiiska kireynta la kordhiyo **{{renewal_duration}} bilood**, oo ka bilaabanaysa **{{new_start_date}}** kuna dhammaanaysa **{{new_end_date}}**.
+
+### 3. WAX KA BEDDELKA KIRADA
+Laga bilaabo {{new_start_date}}, kirada bishii waxay noqonaysaa:
+* **Kiradii Hore:** \${{old_rent}}
+* **Kirada Cusub:** \${{new_rent}}
+
+### 4. SHURUUDAHA KALE
+Dhammaan shuruudihii kale ee heshiiskii hore sidoodii bay ahaanayaan.
+
+**SAXIIXADA:**
+
+**Mulkiilaha:** ________________________  Taariikh: __________
+
+**Kireystaha:** ________________________  Taariikh: __________`,
+        placeholders: ['date', 'original_lease_ref', 'landlord_name', 'tenant_name', 'property_address', 'unit_number', 'renewal_duration', 'new_start_date', 'new_end_date', 'old_rent', 'new_rent', 'rent_notes', 'deposit_adjustment', 'other_modifications']
+      },
+      {
+        category: 'Financial',
+        name_en: 'Investment Performance Report',
+        name_so: 'Warbixinta Waxqabadka Maalgashiga',
+        content_en: `# MONTHLY INVESTMENT PERFORMANCE REPORT
+
+**DATE:** {{date}}
+**REPORTING PERIOD:** {{period}}
+**PROPERTY:** {{property_name}} ({{property_address}})
+
+### 1. FINANCIAL PERFORMANCE SUMMARY
+* **Gross Rental Income:** \${{gross_income}}
+* **Operating Expenses:** \${{total_expenses}}
+* **Net Operating Income (NOI):** **\${{noi}}**
+
+### 2. INVESTMENT METRICS
+* **Capitalization Rate (Cap Rate):** {{cap_rate}}%
+* **Cash-on-Cash Return:** {{cash_return}}%
+* **Occupancy Rate:** {{occupancy_rate}}%
+* **Year-to-Date Growth:** {{ytd_growth}}%
+
+### 3. EXPENSE BREAKDOWN
+* **Management Fees:** \${{mgmt_fees}}
+* **Maintenance & Repairs:** \${{maint_costs}}
+* **Taxes & Insurance:** \${{tax_ins_costs}}
+* **Utilities (Owner Paid):** \${{utility_costs}}
+
+### 4. LEASING ACTIVITY
+* **New Leases Signed:** {{new_leases}}
+* **Renewals:** {{renewals}}
+* **Vacancies:** {{vacancies}}
+
+### 5. MARKET ANALYSIS & STRATEGY
+**LOCAL MARKET TRENDS:** {{market_trends}}
+**MANAGEMENT STRATEGY:** {{strategy_notes}}
+
+### 6. PORTFOLIO MANAGER COMMENTS
+{{manager_comments}}
+
+**Prepared by:** {{manager_name}}`,
+        content_so: `# WARBIXINTA WAXQABADKA MAALGASHIGA
+
+**TAARIIKHDA:** {{date}}
+**MUDDADA:** {{period}}
+**HANTIDA:** {{property_name}}
+
+### 1. KOOBIDDA MAALIYADDA
+* **Kirada guud ee soo gashay:** \${{gross_income}}
+* **Kharashyada bixi:** \${{total_expenses}}
+* **Dakhliga Saafiga ah (NOI):** **\${{noi}}**
+
+### 2. TILMAAMAHA MAALGASHIGA
+* **Heerka Soo-celinta (Cap Rate):** {{cap_rate}}%
+* **Heerka Degenaanshaha:** {{occupancy_rate}}%
+
+### 3. FAAHFAAHINTA KHARASHYADA
+* **Khidmadda Maamulka:** \${{mgmt_fees}}
+* **Dayactirka:** \${{maint_costs}}
+* **Canshuurta & Caymiska:** \${{tax_ins_costs}}
+
+### 4. MAAMULAHA AYAA DIYAARIYEY
+{{manager_comments}}
+**Magaca:** {{manager_name}}`,
+        placeholders: ['date', 'period', 'property_name', 'property_address', 'gross_income', 'total_expenses', 'noi', 'cap_rate', 'cash_return', 'occupancy_rate', 'ytd_growth', 'mgmt_fees', 'maint_costs', 'tax_ins_costs', 'utility_costs', 'new_leases', 'renewals', 'vacancies', 'market_trends', 'strategy_notes', 'manager_comments', 'manager_name']
       }
     ];
 
     for (const t of templates) {
       const { data: existing } = await supabase.from('document_templates').select('id').eq('name_en', t.name_en).maybeSingle();
-      if (!existing) {
+      if (existing) {
+        await supabase.from('document_templates').update(t).eq('id', existing.id);
+      } else {
         await supabase.from('document_templates').insert(t);
       }
     }

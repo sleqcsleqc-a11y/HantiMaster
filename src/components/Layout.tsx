@@ -12,8 +12,6 @@ import {
   Search,
   Bell,
   UserCircle,
-  Sun,
-  Moon,
   MessageSquare,
   CheckSquare,
   Briefcase,
@@ -74,12 +72,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onPro
   });
 
   return (
-    <div className="w-64 bg-white/90 dark:bg-[#241e33]/90 backdrop-blur-md text-zinc-900 dark:text-zinc-100 h-screen flex flex-col border-r border-violet-100 dark:border-white/5 transition-colors duration-300">
+    <div className="w-64 bg-white/90 backdrop-blur-md text-zinc-900 h-screen flex flex-col border-r border-violet-100 transition-colors duration-300">
       <div className="p-8 flex items-center gap-3">
         <div className="w-7 h-7 bg-gradient-to-br from-violet-700 to-violet-900 rounded-lg flex items-center justify-center shadow-lg shadow-violet-600/20">
           <div className="w-3.5 h-3.5 bg-white rounded-[4px]" />
         </div>
-        <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">HantiMaster</h1>
+        <h1 className="text-xl font-bold tracking-tight text-zinc-900">HantiMaster</h1>
       </div>
       
       <nav className="flex-1 px-4 py-4 space-y-1">
@@ -90,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onPro
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${
               activeTab === item.id 
                 ? 'bg-violet-600 text-white font-semibold shadow-lg shadow-violet-600/20' 
-                : 'text-zinc-500 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50 dark:hover:bg-white/10'
+                : 'text-zinc-500 hover:text-violet-700 hover:bg-violet-50'
             }`}
           >
             <item.icon size={18} className={activeTab === item.id ? 'text-white' : 'text-zinc-400 group-hover:text-violet-600'} />
@@ -99,12 +97,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onPro
         ))}
       </nav>
 
-      <div className="p-6 border-t border-violet-50 dark:border-zinc-800 space-y-2">
+      <div className="p-6 border-t border-violet-50 space-y-2">
         <button 
           onClick={onProfileClick}
-          className="w-full flex items-center gap-3 px-2 py-2 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-2xl transition-all group"
+          className="w-full flex items-center gap-3 px-2 py-2 text-zinc-500 hover:bg-zinc-50 rounded-2xl transition-all group"
         >
-          <div className="w-8 h-8 rounded-full bg-violet-50 dark:bg-zinc-800 border border-violet-100 dark:border-zinc-700 flex items-center justify-center text-[10px] font-bold text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-all overflow-hidden">
+          <div className="w-8 h-8 rounded-full bg-violet-50 border border-violet-100 flex items-center justify-center text-[10px] font-bold text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-all overflow-hidden">
             {user?.avatar_url ? (
               <img src={user.avatar_url || null} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             ) : (
@@ -112,14 +110,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onPro
             )}
           </div>
           <div className="flex flex-col text-left truncate">
-            <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">{user?.first_name} {user?.last_name}</span>
+            <span className="text-xs font-bold text-zinc-900 truncate">{user?.first_name} {user?.last_name}</span>
             <span className="text-[10px] font-medium text-zinc-500 truncate">{user?.role_name}</span>
           </div>
           <ChevronRight size={14} className="ml-auto text-zinc-300 group-hover:translate-x-1 transition-transform" />
         </button>
         <button
           onClick={logout}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] uppercase tracking-widest font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] uppercase tracking-widest font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors"
         >
           <LogOut size={14} />
           Sign Out
@@ -131,12 +129,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onPro
 
 interface HeaderProps {
   title: string;
-  isDarkMode: boolean;
-  toggleDarkMode: () => void;
   onProfileClick: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ title, isDarkMode, toggleDarkMode, onProfileClick }) => {
+export const Header: React.FC<HeaderProps> = ({ title, onProfileClick }) => {
   const { user } = useAuth();
   const [overdueCount, setOverdueCount] = React.useState(0);
 
@@ -170,30 +166,23 @@ export const Header: React.FC<HeaderProps> = ({ title, isDarkMode, toggleDarkMod
   }, []);
 
   return (
-    <header className="h-20 border-b border-violet-100 dark:border-white/5 bg-white/30 dark:bg-[#241e33]/30 backdrop-blur-xl flex items-center justify-between px-8 transition-colors duration-300">
-      <h2 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">{title}</h2>
+    <header className="h-20 border-b border-violet-100 bg-white/30 backdrop-blur-xl flex items-center justify-between px-8 transition-colors duration-300">
+      <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-[0.2em]">{title}</h2>
       <div className="flex items-center gap-6">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={14} />
           <input 
             type="text" 
             placeholder="Search properties, tenants..." 
-            className="pl-10 pr-4 py-2 bg-white/50 dark:bg-zinc-800/50 border border-violet-100 dark:border-zinc-700 rounded-xl text-xs w-64 text-zinc-900 dark:text-white focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400"
+            className="pl-10 pr-4 py-2 bg-white/50 border border-violet-100 rounded-xl text-xs w-64 text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400"
           />
         </div>
         
         <div className="flex items-center gap-3">
-          <button 
-            onClick={toggleDarkMode}
-            className="p-2.5 text-zinc-500 hover:text-violet-600 dark:hover:text-violet-400 transition-all bg-white dark:bg-zinc-800 border border-violet-100 dark:border-zinc-700 rounded-xl shadow-sm hover:shadow-md active:scale-95"
-          >
-            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-
-          <button className="p-2.5 text-zinc-500 hover:text-violet-600 dark:hover:text-violet-400 transition-all bg-white dark:bg-zinc-800 border border-violet-100 dark:border-zinc-700 rounded-xl shadow-sm hover:shadow-md active:scale-95 relative">
+          <button className="p-2.5 text-zinc-500 hover:text-violet-600 transition-all bg-white border border-violet-100 rounded-xl shadow-sm hover:shadow-md active:scale-95 relative">
             <Bell size={18} />
             {(overdueCount > 0) && (
-              <span className="absolute top-2 right-2 w-4 h-4 bg-red-600 text-white text-[8px] font-bold rounded-full border-2 border-white dark:border-zinc-800 flex items-center justify-center">
+              <span className="absolute top-2 right-2 w-4 h-4 bg-red-600 text-white text-[8px] font-bold rounded-full border-2 border-white flex items-center justify-center">
                 {overdueCount}
               </span>
             )}
@@ -201,13 +190,13 @@ export const Header: React.FC<HeaderProps> = ({ title, isDarkMode, toggleDarkMod
 
           <button 
             onClick={onProfileClick}
-            className="flex items-center gap-3 pl-6 border-l border-violet-50 dark:border-zinc-800 group"
+            className="flex items-center gap-3 pl-6 border-l border-violet-50 group"
           >
             <div className="text-right hidden sm:block">
-              <p className="text-xs font-bold text-zinc-900 dark:text-white group-hover:text-violet-600 transition-colors">Account</p>
+              <p className="text-xs font-bold text-zinc-900 group-hover:text-violet-600 transition-colors">Account</p>
               <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Profile Settings</p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-zinc-800 border border-violet-100 dark:border-zinc-700 flex items-center justify-center text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-all shadow-sm overflow-hidden">
+            <div className="w-10 h-10 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-all shadow-sm overflow-hidden">
               {user?.avatar_url ? (
                 <img src={user.avatar_url || null} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : (

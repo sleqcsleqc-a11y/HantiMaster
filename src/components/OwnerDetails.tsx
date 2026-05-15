@@ -70,7 +70,7 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
   if (loading || !owner) {
     return (
       <div className="p-8 flex items-center justify-center h-full">
-        <div className="text-violet-600 dark:text-violet-400 animate-pulse uppercase tracking-widest text-xs font-bold">Loading Owner Details...</div>
+        <div className="text-violet-600 animate-pulse uppercase tracking-widest text-xs font-bold">Loading Owner Details...</div>
       </div>
     );
   }
@@ -92,14 +92,14 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
         <div className="space-y-4">
           <button 
             onClick={onBack}
-            className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors text-xs uppercase tracking-widest font-bold"
+            className="flex items-center gap-2 text-zinc-500 hover:text-violet-600 transition-colors text-xs uppercase tracking-widest font-bold"
           >
             <ArrowLeft size={14} />
             Back to Directory
           </button>
           <div>
-            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">Owner Profile</h3>
-            <h2 className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight">{owner.first_name} {owner.last_name}</h2>
+            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Owner Profile</h3>
+            <h2 className="text-4xl font-bold text-zinc-900 tracking-tight">{owner.first_name} {owner.last_name}</h2>
           </div>
         </div>
         <div className="flex gap-4">
@@ -134,15 +134,15 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
         </div>
       </div>
 
-      <div className="flex border-b border-violet-100 dark:border-zinc-800 overflow-x-auto scrollbar-hide">
+      <div className="flex border-b border-violet-100 overflow-x-auto scrollbar-hide">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={`flex items-center gap-2 px-6 py-4 text-xs font-bold uppercase tracking-widest transition-all relative whitespace-nowrap ${
               activeTab === tab.id 
-                ? 'text-violet-600 dark:text-violet-400' 
-                : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+                ? 'text-violet-600' 
+                : 'text-zinc-400 hover:text-zinc-600'
             }`}
           >
             {tab.icon}
@@ -150,7 +150,7 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
             {activeTab === tab.id && (
               <motion.div 
                 layoutId="activeTabOwner"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-600 dark:bg-violet-400"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-600"
               />
             )}
           </button>
@@ -163,7 +163,7 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
             <div className="space-y-8">
               <div className="vintsy-card p-8">
                 <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 flex items-center gap-2">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
                     <User size={16} />
                     Personal & Identification Data
                   </h3>
@@ -284,29 +284,29 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
                     <div className="space-y-6">
                       <div>
                         <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Residential Address</p>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{owner.address || 'Not specified'}</p>
+                        <p className="text-sm font-bold text-zinc-900">{owner.address || 'Not specified'}</p>
                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Nationality</p>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{owner.nationality || 'Not specified'}</p>
+                        <p className="text-sm font-bold text-zinc-900">{owner.nationality || 'Not specified'}</p>
                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Date of Birth</p>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{owner.dob ? new Date(owner.dob).toLocaleDateString() : 'Not specified'}</p>
+                        <p className="text-sm font-bold text-zinc-900">{owner.dob ? new Date(owner.dob).toLocaleDateString() : 'Not specified'}</p>
                       </div>
                     </div>
                     <div className="space-y-6">
                       <div>
                         <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Identification Type</p>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{owner.id_type || 'Not specified'}</p>
+                        <p className="text-sm font-bold text-zinc-900">{owner.id_type || 'Not specified'}</p>
                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">ID Number</p>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{owner.id_number || 'Not specified'}</p>
+                        <p className="text-sm font-bold text-zinc-900">{owner.id_number || 'Not specified'}</p>
                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">ID Expiry Date</p>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{owner.id_expiry ? new Date(owner.id_expiry).toLocaleDateString() : 'Not specified'}</p>
+                        <p className="text-sm font-bold text-zinc-900">{owner.id_expiry ? new Date(owner.id_expiry).toLocaleDateString() : 'Not specified'}</p>
                       </div>
                     </div>
                   </div>
@@ -314,17 +314,17 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="vintsy-card p-6 bg-violet-50 dark:bg-violet-900/10 border-violet-100 dark:border-violet-800">
-                  <p className="text-violet-600 dark:text-violet-400 text-[10px] font-bold uppercase tracking-widest mb-2">Portfolio Value</p>
-                  <h4 className="text-2xl font-bold text-zinc-900 dark:text-white">${totalValue.toLocaleString()}</h4>
+                <div className="vintsy-card p-6 bg-violet-50 border-violet-100">
+                  <p className="text-violet-600 text-[10px] font-bold uppercase tracking-widest mb-2">Portfolio Value</p>
+                  <h4 className="text-2xl font-bold text-zinc-900">${totalValue.toLocaleString()}</h4>
                 </div>
                 <div className="vintsy-card p-6">
-                  <p className="text-zinc-400 dark:text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-2">Total Units</p>
-                  <h4 className="text-2xl font-bold text-zinc-900 dark:text-white">{totalUnits}</h4>
+                  <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest mb-2">Total Units</p>
+                  <h4 className="text-2xl font-bold text-zinc-900">{totalUnits}</h4>
                 </div>
                 <div className="vintsy-card p-6">
-                  <p className="text-zinc-400 dark:text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-2">Properties</p>
-                  <h4 className="text-2xl font-bold text-zinc-900 dark:text-white">{properties.length}</h4>
+                  <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest mb-2">Properties</p>
+                  <h4 className="text-2xl font-bold text-zinc-900">{properties.length}</h4>
                 </div>
               </div>
             </div>
@@ -333,7 +333,7 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
           {activeTab === 'portfolio' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Managed Properties</h3>
+                <h3 className="text-lg font-bold text-zinc-900">Managed Properties</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {properties.map((property, index) => (
@@ -354,7 +354,7 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
                           referrerPolicy="no-referrer"
                         />
                       ) : (
-                        <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+                        <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400">
                           <Building2 size={24} />
                         </div>
                       )}
@@ -367,7 +367,7 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
                       <div className="grid grid-cols-3 gap-4">
                         <div className="space-y-1">
                           <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Units</span>
-                          <p className="text-xs font-bold text-zinc-900 dark:text-white">{property.unit_count}</p>
+                          <p className="text-xs font-bold text-zinc-900">{property.unit_count}</p>
                         </div>
                         <div className="space-y-1">
                           <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Occupancy</span>
@@ -387,14 +387,14 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
 
           {activeTab === 'transactions' && (
             <div className="vintsy-card p-8">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8 flex items-center gap-2">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8 flex items-center gap-2">
                 <CircleDollarSign size={16} />
                 Rent Payment History
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-violet-50 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
+                    <tr className="border-b border-violet-50 bg-zinc-50/50">
                       <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Date</th>
                       <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Property</th>
                       <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Tenant</th>
@@ -402,12 +402,12 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
                       <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-violet-50 dark:divide-zinc-800">
+                  <tbody className="divide-y divide-violet-50">
                     {owner.transactions?.map((tx) => (
                       <tr key={tx.id} className="hover:bg-violet-50/30 transition-colors">
-                        <td className="p-4 text-sm text-zinc-900 dark:text-white">{new Date(tx.date).toLocaleDateString()}</td>
-                        <td className="p-4 text-sm text-zinc-900 dark:text-white font-medium">{tx.property_name}</td>
-                        <td className="p-4 text-sm text-zinc-500 dark:text-zinc-400">{tx.tenant_name}</td>
+                        <td className="p-4 text-sm text-zinc-900">{new Date(tx.date).toLocaleDateString()}</td>
+                        <td className="p-4 text-sm text-zinc-900 font-medium">{tx.property_name}</td>
+                        <td className="p-4 text-sm text-zinc-500">{tx.tenant_name}</td>
                         <td className="p-4 text-sm font-bold text-emerald-600">${tx.amount.toLocaleString()}</td>
                         <td className="p-4">
                           <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest ${
@@ -429,7 +429,7 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
           {activeTab === 'documents' && (
             <div className="vintsy-card p-8">
               <div className="flex justify-between items-center mb-8">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 flex items-center gap-2">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8 flex items-center gap-2">
                   <FileText size={16} />
                   Owner Documents
                 </h3>
@@ -442,13 +442,13 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {owner.documents?.map(doc => (
-                  <div key={doc.id} className="p-4 rounded-xl border border-violet-50 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 flex items-center justify-between group">
+                  <div key={doc.id} className="p-4 rounded-xl border border-violet-50 bg-zinc-50/50 flex items-center justify-between group">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center">
                         <FileText size={20} />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{doc.name}</p>
+                        <p className="text-sm font-bold text-zinc-900">{doc.name}</p>
                         <p className="text-[10px] text-zinc-500 uppercase tracking-widest">{doc.type} • {new Date(doc.uploaded_at).toLocaleDateString()}</p>
                       </div>
                     </div>
@@ -474,21 +474,21 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
 
         <div className="lg:col-span-1 space-y-8">
           <div className="vintsy-card p-8">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-6">Recent Activity</h3>
+            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-6">Recent Activity</h3>
             <div className="space-y-6">
               {owner.activities?.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((activity, idx) => (
                 <div key={activity.id} className="flex gap-4 relative">
                   {idx !== (owner.activities?.length || 0) - 1 && (
-                    <div className="absolute left-2 top-6 bottom-0 w-px bg-violet-100 dark:bg-zinc-800" />
+                    <div className="absolute left-2 top-6 bottom-0 w-px bg-violet-100" />
                   )}
-                  <div className={`w-4 h-4 rounded-full border-2 border-white dark:border-zinc-900 z-10 mt-1 flex items-center justify-center ${
+                  <div className={`w-4 h-4 rounded-full border-2 border-white z-10 mt-1 flex items-center justify-center ${
                     activity.type === 'Payment' ? 'bg-emerald-500' :
                     activity.type === 'Property' ? 'bg-violet-500' :
                     activity.type === 'Document' ? 'bg-blue-500' :
                     'bg-zinc-400'
                   }`} />
                   <div>
-                    <p className="text-sm text-zinc-900 dark:text-white font-medium">{activity.description}</p>
+                    <p className="text-sm text-zinc-900 font-medium">{activity.description}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${
                         activity.type === 'Payment' ? 'bg-emerald-100 text-emerald-700' :
@@ -530,10 +530,10 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-zinc-900 rounded-2xl p-8 max-w-md w-full shadow-2xl border border-violet-100 dark:border-zinc-800"
+            className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl border border-violet-100"
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Upload Document</h3>
+              <h3 className="text-xl font-bold text-zinc-900">Upload Document</h3>
               <button onClick={() => setShowUploadModal(false)} className="text-zinc-400 hover:text-zinc-600 transition-colors">
                 <X size={20} />
               </button>

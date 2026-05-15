@@ -314,18 +314,18 @@ export const Tenants: React.FC = () => {
 
         <div className="vintsy-card p-8 mb-8">
           <div className="flex flex-col md:flex-row items-center gap-8">
-            <div className="w-24 h-24 rounded-2xl bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 flex items-center justify-center font-bold text-3xl border-4 border-white dark:border-zinc-900 shadow-xl">
+            <div className="w-24 h-24 rounded-2xl bg-violet-100 text-violet-700 flex items-center justify-center font-bold text-3xl border-4 border-white shadow-xl">
               {tenantDetails.first_name?.[0]}{tenantDetails.last_name?.[0]}
             </div>
             <div className="text-center md:text-left flex-1">
               <div className="flex flex-wrap items-center gap-3 mb-2 justify-center md:justify-start">
-                <h2 className="text-3xl font-bold text-zinc-900 dark:text-white">
+                <h2 className="text-3xl font-bold text-zinc-900">
                   {tenantDetails.first_name} {tenantDetails.last_name}
                 </h2>
                 <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                   getTenantStatus(tenantDetails) === 'Active' 
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                    : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
+                    ? 'bg-emerald-100 text-emerald-700' 
+                    : 'bg-zinc-100 text-zinc-700'
                 }`}>
                   {getTenantStatus(tenantDetails)} Tenant
                 </span>
@@ -348,15 +348,15 @@ export const Tenants: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex border-b border-violet-100 dark:border-zinc-800 mb-8 overflow-x-auto scrollbar-hide">
+        <div className="flex border-b border-violet-100 mb-8 overflow-x-auto scrollbar-hide">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-6 py-4 text-xs font-bold uppercase tracking-widest transition-all relative whitespace-nowrap ${
                 activeTab === tab.id 
-                  ? 'text-violet-600 dark:text-violet-400' 
-                  : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+                  ? 'text-violet-600' 
+                  : 'text-zinc-400 hover:text-zinc-600'
               }`}
             >
               {tab.icon}
@@ -364,7 +364,7 @@ export const Tenants: React.FC = () => {
               {activeTab === tab.id && (
                 <motion.div 
                   layoutId="activeTab"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-600 dark:bg-violet-400"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-600"
                 />
               )}
             </button>
@@ -377,7 +377,7 @@ export const Tenants: React.FC = () => {
               <div className="space-y-8">
                 <div className="vintsy-card p-8">
                   <div className="flex justify-between items-center mb-8">
-                    <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 flex items-center gap-2">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
                       <User size={16} />
                       Personal Information & Identification
                     </h3>
@@ -440,7 +440,7 @@ export const Tenants: React.FC = () => {
                           className="vintsy-input w-full"
                         />
                       </div>
-                      <div className="md:col-span-2 pt-4 border-t border-violet-50 dark:border-zinc-800">
+                      <div className="md:col-span-2 pt-4 border-t border-violet-50">
                         <button 
                           onClick={handleSavePersonal}
                           className="vintsy-button-primary w-full"
@@ -454,21 +454,21 @@ export const Tenants: React.FC = () => {
                       <div className="space-y-6">
                         <div>
                           <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Nationality</p>
-                          <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.nationality || 'Not specified'}</p>
+                          <p className="text-sm font-bold text-zinc-900">{tenantDetails.nationality || 'Not specified'}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Date of Birth</p>
-                          <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.dob ? new Date(tenantDetails.dob).toLocaleDateString() : 'Not specified'}</p>
+                          <p className="text-sm font-bold text-zinc-900">{tenantDetails.dob ? new Date(tenantDetails.dob).toLocaleDateString() : 'Not specified'}</p>
                         </div>
                       </div>
                       <div className="space-y-6">
                         <div>
                           <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">{tenantDetails.id_type || 'ID'} Number</p>
-                          <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.id_number || 'Not specified'}</p>
+                          <p className="text-sm font-bold text-zinc-900">{tenantDetails.id_number || 'Not specified'}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">ID Expiry Date</p>
-                          <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.id_expiry_date ? new Date(tenantDetails.id_expiry_date).toLocaleDateString() : 'Not specified'}</p>
+                          <p className="text-sm font-bold text-zinc-900">{tenantDetails.id_expiry_date ? new Date(tenantDetails.id_expiry_date).toLocaleDateString() : 'Not specified'}</p>
                         </div>
                       </div>
                     </div>
@@ -476,7 +476,7 @@ export const Tenants: React.FC = () => {
                 </div>
 
                 <div className="vintsy-card p-8">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8 flex items-center gap-2">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8 flex items-center gap-2">
                     <Phone size={16} />
                     Emergency Contact
                   </h3>
@@ -505,11 +505,11 @@ export const Tenants: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div>
                         <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Name</p>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.emergency_contact_name || 'Not specified'}</p>
+                        <p className="text-sm font-bold text-zinc-900">{tenantDetails.emergency_contact_name || 'Not specified'}</p>
                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Phone</p>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.emergency_contact_phone || 'Not specified'}</p>
+                        <p className="text-sm font-bold text-zinc-900">{tenantDetails.emergency_contact_phone || 'Not specified'}</p>
                       </div>
                     </div>
                   )}
@@ -521,7 +521,7 @@ export const Tenants: React.FC = () => {
               <div className="space-y-8">
                 <div className="vintsy-card p-8">
                   <div className="flex justify-between items-center mb-8">
-                    <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 flex items-center gap-2">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
                       <Building2 size={16} />
                       Lease Information
                     </h3>
@@ -545,33 +545,33 @@ export const Tenants: React.FC = () => {
                     <div className="space-y-6">
                       <div>
                         <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Property</p>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenantDetails.property_name}</p>
+                        <p className="text-sm font-bold text-zinc-900">{tenantDetails.property_name}</p>
                         <p className="text-xs text-zinc-500 mt-1">{tenantDetails.property_address}</p>
                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Unit Number</p>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">Unit {tenantDetails.unit_number}</p>
+                        <p className="text-sm font-bold text-zinc-900">Unit {tenantDetails.unit_number}</p>
                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Monthly Rent</p>
-                        <p className="text-lg font-bold text-violet-600 dark:text-violet-400">${tenantDetails.rent_amount?.toLocaleString()}</p>
+                        <p className="text-lg font-bold text-violet-600">${tenantDetails.rent_amount?.toLocaleString()}</p>
                       </div>
                     </div>
                     <div className="space-y-6">
                       <div>
                         <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Lease Start Date</p>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{new Date(tenantDetails.lease_start).toLocaleDateString()}</p>
+                        <p className="text-sm font-bold text-zinc-900">{new Date(tenantDetails.lease_start).toLocaleDateString()}</p>
                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Lease End Date</p>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{new Date(tenantDetails.lease_end).toLocaleDateString()}</p>
+                        <p className="text-sm font-bold text-zinc-900">{new Date(tenantDetails.lease_end).toLocaleDateString()}</p>
                       </div>
-                      <div className="p-4 rounded-xl bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800">
+                      <div className="p-4 rounded-xl bg-violet-50 border border-violet-100">
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-violet-700 dark:text-violet-400 uppercase tracking-widest">Auto Reminders</span>
+                          <span className="text-[10px] font-bold text-violet-700 uppercase tracking-widest">Auto Reminders</span>
                           <button 
                             onClick={handleToggleReminders}
-                            className={`w-10 h-5 rounded-full transition-colors relative ${tenantDetails.auto_rent_reminders ? 'bg-violet-600' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                            className={`w-10 h-5 rounded-full transition-colors relative ${tenantDetails.auto_rent_reminders ? 'bg-violet-600' : 'bg-zinc-300'}`}
                           >
                             <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${tenantDetails.auto_rent_reminders ? 'left-6' : 'left-1'}`} />
                           </button>
@@ -585,31 +585,31 @@ export const Tenants: React.FC = () => {
 
             {activeTab === 'transactions' && (
               <div className="vintsy-card p-8">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8 flex items-center gap-2">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8 flex items-center gap-2">
                   <DollarSign size={16} />
                   Transaction History
                 </h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-violet-50 dark:border-zinc-800">
+                      <tr className="border-b border-violet-50">
                         <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Date</th>
                         <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Type</th>
                         <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Amount</th>
                         <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-violet-50 dark:divide-zinc-800">
+                    <tbody className="divide-y divide-violet-50">
                       {tenantDetails.transactions?.map(tx => (
                         <tr key={tx.id} className="hover:bg-violet-50/20 transition-colors">
-                          <td className="py-5 text-sm text-zinc-900 dark:text-white">{new Date(tx.date).toLocaleDateString()}</td>
-                          <td className="py-5 text-sm text-zinc-600 dark:text-zinc-400">{tx.type}</td>
-                          <td className="py-5 text-sm font-bold text-zinc-900 dark:text-white">${tx.amount.toLocaleString()}</td>
+                          <td className="py-5 text-sm text-zinc-900">{new Date(tx.date).toLocaleDateString()}</td>
+                          <td className="py-5 text-sm text-zinc-600">{tx.type}</td>
+                          <td className="py-5 text-sm font-bold text-zinc-900">${tx.amount.toLocaleString()}</td>
                           <td className="py-5">
                             <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest ${
                               tx.status === 'Paid' 
-                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800' 
-                                : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-100 dark:border-amber-800'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
+                                : 'bg-amber-50 text-amber-700 border border-amber-100'
                             }`}>
                               {tx.status}
                             </span>
@@ -624,17 +624,17 @@ export const Tenants: React.FC = () => {
 
             {activeTab === 'maintenance' && (
               <div className="vintsy-card p-8">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8 flex items-center gap-2">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8 flex items-center gap-2">
                   <Wrench size={16} />
                   Maintenance Requests
                 </h3>
                 <div className="space-y-6">
                   {tenantDetails.maintenance?.map(req => (
-                    <div key={req.id} className="p-6 rounded-2xl border border-violet-50 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/30">
+                    <div key={req.id} className="p-6 rounded-2xl border border-violet-50 bg-zinc-50/30">
                       <div className="flex justify-between items-start mb-4">
                         <div>
-                          <h4 className="text-sm font-bold text-zinc-900 dark:text-white mb-1">{req.title}</h4>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400">{req.description}</p>
+                          <h4 className="text-sm font-bold text-zinc-900 mb-1">{req.title}</h4>
+                          <p className="text-xs text-zinc-500">{req.description}</p>
                         </div>
                         <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
                           req.priority === 'Emergency' ? 'bg-red-50 text-red-700 border-red-100' :
@@ -644,9 +644,9 @@ export const Tenants: React.FC = () => {
                           {req.priority}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center pt-4 border-t border-violet-50 dark:border-zinc-800">
+                      <div className="flex justify-between items-center pt-4 border-t border-violet-50">
                         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{new Date(req.created_at).toLocaleDateString()}</span>
-                        <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-widest">{req.status}</span>
+                        <span className="text-[10px] font-bold text-violet-600 uppercase tracking-widest">{req.status}</span>
                       </div>
                     </div>
                   ))}
@@ -657,7 +657,7 @@ export const Tenants: React.FC = () => {
             {activeTab === 'documents' && (
               <div className="vintsy-card p-8">
                 <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 flex items-center gap-2">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
                     <FileText size={16} />
                     Document Vault
                   </h3>
@@ -670,13 +670,13 @@ export const Tenants: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {tenantDetails.documents?.map(doc => (
-                    <div key={doc.id} className="p-4 rounded-xl border border-violet-50 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 flex items-center justify-between group">
+                    <div key={doc.id} className="p-4 rounded-xl border border-violet-50 bg-zinc-50/50 flex items-center justify-between group">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center">
                           <FileText size={20} />
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-zinc-900 dark:text-white">{doc.name}</p>
+                          <p className="text-sm font-bold text-zinc-900">{doc.name}</p>
                           <p className="text-[10px] text-zinc-500 uppercase tracking-widest">{doc.type} • {new Date(doc.uploaded_at).toLocaleDateString()}</p>
                         </div>
                       </div>
@@ -696,7 +696,7 @@ export const Tenants: React.FC = () => {
 
             {activeTab === 'messages' && (
               <div className="vintsy-card p-8 flex flex-col h-[600px]">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-8 flex items-center gap-2">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8 flex items-center gap-2">
                   <MessageSquare size={16} />
                   Direct Messages
                 </h3>
@@ -714,7 +714,7 @@ export const Tenants: React.FC = () => {
                           <div className={`max-w-[80%] p-4 rounded-2xl ${
                             isManager 
                               ? 'bg-violet-600 text-white rounded-tr-sm' 
-                              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-tl-sm'
+                              : 'bg-zinc-100 text-zinc-900 rounded-tl-sm'
                           }`}>
                             <p className="text-sm">{msg.content}</p>
                             <p className={`text-[9px] font-bold uppercase tracking-widest mt-2 ${
@@ -752,7 +752,7 @@ export const Tenants: React.FC = () => {
           <div className="lg:col-span-1 space-y-8">
             <div className="vintsy-card p-8">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Internal Notes</h3>
+                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Internal Notes</h3>
                 <button 
                   onClick={() => setIsEditingNotes(!isEditingNotes)}
                   className="text-[10px] font-bold uppercase tracking-widest text-violet-600 hover:underline"
@@ -776,23 +776,23 @@ export const Tenants: React.FC = () => {
                   </button>
                 </div>
               ) : (
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap italic">
+                <p className="text-sm text-zinc-600 whitespace-pre-wrap italic">
                   {tenantDetails.notes || 'No notes added yet.'}
                 </p>
               )}
             </div>
 
             <div className="vintsy-card p-8">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-6">Recent Activity</h3>
+              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-6">Recent Activity</h3>
               <div className="space-y-6">
                 {tenantDetails.activities?.map((activity, idx) => (
                   <div key={activity.id} className="flex gap-4 relative">
                     {idx !== (tenantDetails.activities?.length || 0) - 1 && (
-                      <div className="absolute left-2 top-6 bottom-0 w-px bg-violet-100 dark:bg-zinc-800" />
+                      <div className="absolute left-2 top-6 bottom-0 w-px bg-violet-100" />
                     )}
-                    <div className="w-4 h-4 rounded-full bg-violet-100 dark:bg-violet-900/40 border-2 border-white dark:border-zinc-900 z-10 mt-1" />
+                    <div className="w-4 h-4 rounded-full bg-violet-100 border-2 border-white z-10 mt-1" />
                     <div>
-                      <p className="text-sm text-zinc-900 dark:text-white font-medium">{activity.description}</p>
+                      <p className="text-sm text-zinc-900 font-medium">{activity.description}</p>
                       <p className="text-[10px] text-zinc-400 uppercase tracking-widest mt-1">{new Date(activity.date).toLocaleDateString()}</p>
                     </div>
                   </div>
@@ -807,37 +807,37 @@ export const Tenants: React.FC = () => {
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-zinc-900 rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-violet-100 dark:border-zinc-800 max-h-[90vh] overflow-y-auto print:shadow-none print:border-none print:max-w-none print:w-full print:h-full print:overflow-visible print:p-0 print:dark:bg-white"
+              className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-violet-100 max-h-[90vh] overflow-y-auto print:shadow-none print:border-none print:max-w-none print:w-full print:h-full print:overflow-visible print:p-0"
             >
               <div className="flex justify-between items-center mb-6 print:hidden">
-                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Monthly Rent Invoice</h3>
+                <h3 className="text-xl font-bold text-zinc-900">Monthly Rent Invoice</h3>
                 <button 
                   onClick={() => setShowInvoiceModal(false)}
-                  className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                  className="text-zinc-400 hover:text-zinc-600 transition-colors"
                 >
                   <X size={20} />
                 </button>
               </div>
               
-              <div id="invoice-content" className="p-8 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-xl border border-zinc-200 dark:border-zinc-700 print:border-none print:p-0 print:bg-white print:text-black">
+              <div id="invoice-content" className="p-8 bg-white text-zinc-900 rounded-xl border border-zinc-200 print:border-none print:p-0 print:bg-white print:text-black">
                 <div className="flex justify-between items-start mb-12">
                   <div>
                     <h1 className="text-4xl font-black text-violet-700 tracking-tighter uppercase">Invoice</h1>
                     <p className="text-sm text-zinc-500 mt-2 font-medium">PropPulse Management</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-zinc-900 dark:text-white">Date: {new Date().toLocaleDateString()}</p>
+                    <p className="font-bold text-zinc-900">Date: {new Date().toLocaleDateString()}</p>
                     <p className="text-zinc-500 text-sm mt-1">Invoice #: INV-{tenantDetails.id}-{new Date().getMonth() + 1}{new Date().getFullYear()}</p>
                   </div>
                 </div>
                 
                 <div className="mb-12">
                   <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4">Bill To</h3>
-                  <p className="font-bold text-lg text-zinc-900 dark:text-white">{tenantDetails.first_name} {tenantDetails.last_name}</p>
-                  <p className="text-zinc-600 dark:text-zinc-400 mt-1">{tenantDetails.property_name}, Unit {tenantDetails.unit_number}</p>
-                  <p className="text-zinc-600 dark:text-zinc-400">{tenantDetails.property_address}</p>
-                  <p className="text-zinc-600 dark:text-zinc-400 mt-2">{tenantDetails.email}</p>
-                  <p className="text-zinc-600 dark:text-zinc-400">{tenantDetails.phone}</p>
+                  <p className="font-bold text-lg text-zinc-900">{tenantDetails.first_name} {tenantDetails.last_name}</p>
+                  <p className="text-zinc-600 mt-1">{tenantDetails.property_name}, Unit {tenantDetails.unit_number}</p>
+                  <p className="text-zinc-600">{tenantDetails.property_address}</p>
+                  <p className="text-zinc-600 mt-2">{tenantDetails.email}</p>
+                  <p className="text-zinc-600">{tenantDetails.phone}</p>
                 </div>
                 
                 <table className="w-full mb-12 text-left border-collapse">
@@ -849,15 +849,15 @@ export const Tenants: React.FC = () => {
                   </thead>
                   <tbody>
                     <tr className="border-b border-zinc-200">
-                      <td className="py-6 text-zinc-900 dark:text-white font-medium">Monthly Rent - {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}</td>
-                      <td className="py-6 text-right text-zinc-900 dark:text-white font-bold">${tenantDetails.rent_amount?.toLocaleString()}</td>
+                      <td className="py-6 text-zinc-900 font-medium">Monthly Rent - {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}</td>
+                      <td className="py-6 text-right text-zinc-900 font-bold">${tenantDetails.rent_amount?.toLocaleString()}</td>
                     </tr>
                   </tbody>
                 </table>
                 
                 <div className="flex justify-end">
                   <div className="w-1/2">
-                    <div className="flex justify-between font-black text-2xl border-t-2 border-zinc-800 pt-4 text-zinc-900 dark:text-white">
+                    <div className="flex justify-between font-black text-2xl border-t-2 border-zinc-800 pt-4 text-zinc-900">
                       <span>Total Due</span>
                       <span>${tenantDetails.rent_amount?.toLocaleString()}</span>
                     </div>
@@ -869,7 +869,7 @@ export const Tenants: React.FC = () => {
               <div className="flex justify-end gap-4 mt-8 print:hidden">
                 <button 
                   onClick={() => setShowInvoiceModal(false)} 
-                  className="px-6 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors uppercase tracking-widest"
+                  className="px-6 py-3 rounded-xl border border-zinc-200 text-xs font-bold text-zinc-600 hover:bg-zinc-50 transition-colors uppercase tracking-widest"
                 >
                   Cancel
                 </button>
@@ -892,8 +892,8 @@ export const Tenants: React.FC = () => {
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-12">
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">Directory</h3>
-          <p className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">Resident Management</p>
+          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Directory</h3>
+          <p className="text-2xl font-bold text-zinc-900 tracking-tight">Resident Management</p>
         </div>
         <div className="flex gap-3">
           <button 
@@ -946,7 +946,7 @@ export const Tenants: React.FC = () => {
           </div>
           <button 
             onClick={clearFilters}
-            className="w-full md:w-auto px-6 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors uppercase tracking-widest"
+            className="w-full md:w-auto px-6 py-3 rounded-xl border border-zinc-200 text-xs font-bold text-zinc-600 hover:bg-zinc-50 transition-colors uppercase tracking-widest"
           >
             Clear Filters
           </button>
@@ -957,9 +957,9 @@ export const Tenants: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-violet-50/20 dark:bg-zinc-800/20 border-b border-violet-100 dark:border-zinc-800">
+              <tr className="bg-violet-50/20 border-b border-violet-100">
                 <th 
-                  className="px-8 py-5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.15em] cursor-pointer hover:text-violet-600 transition-colors group"
+                  className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em] cursor-pointer hover:text-violet-600 transition-colors group"
                   onClick={() => handleSort('name')}
                 >
                   <div className="flex items-center gap-2">
@@ -968,7 +968,7 @@ export const Tenants: React.FC = () => {
                   </div>
                 </th>
                 <th 
-                  className="px-8 py-5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.15em] cursor-pointer hover:text-violet-600 transition-colors group"
+                  className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em] cursor-pointer hover:text-violet-600 transition-colors group"
                   onClick={() => handleSort('unit')}
                 >
                   <div className="flex items-center gap-2">
@@ -976,9 +976,9 @@ export const Tenants: React.FC = () => {
                     <ArrowUpDown size={12} className={`opacity-0 group-hover:opacity-100 transition-opacity ${sortField === 'unit' ? 'opacity-100 text-violet-600' : ''}`} />
                   </div>
                 </th>
-                <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.15em]">Contact Info</th>
+                <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em]">Contact Info</th>
                 <th 
-                  className="px-8 py-5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.15em] cursor-pointer hover:text-violet-600 transition-colors group"
+                  className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em] cursor-pointer hover:text-violet-600 transition-colors group"
                   onClick={() => handleSort('lease_end')}
                 >
                   <div className="flex items-center gap-2">
@@ -986,11 +986,11 @@ export const Tenants: React.FC = () => {
                     <ArrowUpDown size={12} className={`opacity-0 group-hover:opacity-100 transition-opacity ${sortField === 'lease_end' ? 'opacity-100 text-violet-600' : ''}`} />
                   </div>
                 </th>
-                <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.15em]">Status</th>
+                <th className="px-8 py-5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em]">Status</th>
                 <th className="px-8 py-5"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-violet-50 dark:divide-zinc-800">
+            <tbody className="divide-y divide-violet-50">
               {filteredAndSortedTenants.map((tenant, index) => (
                 <motion.tr
                   key={tenant.id}
@@ -998,52 +998,52 @@ export const Tenants: React.FC = () => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
                   onClick={() => setSelectedTenantId(tenant.id)}
-                  className="hover:bg-violet-50/30 dark:hover:bg-zinc-800/30 transition-colors group cursor-pointer"
+                  className="hover:bg-violet-50/30 transition-colors group cursor-pointer"
                 >
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-violet-700 dark:bg-violet-900/40 text-white dark:text-violet-400 flex items-center justify-center font-bold text-xs border border-violet-800 dark:border-violet-800 shadow-md">
+                      <div className="w-10 h-10 rounded-xl bg-violet-700 text-white flex items-center justify-center font-bold text-xs border border-violet-800 shadow-md">
                         {tenant.first_name?.[0]}{tenant.last_name?.[0]}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{tenant.first_name} {tenant.last_name}</p>
-                        <p className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest font-medium">#{tenant.id.toString().padStart(4, '0')}</p>
+                        <p className="text-sm font-bold text-zinc-900">{tenant.first_name} {tenant.last_name}</p>
+                        <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-medium">#{tenant.id.toString().padStart(4, '0')}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-8 py-6">
-                    <p className="text-sm font-bold text-zinc-900 dark:text-white">Unit {tenant.unit_number}</p>
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">{tenant.property_name}</p>
+                    <p className="text-sm font-bold text-zinc-900">Unit {tenant.unit_number}</p>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest">{tenant.property_name}</p>
                   </td>
                   <td className="px-8 py-6">
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-                        <Mail size={12} className="text-zinc-300 dark:text-zinc-600" />
+                      <div className="flex items-center gap-2 text-xs text-zinc-500">
+                        <Mail size={12} className="text-zinc-300" />
                         {tenant.email}
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-                        <Phone size={12} className="text-zinc-300 dark:text-zinc-600" />
+                      <div className="flex items-center gap-2 text-xs text-zinc-500">
+                        <Phone size={12} className="text-zinc-300" />
                         {tenant.phone}
                       </div>
                     </div>
                   </td>
                   <td className="px-8 py-6">
-                    <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                      <Calendar size={12} className="text-zinc-300 dark:text-zinc-600" />
+                    <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium">
+                      <Calendar size={12} className="text-zinc-300" />
                       <span>{new Date(tenant.lease_end).toLocaleDateString()}</span>
                     </div>
                   </td>
                   <td className="px-8 py-6">
                     <span className={`px-2.5 py-1 text-[9px] font-bold rounded-lg uppercase tracking-widest border ${
                       getTenantStatus(tenant) === 'Active'
-                        ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
-                        : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-100 dark:border-zinc-700'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                        : 'bg-zinc-50 text-zinc-500 border-zinc-100'
                     }`}>
                       {getTenantStatus(tenant)}
                     </span>
                   </td>
                   <td className="px-8 py-6 text-right">
-                    <button className="text-zinc-300 dark:text-zinc-600 hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
+                    <button className="text-zinc-300 hover:text-violet-600 transition-colors">
                       <ChevronRight size={16} />
                     </button>
                   </td>
@@ -1059,14 +1059,14 @@ export const Tenants: React.FC = () => {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-violet-100 dark:border-zinc-800"
+            className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-violet-100"
           >
-            <div className="p-6 border-b border-violet-50 dark:border-zinc-800 flex justify-between items-center bg-violet-50/50 dark:bg-zinc-900/50">
-              <h2 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+            <div className="p-6 border-b border-violet-50 flex justify-between items-center bg-violet-50/50">
+              <h2 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
                 <FileText size={20} className="text-violet-600" />
                 Upload Document
               </h2>
-              <button onClick={() => setShowUploadModal(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+              <button onClick={() => setShowUploadModal(false)} className="text-zinc-400 hover:text-zinc-600">
                 <X size={20} />
               </button>
             </div>
@@ -1117,13 +1117,13 @@ export const Tenants: React.FC = () => {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-zinc-900 rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-violet-100 dark:border-zinc-800 max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-violet-100 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Add New Tenant</h3>
+              <h3 className="text-xl font-bold text-zinc-900">Add New Tenant</h3>
               <button 
                 onClick={() => setShowAddModal(false)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                className="text-zinc-400 hover:text-zinc-600 transition-colors"
               >
                 <X size={20} />
               </button>
@@ -1210,7 +1210,7 @@ export const Tenants: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-violet-50 dark:border-zinc-800">
+              <div className="pt-4 border-t border-violet-50">
                 <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Personal Details & ID Verification</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1264,7 +1264,7 @@ export const Tenants: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-violet-50 dark:border-zinc-800">
+              <div className="pt-4 border-t border-violet-50">
                 <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Emergency Contact</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
