@@ -11,12 +11,12 @@ INSERT INTO public.owners (id, first_name, last_name, email, phone, address, nat
 (3, 'Elena', 'Rodriguez', 'elena.r@example.com', '+1-555-0103', '789 Property Ln, TX', 'Mexican', '1968-11-05', 'Driver License', 'D45612378');
 
 -- 3. Insert Properties
-INSERT INTO public.properties (id, name, address, type, image_url, property_value, owner_id, status, amenities, is_furnished, description) VALUES
-(1, 'The Grand Horizon', '100 Skyline Drive, Downtown', 'Residential', 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&q=80', 2500000, 1, 'Active', '["Pool", "Gym", "Parking"]', true, 'Luxury high-rise apartments with city views.'),
-(2, 'Sunset Plaza', '250 West End Ave', 'Commercial', 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80', 4200000, 2, 'Active', '["Parking", "Security", "Elevator"]', false, 'Prime commercial office space.'),
-(3, 'Maplewood Estates', '500 Maple Street, Suburbs', 'Residential', 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&q=80', 1800000, 3, 'Active', '["Parking", "Pet Friendly", "Balcony"]', false, 'Quiet suburban townhomes.'),
-(4, 'Tech Hub Center', '88 Innovation Way', 'Commercial', 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80', 5500000, 1, 'Active', '["WiFi", "Security", "Gym"]', true, 'Modern co-working and office spaces.'),
-(5, 'Oceanview Villas', '10 Coastal Highway', 'Residential', 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80', 3100000, 2, 'Active', '["Pool", "Balcony", "Parking"]', true, 'Beachfront luxury villas.');
+INSERT INTO public.properties (id, name, address, type, image_url, property_value, owner_id, status, amenities, is_furnished, description, available_from) VALUES
+(1, 'The Grand Horizon', '100 Skyline Drive, Downtown', 'Residential', 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&q=80', 2500000, 1, 'Active', '["Pool", "Gym", "Parking"]', true, 'Luxury high-rise apartments with city views.', '2023-01-01'),
+(2, 'Sunset Plaza', '250 West End Ave', 'Commercial', 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80', 4200000, 2, 'Active', '["Parking", "Security", "Elevator"]', false, 'Prime commercial office space.', '2023-01-01'),
+(3, 'Maplewood Estates', '500 Maple Street, Suburbs', 'Residential', 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&q=80', 1800000, 3, 'Active', '["Parking", "Pet Friendly", "Balcony"]', false, 'Quiet suburban townhomes.', '2023-01-01'),
+(4, 'Tech Hub Center', '88 Innovation Way', 'Commercial', 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80', 5500000, 1, 'Active', '["WiFi", "Security", "Gym"]', true, 'Modern co-working and office spaces.', '2023-01-01'),
+(5, 'Oceanview Villas', '10 Coastal Highway', 'Residential', 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80', 3100000, 2, 'Active', '["Pool", "Balcony", "Parking"]', true, 'Beachfront luxury villas.', '2023-01-01');
 
 -- 4. Insert Units
 INSERT INTO public.units (id, property_id, unit_number, rent_amount, status) VALUES

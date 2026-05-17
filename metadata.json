@@ -1,5 +1,6 @@
 {
   "name": "HantiMaster",
-  "description": "A premium property management platform for modern real estate operations, featuring financial analytics, portfolio management, and tenant communication.",
-  "requestFramePermissions": []
+  "description": "Intelligent property management workflow engine and document orchestration system for modern real estate operations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -31,6 +31,10 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
     name: '', 
     address: '', 
     type: 'Residential', 
+    status: 'Vacant',
+    available_from: '',
+    bedrooms: 0,
+    bathrooms: 0,
     image_url: '', 
     image_asset_id: '',
     property_value: 0, 
@@ -66,6 +70,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
     try {
       await api.createProperty({
         ...propertyForm,
+        status: propertyForm.status as any,
         owner_id: propertyForm.owner_id ? Number(propertyForm.owner_id) : undefined,
         image_asset_id: propertyForm.image_asset_id || undefined
       }, user?.id);
@@ -74,6 +79,10 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
         name: '', 
         address: '', 
         type: 'Residential', 
+        status: 'Vacant',
+        available_from: '',
+        bedrooms: 0,
+        bathrooms: 0,
         image_url: '', 
         image_asset_id: '',
         property_value: 0, 
@@ -224,6 +233,55 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
                   </select>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Operational Status</label>
+                  <select 
+                    value={propertyForm.status}
+                    onChange={e => setPropertyForm({...propertyForm, status: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-violet-100 rounded-xl text-sm text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                  >
+                    <option value="Vacant">Vacant</option>
+                    <option value="Occupied">Occupied</option>
+                    <option value="Reserved">Reserved</option>
+                    <option value="Future Available">Future Available</option>
+                    <option value="Under Maintenance">Under Maintenance</option>
+                    <option value="Under Renovation">Under Renovation</option>
+                    <option value="Unavailable">Unavailable</option>
+                  </select>
+                </div>
+                {propertyForm.status === 'Future Available' && (
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Available From</label>
+                    <input 
+                      type="date" 
+                      value={propertyForm.available_from}
+                      onChange={e => setPropertyForm({...propertyForm, available_from: e.target.value})}
+                      className="w-full px-4 py-2.5 bg-zinc-50 border border-violet-100 rounded-xl text-sm text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Bedrooms</label>
+                  <input 
+                    type="number" 
+                    value={propertyForm.bedrooms}
+                    onChange={e => setPropertyForm({...propertyForm, bedrooms: Number(e.target.value)})}
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-violet-100 rounded-xl text-sm text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Bathrooms</label>
+                  <input 
+                    type="number" 
+                    value={propertyForm.bathrooms}
+                    onChange={e => setPropertyForm({...propertyForm, bathrooms: Number(e.target.value)})}
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-violet-100 rounded-xl text-sm text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all"
+                  />
+                </div>
+              </div>
               <div>
                 <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Address</label>
                 <input 
@@ -355,7 +413,7 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
       <div className="vintsy-card p-6 mb-12 space-y-4">
         <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-400 mb-2">
           <Filter size={16} />
-          Advanced Search
+          Advanced Search & Asset Status
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="relative">
@@ -385,25 +443,17 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
             />
           </div>
           <select 
-            value={occupancyStatus}
-            onChange={(e) => setOccupancyStatus(e.target.value)}
-            className="w-full px-4 py-2.5 bg-white/50 border border-violet-100 rounded-xl text-xs text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all appearance-none cursor-pointer"
-          >
-            <option value="All">All Occupancy</option>
-            <option value="Fully Occupied">Fully Occupied</option>
-            <option value="Partially Occupied">Partially Occupied</option>
-            <option value="Vacant">Vacant</option>
-            <option value="Has Vacancies">Has Vacancies</option>
-          </select>
-          <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="w-full px-4 py-2.5 bg-white/50 border border-violet-100 rounded-xl text-xs text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all appearance-none cursor-pointer"
           >
-            <option value="All">All Status</option>
-            <option value="Active">Active</option>
-            <option value="Maintenance">Maintenance</option>
-            <option value="Sold">Sold</option>
+            <option value="All">All Operational Statuses</option>
+            <option value="Vacant">Vacant (Available)</option>
+            <option value="Occupied">Occupied</option>
+            <option value="Reserved">Reserved</option>
+            <option value="Future Available">Future Available</option>
+            <option value="Under Maintenance">Under Maintenance</option>
+            <option value="Under Renovation">Under Renovation</option>
           </select>
           <div className="flex gap-2">
             <select 
@@ -423,13 +473,6 @@ export const Properties: React.FC<PropertiesProps> = ({ onSelectProperty }) => {
               <option value="occupancy">Sort: Occupancy</option>
               <option value="value">Sort: Value</option>
             </select>
-            <button 
-              onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-              className="p-2.5 bg-white/50 border border-violet-100 rounded-xl text-zinc-500 hover:text-violet-600 transition-colors"
-              title={`Sort ${sortDirection === 'asc' ? 'Ascending' : 'Descending'}`}
-            >
-              <ArrowUpDown size={16} className={sortDirection === 'desc' ? 'rotate-180 transition-transform' : 'transition-transform'} />
-            </button>
           </div>
         </div>
       </div>

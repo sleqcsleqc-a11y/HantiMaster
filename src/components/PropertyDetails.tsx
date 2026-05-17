@@ -57,6 +57,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
   const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
   const [isUnitEditMode, setIsUnitEditMode] = useState(false);
   const [unitEditForm, setUnitEditForm] = useState<Partial<Unit> & { tenant_first_name?: string, tenant_last_name?: string }>({});
+  const [unitMaintenanceHistory, setUnitMaintenanceHistory] = useState<any[]>([]);
 
   // Form states
   const [editForm, setEditForm] = useState<Partial<Property>>({});
@@ -106,7 +107,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
       return sortDirection === 'asc' ? comparison : -comparison;
     });
 
-  const handleUnitClick = (unit: Unit) => {
+  const handleUnitClick = async (unit: Unit) => {
     setSelectedUnit(unit);
     setUnitEditForm({
       ...unit,
@@ -115,6 +116,13 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
     });
     setIsUnitEditMode(false);
     setIsUnitModalOpen(true);
+    setUnitMaintenanceHistory([]);
+    try {
+      const history = await api.getUnitMaintenanceRequests(unit.id);
+      setUnitMaintenanceHistory(history);
+    } catch (err) {
+      console.error('Failed to load unit maintenance history', err);
+    }
   };
 
   const handleSaveUnitDetails = async (e: React.FormEvent) => {
@@ -323,13 +331,15 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
               {property.name}
               <div className="flex gap-2">
                 <span className={`text-[10px] px-3 py-1 rounded-full uppercase tracking-widest font-bold border ${
-                  property.status === 'For Sale' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                  property.status === 'Sold' ? 'bg-zinc-100 text-zinc-700 border-zinc-200' :
-                  property.status === 'Rented' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                  property.status === 'Occupied' ? 'bg-zinc-100 text-zinc-700 border-zinc-200' :
+                  property.status === 'Vacant' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                  property.status === 'Reserved' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                   property.status === 'Under Maintenance' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                  'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  property.status === 'Under Renovation' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                  property.status === 'Future Available' ? 'bg-violet-50 text-violet-700 border-violet-200' :
+                  'bg-zinc-50 text-zinc-500 border-zinc-200'
                 }`}>
-                  {property.status || 'Active'}
+                  {property.status || 'Vacant'}
                 </span>
                 {property.is_furnished && (
                   <span className="text-[10px] px-3 py-1 rounded-full uppercase tracking-widest font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
@@ -1199,6 +1209,29 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                     ) : (
                       <p className="text-sm text-zinc-500 italic">No tenant assigned to this unit.</p>
                     )}
+                  </div>
+                  
+                  <div className="pt-6 border-t border-violet-50">
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-4">Maintenance History</h4>
+                    <div className="space-y-3">
+                      {unitMaintenanceHistory.length > 0 ? (
+                        unitMaintenanceHistory.map(req => (
+                          <div key={req.id} className="p-3 bg-zinc-50 rounded-xl border border-zinc-100 flex items-center justify-between">
+                            <div>
+                               <p className="text-xs font-bold text-zinc-900">{req.title}</p>
+                               <p className="text-[10px] text-zinc-500 uppercase tracking-widest">{new Date(req.created_at).toLocaleDateString()}</p>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest ${
+                               req.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-orange-50 text-orange-600 border border-orange-100'
+                            }`}>
+                               {req.status}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-zinc-500 italic">No maintenance requests found for this unit.</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

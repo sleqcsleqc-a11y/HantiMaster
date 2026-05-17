@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, Reorder } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   TrendingUp, 
@@ -11,7 +11,11 @@ import {
   ChevronRight,
   Lock,
   Building2,
-  Key
+  Key,
+  GripHorizontal,
+  Settings,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { api } from '../services/api';
 import { FinanceStats } from '../types';
@@ -29,6 +33,39 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectProperty, onSelect
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+
+  // Widget ordering state
+  const [widgetOrder, setWidgetOrder] = useState<string[]>([]);
+  const [hiddenWidgets, setHiddenWidgets] = useState<string[]>([]);
+
+  useEffect(() => {
+    const savedOrder = localStorage.getItem('hanti_dashboard_order');
+    const savedHidden = localStorage.getItem('hanti_dashboard_hidden');
+    if (savedOrder) {
+      setWidgetOrder(JSON.parse(savedOrder));
+    } else {
+      setWidgetOrder(['kpis', 'activity', 'maintenance']);
+    }
+    if (savedHidden) {
+      setHiddenWidgets(JSON.parse(savedHidden));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (widgetOrder.length > 0) {
+      localStorage.setItem('hanti_dashboard_order', JSON.stringify(widgetOrder));
+    }
+  }, [widgetOrder]);
+
+  useEffect(() => {
+    localStorage.setItem('hanti_dashboard_hidden', JSON.stringify(hiddenWidgets));
+  }, [hiddenWidgets]);
+
+  const toggleWidget = (id: string) => {
+    setHiddenWidgets(prev => 
+      prev.includes(id) ? prev.filter(w => w !== id) : [...prev, id]
+    );
+  };
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -154,121 +191,202 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectProperty, onSelect
     },
   ].filter(kpi => hasPermission(kpi.permission, 'view'));
 
-  return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">Welcome back, {user?.first_name}</h2>
-        <p className="text-zinc-500 mt-1">Here's what's happening with your portfolio today.</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((kpi, index) => (
-          <motion.div
-            key={kpi.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="vintsy-card p-6"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className="text-violet-700 bg-violet-50 p-2.5 rounded-xl border border-violet-100 shadow-sm">
-                <kpi.icon size={20} />
-              </div>
-              <div className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
-                kpi.trend === 'up' 
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-                  : 'bg-red-50 text-red-700 border-red-100'
-              }`}>
-                {kpi.change}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{kpi.label}</p>
-              <p className="text-2xl font-bold text-zinc-900 tracking-tight">{kpi.value}</p>
-            </div>
-          </motion.div>
-        ))}
-        {kpis.length === 0 && (
-          <div className="lg:col-span-4 p-12 bg-zinc-50 rounded-3xl border border-zinc-200 text-center">
-            <Lock size={32} className="mx-auto text-zinc-400 mb-4" />
-            <p className="text-zinc-500 text-sm font-medium">No high-level metrics available for your role.</p>
-          </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 vintsy-card p-8">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Recent Activity</h3>
-            <button className="text-xs font-bold text-violet-600 hover:text-violet-700 hover:underline transition-colors">View All</button>
-          </div>
-          <div className="space-y-4">
-            {activities.length > 0 ? (
-              activities.map((activity, index) => (
-                <button 
-                  key={index} 
-                  onClick={() => handleActivityClick(activity)}
-                  className="w-full flex items-center gap-4 p-4 bg-violet-50/20 border border-violet-50 rounded-2xl group hover:border-violet-300 hover:bg-white transition-all duration-300 text-left"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-white border border-violet-100 flex items-center justify-center text-zinc-400 group-hover:text-white group-hover:bg-violet-700 transition-all duration-300 shadow-sm">
-                    {activity.entity_type === 'Property' ? <Building2 size={18} /> : <Users size={18} />}
+  const renderWidget = (id: string) => {
+    switch (id) {
+      case 'kpis':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+            {kpis.map((kpi, index) => (
+              <motion.div
+                key={kpi.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                whileDrag={{ scale: 1.05 }}
+                className="vintsy-card p-6"
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div className="text-violet-700 bg-violet-50 p-2.5 rounded-xl border border-violet-100 shadow-sm">
+                    <kpi.icon size={20} />
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold text-zinc-900 group-hover:text-violet-700 transition-colors">{activity.action}</p>
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-medium">
-                      {getTimeAgo(activity.timestamp)} • {activity.user_name}
-                    </p>
+                  <div className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+                    kpi.trend === 'up' 
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                      : 'bg-red-50 text-red-700 border-red-100'
+                  }`}>
+                    {kpi.change}
                   </div>
-                  <ChevronRight size={16} className="text-zinc-300 group-hover:text-violet-700 transition-colors" />
-                </button>
-              ))
-            ) : (
-              <div className="py-12 text-center">
-                <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">No recent activity detected</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{kpi.label}</p>
+                  <p className="text-2xl font-bold text-zinc-900 tracking-tight">{kpi.value}</p>
+                </div>
+              </motion.div>
+            ))}
+            {kpis.length === 0 && (
+              <div className="col-span-full p-12 bg-zinc-50 rounded-3xl border border-zinc-200 text-center">
+                <Lock size={32} className="mx-auto text-zinc-400 mb-4" />
+                <p className="text-zinc-500 text-sm font-medium">No high-level metrics available for your role.</p>
               </div>
             )}
           </div>
-        </div>
-
-        <div className="vintsy-card p-8 flex flex-col justify-between">
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8">Maintenance</h3>
+        );
+      case 'activity':
+        return (
+          <div className="vintsy-card p-8 w-full h-full">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Recent Activity</h3>
+              <button className="text-xs font-bold text-violet-600 hover:text-violet-700 hover:underline transition-colors">View All</button>
+            </div>
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-zinc-600">Urgent Repairs</span>
-                <span className="text-sm font-bold text-red-600">03</span>
-              </div>
-              <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden border border-zinc-200">
-                <div className="h-full bg-red-500 w-1/4" />
-              </div>
-              
-              <div className="flex justify-between items-center pt-4">
-                <span className="text-sm text-zinc-600">In Progress</span>
-                <span className="text-sm font-bold text-orange-600">05</span>
-              </div>
-              <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden border border-zinc-200">
-                <div className="h-full bg-orange-500 w-1/2" />
-              </div>
-
-              <div className="flex justify-between items-center pt-4">
-                <span className="text-sm text-zinc-600">Completed</span>
-                <span className="text-sm font-bold text-emerald-600">24</span>
-              </div>
-              <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden border border-zinc-200">
-                <div className="h-full bg-emerald-500 w-full" />
-              </div>
+              {activities.length > 0 ? (
+                activities.map((activity, index) => (
+                  <button 
+                    key={index} 
+                    onClick={() => handleActivityClick(activity)}
+                    className="w-full flex items-center gap-4 p-4 bg-violet-50/20 border border-violet-50 rounded-2xl group hover:border-violet-300 hover:bg-white transition-all duration-300 text-left"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-white border border-violet-100 flex items-center justify-center text-zinc-400 group-hover:text-white group-hover:bg-violet-700 transition-all duration-300 shadow-sm">
+                      {activity.entity_type === 'Property' ? <Building2 size={18} /> : <Users size={18} />}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-zinc-900 group-hover:text-violet-700 transition-colors">{activity.action}</p>
+                      <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-medium">
+                        {getTimeAgo(activity.timestamp)} • {activity.user_name}
+                      </p>
+                    </div>
+                    <ChevronRight size={16} className="text-zinc-300 group-hover:text-violet-700 transition-colors" />
+                  </button>
+                ))
+              ) : (
+                <div className="py-12 text-center">
+                  <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">No recent activity detected</p>
+                </div>
+              )}
             </div>
           </div>
-          
+        );
+      case 'maintenance':
+        return (
+          <div className="vintsy-card p-8 flex flex-col justify-between w-full h-full">
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8">Maintenance Summary</h3>
+              <div className="space-y-6">
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-bold text-zinc-600 uppercase">Urgent Repairs</span>
+                    <span className="text-xs font-bold text-red-600">03</span>
+                  </div>
+                  <div className="h-2 w-full bg-zinc-100 rounded-full overflow-hidden border border-zinc-200">
+                    <div className="h-full bg-red-500 w-1/4" />
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-bold text-zinc-600 uppercase">In Progress</span>
+                    <span className="text-xs font-bold text-orange-600">05</span>
+                  </div>
+                  <div className="h-2 w-full bg-zinc-100 rounded-full overflow-hidden border border-zinc-200">
+                    <div className="h-full bg-orange-500 w-1/2" />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-bold text-zinc-600 uppercase">Completed</span>
+                    <span className="text-xs font-bold text-emerald-600">24</span>
+                  </div>
+                  <div className="h-2 w-full bg-zinc-100 rounded-full overflow-hidden border border-zinc-200">
+                    <div className="h-full bg-emerald-500 w-full" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => setIsRequestModalOpen(true)}
+              className="w-full mt-8 vintsy-button-secondary text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2"
+            >
+              <Key size={14} />
+              Request Permission
+            </button>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const [showConfig, setShowConfig] = useState(false);
+
+  return (
+    <div className="p-8 space-y-8 max-w-7xl mx-auto pb-24">
+      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div>
+          <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">Welcome back, {user?.first_name}</h2>
+          <p className="text-zinc-500 mt-1 uppercase text-xs tracking-widest font-bold">Personalized Dashboard</p>
+        </div>
+        <div className="flex items-center gap-4 relative">
+          <div className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold flex items-center gap-2 mr-4">
+            <GripHorizontal size={14} />
+            Drag to reorder
+          </div>
           <button 
-            onClick={() => setIsRequestModalOpen(true)}
-            className="w-full mt-8 vintsy-button-secondary text-xs uppercase tracking-widest flex items-center justify-center gap-2"
+            onClick={() => setShowConfig(!showConfig)}
+            className="vintsy-button-secondary p-2 flex items-center gap-2 text-[10px] uppercase tracking-widest"
           >
-            <Key size={14} />
-            Request Permission
+            <Settings size={14} />
+            Configure Widgets
           </button>
+          
+          {showConfig && (
+            <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-zinc-200 shadow-xl shadow-zinc-200/50 rounded-2xl p-4 z-50">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Toggle Widgets</h4>
+              <div className="space-y-3">
+                {[
+                  { id: 'kpis', label: 'Key Metrics' },
+                  { id: 'activity', label: 'Recent Activity' },
+                  { id: 'maintenance', label: 'Maintenance Summary' }
+                ].map(w => (
+                  <button 
+                    key={w.id}
+                    onClick={() => toggleWidget(w.id)}
+                    className="flex justify-between items-center w-full p-2 hover:bg-zinc-50 rounded-xl transition-colors group text-left"
+                  >
+                    <span className="text-xs font-bold text-zinc-700">{w.label}</span>
+                    {hiddenWidgets.includes(w.id) ? (
+                      <EyeOff size={14} className="text-zinc-400 group-hover:text-red-500 transition-colors" />
+                    ) : (
+                      <Eye size={14} className="text-violet-600 transition-colors" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      <Reorder.Group 
+        axis="y" 
+        values={widgetOrder} 
+        onReorder={setWidgetOrder} 
+        className="space-y-6"
+      >
+        {widgetOrder.filter(id => !hiddenWidgets.includes(id)).map((id) => (
+          <Reorder.Item 
+            key={id} 
+            value={id} 
+            className="cursor-move relative"
+          >
+            <div className={`grid gap-4 ${id === 'kpis' ? 'grid-cols-1' : (id === 'activity' ? 'lg:col-span-2' : 'lg:col-span-1')}`}>
+              {/* For layout, we wrap activity and maintenance if they were on same row, but Reorder axis="y" handles vertical ordering of sections. */}
+               {renderWidget(id)}
+            </div>
+          </Reorder.Item>
+        ))}
+      </Reorder.Group>
       
       <RequestPermissionModal 
         isOpen={isRequestModalOpen} 
@@ -277,3 +395,4 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectProperty, onSelect
     </div>
   );
 };
+

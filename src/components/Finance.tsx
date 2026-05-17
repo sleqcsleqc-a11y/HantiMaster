@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   CircleDollarSign, 
@@ -9,7 +9,11 @@ import {
   Calendar,
   CreditCard,
   Banknote,
-  Lock
+  Lock,
+  Building2,
+  Zap,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -20,7 +24,11 @@ import {
   Tooltip, 
   ResponsiveContainer,
   LineChart,
-  Line
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
 } from 'recharts';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas-pro';
@@ -31,26 +39,82 @@ export const Finance: React.FC = () => {
   const { user, hasPermission } = useAuth();
   const [stats, setStats] = useState<FinanceStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cashFlow, setCashFlow] = useState<any>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [rentRoll, setRentRoll] = useState<any[]>([]);
+  const [engineProcessing, setEngineProcessing] = useState(false);
+  const [view, setView] = useState<'overview' | 'rent-roll'>('overview');
 
-  const revenueData = [
-    { name: 'Jan', income: 40000, expenses: 24000 },
-    { name: 'Feb', income: 45000, expenses: 28000 },
-    { name: 'Mar', income: 42000, expenses: 25000 },
-    { name: 'Apr', income: 50000, expenses: 29000 },
-    { name: 'May', income: 55000, expenses: 31000 },
-    { name: 'Jun', income: 58000, expenses: 32000 },
-  ];
+  const runRentEngine = async () => {
+    if (!confirm('Are you sure you want to run the automated rent engine? This will post rent charges for all active tenants for the current month.')) return;
+    
+    setEngineProcessing(true);
+    try {
+      const result = await api.postMonthlyRent();
+      alert(`Rent Engine Complete!\n\nProcessed: ${result.processed} charges\nAlready Posted: ${result.already_posted} skipped`);
+      // Refresh data
+      const statsData = await api.getFinanceStats(user?.id);
+      setStats(statsData);
+      const txData = await api.getTransactions(10);
+      setTransactions(txData);
+    } catch (error) {
+      console.error('Rent engine failed:', error);
+      alert('Failed to run rent engine. See console for details.');
+    } finally {
+      setEngineProcessing(false);
+    }
+  };
 
   useEffect(() => {
-    if (hasPermission('FINANCE', 'view')) {
-      api.getFinanceStats(user?.id).then(data => {
-        setStats(data);
+    const fetchData = async () => {
+      try {
+        if (hasPermission('FINANCE', 'view')) {
+          const statsData = await api.getFinanceStats(user?.id);
+          setStats(statsData);
+
+          const flowData = await api.getCashFlowReport();
+          setCashFlow(flowData);
+
+          const txData = await api.getTransactions(10);
+          setTransactions(txData);
+
+          const vendorData = await api.getVendors();
+          setVendors(vendorData);
+
+          const rollData = await api.getRentRoll();
+          setRentRoll(rollData);
+        }
+      } catch (error) {
+        console.error('Error fetching financial reports:', error);
+      } finally {
         setLoading(false);
-      });
-    } else {
-      setLoading(false);
-    }
+      }
+    };
+
+    fetchData();
   }, [hasPermission, user]);
+
+  // Transform cashFlow for chart
+  const revenueData = cashFlow ? Object.entries(cashFlow).map(([month, values]: [string, any]) => ({
+    name: month,
+    income: values.payments,
+    expenses: values.charges
+  })).sort((a, b) => a.name.localeCompare(b.name)) : [];
+
+  const rentRollChartData = rentRoll.reduce((acc: any[], tenant: any) => {
+    const propName = tenant.units?.properties?.name || 'Unknown';
+    const existing = acc.find(item => item.name === propName);
+    const amount = Number(tenant.rent_amount) || 0;
+    if (existing) {
+      existing.value += amount;
+    } else {
+      acc.push({ name: propName, value: amount });
+    }
+    return acc;
+  }, []);
+
+  const COLORS = ['#7c3aed', '#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe'];
 
   if (!hasPermission('FINANCE', 'view')) {
     return (
@@ -89,21 +153,55 @@ export const Finance: React.FC = () => {
 
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto" id="finance-report">
-      <div className="flex justify-between items-center mb-12">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
         <div>
           <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Financials</h3>
           <p className="text-2xl font-bold text-zinc-900 tracking-tight">Revenue & Performance</p>
         </div>
-        <button 
-          onClick={exportToPDF}
-          className="vintsy-button-secondary flex items-center gap-2 text-[10px] uppercase tracking-widest"
-        >
-          <Download size={14} />
-          Export Report
-        </button>
+        <div className="flex flex-col md:flex-row items-center gap-4">
+          <div className="flex bg-white/50 border border-violet-100 rounded-xl p-1 shadow-sm">
+            <button 
+              onClick={() => setView('overview')}
+              className={`p-2 rounded-lg transition-colors flex items-center gap-2 px-3 ${view === 'overview' ? 'bg-violet-100 text-violet-700' : 'text-zinc-400 hover:text-zinc-600'}`}
+            >
+              <LayoutGrid size={16} />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Overview</span>
+            </button>
+            <button 
+              onClick={() => setView('rent-roll')}
+              className={`p-2 rounded-lg transition-colors flex items-center gap-2 px-3 ${view === 'rent-roll' ? 'bg-violet-100 text-violet-700' : 'text-zinc-400 hover:text-zinc-600'}`}
+            >
+              <List size={16} />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Rent Roll</span>
+            </button>
+          </div>
+          <button 
+            onClick={runRentEngine}
+            disabled={engineProcessing}
+            className="px-6 py-4 bg-orange-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-orange-700 transition-all shadow-xl shadow-orange-600/20 disabled:opacity-50 flex items-center gap-2"
+          >
+            <Zap size={14} className={engineProcessing ? 'animate-pulse' : ''} />
+            {engineProcessing ? 'Processing...' : 'Run Rent Engine'}
+          </button>
+          <button 
+            onClick={exportToPDF}
+            className="vintsy-button-secondary flex items-center gap-2 text-[10px] uppercase tracking-widest"
+          >
+            <Download size={14} />
+            Export Report
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <AnimatePresence mode="wait">
+        {view === 'overview' ? (
+          <motion.div 
+            key="overview"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+          >
         <div className="lg:col-span-2 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-gradient-to-br from-violet-700 to-violet-900 text-white p-10 rounded-3xl relative overflow-hidden shadow-xl shadow-violet-600/20">
@@ -128,10 +226,10 @@ export const Finance: React.FC = () => {
             </div>
           </div>
 
-          <div className="vintsy-card p-8">
+          <div className="vintsy-card p-8 min-h-[400px] flex flex-col">
             <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8">Income vs Expenses</h4>
-            <div className="h-72 w-full min-h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="flex-grow w-full">
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
                   <XAxis 
@@ -162,40 +260,50 @@ export const Finance: React.FC = () => {
 
           <div className="vintsy-card">
             <div className="p-8 border-b border-violet-50 flex justify-between items-center">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Recent Transactions</h4>
-              <button className="text-[10px] font-bold text-violet-600 uppercase tracking-widest hover:text-violet-700 transition-colors">View All</button>
+              <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Recent Ledger Activity</h4>
+              <button className="text-[10px] font-bold text-violet-600 uppercase tracking-widest hover:text-violet-700 transition-colors">Audit Full Ledger</button>
             </div>
             <div className="divide-y divide-violet-50">
-              {[1, 2, 3, 4, 5].map((item) => (
-                <div key={item} className="p-8 flex items-center justify-between hover:bg-violet-50/20 transition-all duration-300 group">
+              {transactions.length > 0 ? transactions.map((tx) => (
+                <div key={tx.id} className="p-8 flex items-center justify-between hover:bg-violet-50/20 transition-all duration-300 group">
                   <div className="flex items-center gap-6">
                     <div className="w-12 h-12 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-zinc-400 group-hover:bg-violet-700 group-hover:text-white transition-all duration-300 shadow-sm">
-                      {item % 2 === 0 ? <CreditCard size={20} /> : <Banknote size={20} />}
+                      {tx.type === 'Payment' ? <CreditCard size={20} /> : <Banknote size={20} />}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-zinc-900">Rent Payment - Unit 101</p>
-                      <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-medium">Feb 24, 2024 • John Doe</p>
+                      <p className="text-sm font-bold text-zinc-900">{tx.category} - {tx.properties?.name || 'Property'}</p>
+                      <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-medium">
+                        {new Date(tx.transaction_date || tx.created_at).toLocaleDateString()} • {tx.tenants?.first_name} {tx.tenants?.last_name}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-emerald-700">+$1,200.00</p>
-                    <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Completed</p>
+                    <p className={`text-sm font-bold ${tx.type === 'Payment' ? 'text-emerald-700' : 'text-zinc-900'}`}>
+                      {tx.type === 'Payment' ? '+' : '-'}${Number(tx.amount).toLocaleString()}
+                    </p>
+                    <p className={`text-[9px] font-bold uppercase tracking-widest ${tx.status === 'Completed' ? 'text-emerald-600' : 'text-orange-600'}`}>
+                      {tx.status}
+                    </p>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="p-12 text-center text-zinc-400 text-sm italic">
+                  No transaction history recorded for the current period.
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         <div className="space-y-6">
           <div className="vintsy-card p-8">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8">Revenue Breakdown</h4>
+            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8">Asset Yield Distribution</h4>
             <div className="space-y-8">
               {[
-                { label: 'Residential', value: 85, color: 'bg-violet-600' },
-                { label: 'Commercial', value: 10, color: 'bg-violet-400' },
-                { label: 'Late Fees', value: 3, color: 'bg-violet-300' },
-                { label: 'Other', value: 2, color: 'bg-violet-200' },
+                { label: 'Residential Rent', value: 85, color: 'bg-violet-600' },
+                { label: 'Commercial Leases', value: 10, color: 'bg-violet-400' },
+                { label: 'Ancillary (Late Fees)', value: 3, color: 'bg-violet-300' },
+                { label: 'Utility Rebill', value: 2, color: 'bg-violet-200' },
               ].map((item) => (
                 <div key={item.label} className="space-y-3">
                   <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
@@ -215,9 +323,100 @@ export const Finance: React.FC = () => {
           </div>
 
           <div className="vintsy-card p-8">
+            <div className="flex justify-between items-center mb-8">
+               <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Vendor Expenditure</h4>
+               <span className="text-[10px] font-bold text-violet-600 bg-violet-50 px-2 py-1 rounded-lg">{vendors.length} Partners</span>
+            </div>
+            <div className="space-y-6">
+              {vendors.slice(0, 3).map(v => (
+                <div key={v.id} className="flex justify-between items-center group cursor-pointer">
+                  <div className="flex items-center gap-3">
+                     <div className="w-8 h-8 rounded-lg bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-violet-100 group-hover:text-violet-600 transition-colors">
+                       <Building2 size={14} />
+                     </div>
+                     <div>
+                       <p className="text-xs font-bold text-zinc-900 truncate max-w-[120px]">{v.company_name}</p>
+                       <p className="text-[10px] text-zinc-400 font-medium">{v.category}</p>
+                     </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-zinc-900">$0.00</p>
+                    <p className="text-[9px] text-zinc-400 uppercase font-bold tracking-widest">YTD Spend</p>
+                  </div>
+                </div>
+              ))}
+              <button className="w-full py-3 border-2 border-dashed border-violet-100 rounded-xl text-[10px] font-bold text-violet-400 uppercase tracking-widest hover:border-violet-300 hover:text-violet-600 transition-all">
+                Add New Professional Vendor
+              </button>
+            </div>
+          </div>
+
+          <div className="vintsy-card p-8">
+            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8">Track New Expense</h4>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const f = new FormData(e.currentTarget);
+              try {
+                await api.createExpenseTransaction({
+                  amount: Number(f.get('amount')),
+                  category: f.get('category') as string,
+                  vendor_id: f.get('vendor_id') ? Number(f.get('vendor_id')) : undefined,
+                  transaction_date: f.get('date') as string || new Date().toISOString().split('T')[0],
+                  description: f.get('description') as string,
+                });
+                alert('Expense tracked successfully.');
+                const txData = await api.getTransactions(10);
+                setTransactions(txData);
+                const flowData = await api.getCashFlowReport();
+                setCashFlow(flowData);
+                const statsData = await api.getFinanceStats(user?.id);
+                setStats(statsData);
+                (e.target as HTMLFormElement).reset();
+              } catch (err) {
+                console.error(err);
+                alert('Failed to track expense.');
+              }
+            }} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Description</label>
+                <input required name="description" type="text" className="vintsy-input w-full" placeholder="Plumbing repair" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Amount</label>
+                  <input required name="amount" type="number" step="0.01" className="vintsy-input w-full" placeholder="0.00" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Category</label>
+                  <select required name="category" className="vintsy-input w-full">
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Utilities">Utilities</option>
+                    <option value="Taxes">Taxes</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Vendor (Optional)</label>
+                  <select name="vendor_id" className="vintsy-input w-full">
+                    <option value="">-- None --</option>
+                    {vendors.map(v => <option key={v.id} value={v.id}>{v.company_name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Date</label>
+                  <input required name="date" type="date" defaultValue={new Date().toISOString().split('T')[0]} className="vintsy-input w-full" />
+                </div>
+              </div>
+              <button type="submit" className="w-full vintsy-button-primary mt-4 py-3">Record Expense</button>
+            </form>
+          </div>
+
+          <div className="vintsy-card p-8 min-h-[350px] flex flex-col">
             <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8">Income Trends</h4>
-            <div className="h-64 w-full min-h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="flex-grow w-full">
+              <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
                   <XAxis 
@@ -253,7 +452,112 @@ export const Finance: React.FC = () => {
             </button>
           </div>
         </div>
-      </div>
+          </motion.div>
+        ) : (
+          <motion.div 
+            key="rent-roll"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-6"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="vintsy-card p-8">
+                 <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8">Expected Monthly Rent by Property</h4>
+                 <div className="h-[250px]">
+                   <ResponsiveContainer width="100%" height="100%">
+                     <PieChart>
+                       <Pie
+                         data={rentRollChartData}
+                         cx="50%"
+                         cy="50%"
+                         innerRadius={60}
+                         outerRadius={80}
+                         paddingAngle={5}
+                         dataKey="value"
+                       >
+                         {rentRollChartData.map((entry, index) => (
+                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                         ))}
+                       </Pie>
+                       <Tooltip 
+                         formatter={(value: any) => [`$${Number(value).toLocaleString()}`, 'Rent']}
+                         contentStyle={{ backgroundColor: '#18181b', border: 'none', borderRadius: '8px', color: '#fff' }}
+                         itemStyle={{ color: '#fff' }}
+                       />
+                       <Legend verticalAlign="bottom" height={36}/>
+                     </PieChart>
+                   </ResponsiveContainer>
+                 </div>
+              </div>
+              
+              <div className="vintsy-card p-8">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-8">Rent Roll Overview</h4>
+                <div className="grid grid-cols-2 gap-6">
+                   <div className="space-y-2">
+                     <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Total Expected</p>
+                     <p className="text-3xl font-bold text-zinc-900">${rentRoll.reduce((acc, t) => acc + (Number(t.rent_amount) || 0), 0).toLocaleString()}</p>
+                   </div>
+                   <div className="space-y-2">
+                     <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Active Leases</p>
+                     <p className="text-3xl font-bold text-zinc-900">{rentRoll.length}</p>
+                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="vintsy-card overflow-hidden">
+              <div className="p-6 border-b border-violet-50">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Master Rent Roll</h4>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-violet-50/20 border-b border-violet-100">
+                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Tenant</th>
+                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Property & Unit</th>
+                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Status</th>
+                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Lease Terms</th>
+                      <th className="px-6 py-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">M. Rent</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-violet-50">
+                    {rentRoll.map((tenant) => (
+                      <tr key={tenant.id} className="hover:bg-violet-50/20 transition-colors">
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-bold text-zinc-900">{tenant.first_name} {tenant.last_name}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-medium text-zinc-900">{tenant.units?.properties?.name || 'N/A'}</p>
+                          <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Unit {tenant.units?.unit_number || 'N/A'}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${tenant.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
+                            {tenant.status || 'Active'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-xs text-zinc-600 font-medium">
+                            {tenant.lease_start ? new Date(tenant.lease_start).toLocaleDateString() : 'N/A'} - {tenant.lease_end ? new Date(tenant.lease_end).toLocaleDateString() : 'N/A'}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <p className="text-sm font-bold text-zinc-900">${(Number(tenant.rent_amount) || 0).toLocaleString()}</p>
+                        </td>
+                      </tr>
+                    ))}
+                    {rentRoll.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-12 text-center text-sm text-zinc-500 italic">No rent roll data found.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

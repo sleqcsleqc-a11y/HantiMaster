@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS property_documents (
 ALTER TABLE property_documents ENABLE ROW LEVEL SECURITY;
 
 -- Owners can view/upload documents for their properties
+DROP POLICY IF EXISTS "Owners can view own property documents" ON property_documents;
 CREATE POLICY "Owners can view own property documents" ON property_documents
   FOR SELECT USING (
     EXISTS (
@@ -77,6 +78,7 @@ CREATE POLICY "Owners can view own property documents" ON property_documents
     )
   );
 
+DROP POLICY IF EXISTS "Owners can upload own property documents" ON property_documents;
 CREATE POLICY "Owners can upload own property documents" ON property_documents
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -87,6 +89,7 @@ CREATE POLICY "Owners can upload own property documents" ON property_documents
   );
 
 -- Property Managers can view/upload all
+DROP POLICY IF EXISTS "Property Managers can view all property documents" ON property_documents;
 CREATE POLICY "Property Managers can view all property documents" ON property_documents
   FOR ALL USING (
     EXISTS (
@@ -98,18 +101,23 @@ CREATE POLICY "Property Managers can view all property documents" ON property_do
 
 -- Notifications: Users can only see their own
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view own notifications" ON notifications;
 CREATE POLICY "Users can view own notifications" ON notifications
   FOR SELECT USING (auth.uid() = user_id);
 
 -- Preferences: Users can view/edit own
 ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view own preferences" ON user_preferences;
 CREATE POLICY "Users can view own preferences" ON user_preferences
   FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update own preferences" ON user_preferences;
 CREATE POLICY "Users can update own preferences" ON user_preferences
   FOR UPDATE USING (auth.uid() = user_id);
 
 -- Conversations: Participants can view
 ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Participants can view conversations" ON conversations;
 CREATE POLICY "Participants can view conversations" ON conversations
   FOR SELECT USING (
     EXISTS (
@@ -120,6 +128,7 @@ CREATE POLICY "Participants can view conversations" ON conversations
 
 -- Messages: Participants can view
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Participants can view messages" ON chat_messages;
 CREATE POLICY "Participants can view messages" ON chat_messages
   FOR SELECT USING (
     EXISTS (

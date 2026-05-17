@@ -20,7 +20,8 @@ import {
   Info,
   Plus,
   Trash2,
-  ArrowRight
+  ArrowRight,
+  Zap
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -34,6 +35,7 @@ export const SystemRules: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [generatingRent, setGeneratingRent] = useState(false);
   
   // New rule form state
   const [newRule, setNewRule] = useState({
@@ -94,6 +96,23 @@ export const SystemRules: React.FC = () => {
     }
   };
 
+  const handleGenerateRent = async () => {
+    try {
+      setGeneratingRent(true);
+      const result = await api.generateMonthlyRent();
+      if (result.success) {
+        addToast(result.message, 'success');
+      } else {
+        addToast(result.message, 'error');
+      }
+    } catch (error) {
+      console.error("Failed to trigger rent generation", error);
+      addToast('Failed to connect to automation server', 'error');
+    } finally {
+      setGeneratingRent(false);
+    }
+  };
+
   if (loading) return <div className="animate-pulse space-y-8">
     <div className="grid grid-cols-2 gap-8 h-96 bg-zinc-100 rounded-3xl" />
   </div>;
@@ -101,6 +120,45 @@ export const SystemRules: React.FC = () => {
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* MFA Settings */}
+        <div className="vintsy-card p-8 space-y-8">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+              <Zap size={16} className="text-violet-500" />
+              Automated Rent Engine
+            </h4>
+            <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+              Service Active
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="p-6 bg-zinc-900 rounded-2xl border border-zinc-800 text-white">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Engine Status</p>
+                <span className="px-2 py-0.5 bg-violet-600 rounded text-[9px] font-bold uppercase tracking-widest">Monthly Cycle</span>
+              </div>
+              <p className="text-xs text-zinc-300 font-medium leading-relaxed mb-6">
+                The rent engine automatically generates monthly charges for all active tenants on the 1st of every month at 00:00 UTC.
+              </p>
+              <button 
+                onClick={handleGenerateRent}
+                disabled={generatingRent}
+                className="w-full flex items-center justify-center gap-2 py-3.5 bg-white text-zinc-900 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all disabled:opacity-50"
+              >
+                {generatingRent ? <RefreshCw size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                {generatingRent ? 'Generating Rent...' : 'Force Run Engine Now'}
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 p-4 bg-zinc-50 rounded-2xl border border-zinc-100 italic">
+              <Info size={14} className="text-zinc-400" />
+              <p className="text-[10px] text-zinc-500 font-medium">Next run scheduled for: June 1st, 2026</p>
+            </div>
+          </div>
+        </div>
+
         {/* Password Policy */}
         <div className="vintsy-card p-8 space-y-8">
           <div className="flex items-center justify-between">

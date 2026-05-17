@@ -405,13 +405,13 @@ export const OwnerDetails: React.FC<OwnerDetailsProps> = ({ ownerId, onBack, onS
                   <tbody className="divide-y divide-violet-50">
                     {owner.transactions?.map((tx) => (
                       <tr key={tx.id} className="hover:bg-violet-50/30 transition-colors">
-                        <td className="p-4 text-sm text-zinc-900">{new Date(tx.date).toLocaleDateString()}</td>
+                        <td className="p-4 text-sm text-zinc-900">{new Date(tx.transaction_date || tx.created_at).toLocaleDateString()}</td>
                         <td className="p-4 text-sm text-zinc-900 font-medium">{tx.property_name}</td>
                         <td className="p-4 text-sm text-zinc-500">{tx.tenant_name}</td>
                         <td className="p-4 text-sm font-bold text-emerald-600">${tx.amount.toLocaleString()}</td>
                         <td className="p-4">
                           <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest ${
-                            tx.status === 'Paid' 
+                            tx.status === 'Completed' 
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
                               : 'bg-amber-50 text-amber-700 border border-amber-100'
                           }`}>

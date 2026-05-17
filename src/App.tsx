@@ -17,6 +17,8 @@ import { TenantPayments } from './components/Tenant/TenantPayments';
 import { TenantMaintenance } from './components/Tenant/TenantMaintenance';
 import { TenantLease } from './components/Tenant/TenantLease';
 import { DocumentManagement } from './components/DocumentManagement';
+import { Vendors } from './components/Vendors';
+import { VendorDashboard } from './components/Vendor/VendorDashboard';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { Building2, AlertTriangle, ExternalLink, Copy, Check } from 'lucide-react';
@@ -262,6 +264,16 @@ const AppContent: React.FC = () => {
       }
     }
 
+    if (user?.role_name === 'Vendor') {
+      switch (activeTab) {
+        case 'dashboard': return <VendorDashboard setActiveTab={setActiveTab} />;
+        case 'maintenance': return <Maintenance />;
+        case 'communication': return <Communication />;
+        case 'tasks': return <Tasks />;
+        default: return <VendorDashboard setActiveTab={setActiveTab} />;
+      }
+    }
+
     if (activeTab === 'owners' && selectedOwnerId !== null) {
       return (
         <OwnerDetails 
@@ -313,6 +325,8 @@ const AppContent: React.FC = () => {
         return <Communication />;
       case 'tasks':
         return <Tasks />;
+      case 'vendors':
+        return <Vendors />;
       case 'lease':
         return <DocumentManagement />;
       default:
@@ -338,6 +352,7 @@ const AppContent: React.FC = () => {
       case 'lease': return 'Lease & Documents';
       case 'communication': return 'Communication';
       case 'tasks': return 'Task Management';
+      case 'vendors': return 'Vendor Network';
       case 'governance': return 'Admin Control Center';
       default: return 'Dashboard';
     }

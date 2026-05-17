@@ -11,18 +11,30 @@ import {
   Home,
   ChevronRight,
   X,
-  Lock
+  Lock,
+  Briefcase
 } from 'lucide-react';
 import { api } from '../services/api';
-import { MaintenanceRequest, Unit, Tenant } from '../types';
+import { MaintenanceRequest, Unit, Tenant, Vendor } from '../types';
+import { useToast } from '../contexts/ToastContext';
 
 export const Maintenance: React.FC = () => {
   const { user, hasPermission } = useAuth();
+  const { addToast } = useToast();
   const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<MaintenanceRequest | null>(null);
+  const [assigningVendor, setAssigningVendor] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invoiceForm, setInvoiceForm] = useState({
+    amount: '',
+    description: '',
+    date: new Date().toISOString().split('T')[0]
+  });
   const [requestForm, setRequestForm] = useState<Partial<MaintenanceRequest>>({
     title: '',
     description: '',
@@ -36,14 +48,16 @@ export const Maintenance: React.FC = () => {
     
     setLoading(true);
     try {
-      const [requestsData, unitsData, tenantsData] = await Promise.all([
+      const [requestsData, unitsData, tenantsData, vendorsData] = await Promise.all([
         api.getMaintenance(user.id),
         api.getUnits(),
-        api.getTenants()
+        api.getTenants(),
+        api.getVendors()
       ]);
       setRequests(requestsData);
       setUnits(unitsData);
       setTenants(tenantsData);
+      setVendors(vendorsData);
     } catch (error) {
       console.error("Failed to load maintenance data", error);
     } finally {
@@ -84,9 +98,59 @@ export const Maintenance: React.FC = () => {
         tenant_id: 0
       });
       loadData();
+      addToast('Maintenance request created successfully', 'success');
     } catch (error) {
       console.error('Failed to add maintenance request:', error);
-      alert('Failed to add maintenance request. Please check your connection and permissions.');
+      addToast('Failed to add maintenance request', 'error');
+    }
+  };
+
+  const handleAssignVendor = async (requestId: number, vendorId: number) => {
+    try {
+      setAssigningVendor(true);
+      await api.assignVendorToRequest(requestId, vendorId);
+      addToast('Vendor assigned successfully', 'success');
+      setSelectedRequest(null);
+      loadData();
+    } catch (error) {
+      console.error('Failed to assign vendor:', error);
+      addToast('Failed to assign vendor', 'error');
+    } finally {
+      setAssigningVendor(false);
+    }
+  };
+
+  const handleCreateInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRequest || !selectedRequest.vendor_id) return;
+
+    try {
+      await api.createMaintenanceInvoice(selectedRequest.id, selectedRequest.vendor_id, {
+        amount: Number(invoiceForm.amount),
+        description: invoiceForm.description,
+        date: invoiceForm.date
+      });
+      addToast('Invoice recorded and request completed', 'success');
+      setShowInvoiceModal(false);
+      setSelectedRequest(null);
+      loadData();
+    } catch (error) {
+      console.error('Failed to create invoice:', error);
+      addToast('Failed to record invoice', 'error');
+    }
+  };
+
+  const handleUpdateStatus = async (requestId: number, status: string) => {
+    try {
+      await api.updateMaintenance(requestId, { status: status as any });
+      addToast('Status updated successfully', 'success');
+      loadData();
+      if (selectedRequest?.id === requestId) {
+        setSelectedRequest(prev => prev ? { ...prev, status: status as any } : null);
+      }
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      addToast('Failed to update status', 'error');
     }
   };
 
@@ -158,7 +222,10 @@ export const Maintenance: React.FC = () => {
                   {request.status}
                 </div>
               </div>
-              <button className="w-12 h-12 rounded-xl border border-violet-100 flex items-center justify-center text-zinc-300 hover:text-violet-700 hover:border-violet-300 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95">
+              <button 
+                onClick={() => setSelectedRequest(request)}
+                className="w-12 h-12 rounded-xl border border-violet-100 flex items-center justify-center text-zinc-300 hover:text-violet-700 hover:border-violet-300 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95"
+              >
                 <ChevronRight size={20} />
               </button>
             </div>
@@ -271,6 +338,175 @@ export const Maintenance: React.FC = () => {
               <button type="submit" className="w-full vintsy-button-primary py-3 mt-6">
                 Submit Request
               </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {selectedRequest && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-violet-100 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest border mb-2 inline-block ${priorityColors[selectedRequest.priority as keyof typeof priorityColors]}`}>
+                  {selectedRequest.priority} Priority
+                </span>
+                <h3 className="text-2xl font-bold text-zinc-900">{selectedRequest.title}</h3>
+              </div>
+              <button 
+                onClick={() => setSelectedRequest(null)}
+                className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400 hover:text-zinc-600 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-3">Unit Information</label>
+                <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-100">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Home size={16} className="text-violet-600" />
+                    <span className="text-sm font-bold text-zinc-900">Unit {selectedRequest.unit_number}</span>
+                  </div>
+                  <p className="text-xs text-zinc-500 font-medium">Tenant: {selectedRequest.first_name} {selectedRequest.last_name}</p>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-3">Status Control</label>
+                <div className="flex gap-2">
+                  <select 
+                    value={selectedRequest.status}
+                    onChange={(e) => handleUpdateStatus(selectedRequest.id, e.target.value)}
+                    className="flex-1 vintsy-input py-2 text-sm"
+                  >
+                    <option value="Open">Open</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Closed">Closed</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-8">
+              <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-3">Issue Description</label>
+              <p className="text-sm text-zinc-600 leading-relaxed font-medium bg-zinc-50 p-6 rounded-2xl border border-zinc-100">
+                {selectedRequest.description}
+              </p>
+            </div>
+
+            {selectedRequest.image_url && (
+              <div className="mb-8">
+                <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-3">Attachments</label>
+                <div className="rounded-2xl overflow-hidden border border-zinc-200">
+                  <img src={selectedRequest.image_url || null} alt="Attachment" className="w-full h-auto max-h-[300px] object-cover" />
+                </div>
+              </div>
+            )}
+
+            <div className="border-t border-zinc-100 pt-8">
+              <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Vendor Assignment</label>
+              <div className="space-y-4">
+                {selectedRequest.vendor_id ? (
+                  <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Briefcase size={20} className="text-emerald-600" />
+                      <div>
+                        <p className="text-sm font-bold text-emerald-900">Assigned Vendor</p>
+                        <p className="text-xs text-emerald-600">{vendors.find(v => v.id === selectedRequest.vendor_id)?.company_name}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setInvoiceForm({
+                          amount: '',
+                          description: selectedRequest.title,
+                          date: new Date().toISOString().split('T')[0]
+                        });
+                        setShowInvoiceModal(true);
+                      }}
+                      className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-700 transition-colors"
+                    >
+                      Complete & Add Invoice
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <select 
+                      className="w-full vintsy-input appearance-none"
+                      onChange={(e) => {
+                        const vendorId = Number(e.target.value);
+                        if (vendorId) handleAssignVendor(selectedRequest.id, vendorId);
+                      }}
+                      disabled={assigningVendor}
+                    >
+                      <option value="">Select a professional vendor...</option>
+                      {vendors.filter(v => v.status === 'Active').map(v => (
+                        <option key={v.id} value={v.id}>{v.company_name} ({v.category})</option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-zinc-400 font-medium italic">Assigning a vendor will automatically generate a work order and notify the service provider.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+      {showInvoiceModal && selectedRequest && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl border border-violet-100"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-zinc-900">Record Vendor Invoice</h3>
+              <button onClick={() => setShowInvoiceModal(false)} className="text-zinc-400 hover:text-zinc-600"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleCreateInvoice} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Invoice Amount ($)</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  required
+                  value={invoiceForm.amount}
+                  onChange={e => setInvoiceForm({...invoiceForm, amount: e.target.value})}
+                  className="vintsy-input w-full"
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Date</label>
+                  <input 
+                    type="date" 
+                    required
+                    value={invoiceForm.date}
+                    onChange={e => setInvoiceForm({...invoiceForm, date: e.target.value})}
+                    className="vintsy-input w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Category</label>
+                  <div className="vintsy-input w-full bg-zinc-50 text-zinc-400 flex items-center">Maintenance</div>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Memo / Notes</label>
+                <textarea 
+                  value={invoiceForm.description}
+                  onChange={e => setInvoiceForm({...invoiceForm, description: e.target.value})}
+                  className="vintsy-input w-full min-h-[80px]"
+                />
+              </div>
+              <button type="submit" className="w-full vintsy-button-primary py-3">Finalize Work Order</button>
             </form>
           </motion.div>
         </div>

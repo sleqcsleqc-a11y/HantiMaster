@@ -44,6 +44,7 @@ export const Tenants: React.FC = () => {
     email: '',
     phone: '',
     unit_id: 0,
+    status: 'Prospective',
     lease_start: new Date().toISOString().split('T')[0],
     lease_end: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
     nationality: '',
@@ -51,19 +52,44 @@ export const Tenants: React.FC = () => {
     id_type: 'National ID',
     id_number: '',
     id_expiry_date: '',
+    tenant_id_number: '',
+    occupation: '',
+    employer: '',
+    monthly_income: 0,
+    occupants_count: 1,
+    occupant_details: '',
+    preferred_language: 'Somali',
+    vehicle_info: '',
+    rental_history: '',
+    guarantor_details: '',
     emergency_contact_name: '',
     emergency_contact_phone: '',
     emergency_contact_relation: ''
   });
 
+  const [properties, setProperties] = useState<any[]>([]);
+
   const loadData = async () => {
-    const [tenantsData, unitsData] = await Promise.all([
-      api.getTenants(),
-      api.getUnits()
-    ]);
-    setTenants(tenantsData);
-    setUnits(unitsData.filter(u => u.status === 'Vacant'));
-    setLoading(false);
+    try {
+      const [tenantsData, unitsData, propertiesData] = await Promise.all([
+        api.getTenants(),
+        api.getUnits(),
+        api.getProperties(user?.id) // Pass user.id for correct scoping if applicable
+      ]);
+      setTenants(tenantsData);
+      setProperties(propertiesData || []);
+      
+      // Filter for available units, including those with no status set
+      const availableUnits = (unitsData || []).filter(u => 
+        !u.status || ['Vacant', 'Future Available'].includes(u.status)
+      );
+      setUnits(availableUnits);
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -131,7 +157,33 @@ export const Tenants: React.FC = () => {
   const handleAddTenant = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.createTenant({ ...tenantForm, admin_id: user?.id });
+      let finalUnitId: number | null = null;
+      const unitIdValue = tenantForm.unit_id as any;
+      
+      if (typeof unitIdValue === 'string' && unitIdValue.startsWith('new-unit-')) {
+        const propertyId = Number(unitIdValue.replace('new-unit-', ''));
+        try {
+          const newUnit = await api.createUnit({
+            property_id: propertyId,
+            unit_number: '1',
+            rent_amount: 0,
+            status: 'Vacant'
+          });
+          finalUnitId = newUnit.id;
+        } catch (error) {
+          console.error('Failed to auto-create unit:', error);
+        }
+      } else if (unitIdValue && unitIdValue !== 0) {
+        finalUnitId = Number(unitIdValue);
+      }
+
+      const payload = { 
+        ...tenantForm, 
+        admin_id: user?.id,
+        unit_id: finalUnitId,
+        status: finalUnitId ? 'Active' : 'Prospective'
+      };
+      await api.createTenant(payload as any);
       setShowAddModal(false);
       setTenantForm({
         first_name: '',
@@ -139,6 +191,7 @@ export const Tenants: React.FC = () => {
         email: '',
         phone: '',
         unit_id: 0,
+        status: 'Prospective',
         lease_start: new Date().toISOString().split('T')[0],
         lease_end: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
         nationality: '',
@@ -151,19 +204,17 @@ export const Tenants: React.FC = () => {
         emergency_contact_relation: ''
       });
       loadData();
-      addToast('Tenant added successfully', 'success');
+      addToast('Tenant profile created successfully', 'success');
     } catch (error) {
-      console.error('Failed to add tenant:', error);
-      addToast('Failed to add tenant. Please check your connection and permissions.', 'error');
+      console.error('Failed to create tenant:', error);
+      addToast('Failed to create tenant profile', 'error');
     }
   };
 
   const uniqueProperties = Array.from(new Set(tenants.map(t => t.property_name).filter(Boolean)));
 
   const getTenantStatus = (tenant: Tenant) => {
-    const today = new Date();
-    const end = new Date(tenant.lease_end);
-    return end >= today ? 'Active' : 'Past';
+    return tenant.status || 'Prospective';
   };
 
   const filteredAndSortedTenants = useMemo(() => {
@@ -176,6 +227,7 @@ export const Tenants: React.FC = () => {
         `${t.first_name} ${t.last_name}`.toLowerCase().includes(query) ||
         t.email.toLowerCase().includes(query) ||
         t.unit_number?.toString().toLowerCase().includes(query) ||
+        t.tenant_id_number?.toLowerCase().includes(query) ||
         getTenantStatus(t).toLowerCase().includes(query)
       );
     }
@@ -341,7 +393,7 @@ export const Tenants: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <Building2 size={16} className="text-violet-600" />
-                  {tenantDetails.property_name}, Unit {tenantDetails.unit_number}
+                  {tenantDetails.property_name ? `${tenantDetails.property_name}, Unit ${tenantDetails.unit_number}` : 'Prospective (Unassigned)'}
                 </div>
               </div>
             </div>
@@ -526,59 +578,86 @@ export const Tenants: React.FC = () => {
                       Lease Information
                     </h3>
                     <div className="flex gap-3">
-                      <button 
-                        onClick={handleMoveOut}
-                        className="px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-[10px] uppercase tracking-widest font-bold flex items-center gap-2"
-                      >
-                        <LogOut size={14} />
-                        Move Out
-                      </button>
-                      <button 
-                        onClick={() => setShowRenewalModal(true)}
-                        className="vintsy-button-primary text-[10px] uppercase tracking-widest"
-                      >
-                        Renew Lease
-                      </button>
+                      {tenantDetails.status === 'Prospective' ? (
+                        <button 
+                          onClick={() => {
+                            // Link to Document Management or Lease Workflow
+                            window.location.href = '#/documents'; // Or trigger workflow modal if accessible here
+                            addToast('Navigate to Documents to start Lease Workflow for this prospect', 'info');
+                          }}
+                          className="px-6 py-3 bg-violet-600 text-white rounded-xl text-[10px] uppercase tracking-widest font-bold flex items-center gap-2 hover:bg-violet-500 transition-all shadow-lg shadow-violet-600/20"
+                        >
+                          <FileText size={14} />
+                          Start Tenancy Workflow
+                        </button>
+                      ) : (
+                        <>
+                          <button 
+                            onClick={handleMoveOut}
+                            className="px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-[10px] uppercase tracking-widest font-bold flex items-center gap-2"
+                          >
+                            <LogOut size={14} />
+                            Move Out
+                          </button>
+                          <button 
+                            onClick={() => setShowRenewalModal(true)}
+                            className="vintsy-button-primary text-[10px] uppercase tracking-widest"
+                          >
+                            Renew Lease
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                    <div className="space-y-6">
-                      <div>
-                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Property</p>
-                        <p className="text-sm font-bold text-zinc-900">{tenantDetails.property_name}</p>
-                        <p className="text-xs text-zinc-500 mt-1">{tenantDetails.property_address}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Unit Number</p>
-                        <p className="text-sm font-bold text-zinc-900">Unit {tenantDetails.unit_number}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Monthly Rent</p>
-                        <p className="text-lg font-bold text-violet-600">${tenantDetails.rent_amount?.toLocaleString()}</p>
-                      </div>
+                  
+                  {tenantDetails.status === 'Prospective' ? (
+                    <div className="p-12 text-center bg-zinc-50 rounded-[2rem] border border-dashed border-zinc-200">
+                       <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-zinc-300 mx-auto mb-4 border border-zinc-100">
+                          <Building2 size={32} />
+                       </div>
+                       <h4 className="text-sm font-black text-zinc-900 mb-2">No Active Tenancy</h4>
+                       <p className="text-xs text-zinc-500 max-w-xs mx-auto mb-6">This profile is currently marked as Prospective. You can initiate a tenancy agreement to assign them to a property.</p>
                     </div>
-                    <div className="space-y-6">
-                      <div>
-                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Lease Start Date</p>
-                        <p className="text-sm font-bold text-zinc-900">{new Date(tenantDetails.lease_start).toLocaleDateString()}</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                      <div className="space-y-6">
+                        <div>
+                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Property</p>
+                          <p className="text-sm font-bold text-zinc-900">{tenantDetails.property_name}</p>
+                          <p className="text-xs text-zinc-500 mt-1">{tenantDetails.property_address}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Unit Number</p>
+                          <p className="text-sm font-bold text-zinc-900">Unit {tenantDetails.unit_number}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Monthly Rent</p>
+                          <p className="text-lg font-bold text-violet-600">${tenantDetails.rent_amount?.toLocaleString()}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Lease End Date</p>
-                        <p className="text-sm font-bold text-zinc-900">{new Date(tenantDetails.lease_end).toLocaleDateString()}</p>
-                      </div>
-                      <div className="p-4 rounded-xl bg-violet-50 border border-violet-100">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-violet-700 uppercase tracking-widest">Auto Reminders</span>
-                          <button 
-                            onClick={handleToggleReminders}
-                            className={`w-10 h-5 rounded-full transition-colors relative ${tenantDetails.auto_rent_reminders ? 'bg-violet-600' : 'bg-zinc-300'}`}
-                          >
-                            <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${tenantDetails.auto_rent_reminders ? 'left-6' : 'left-1'}`} />
-                          </button>
+                      <div className="space-y-6">
+                        <div>
+                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Lease Start Date</p>
+                          <p className="text-sm font-bold text-zinc-900">{new Date(tenantDetails.lease_start).toLocaleDateString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Lease End Date</p>
+                          <p className="text-sm font-bold text-zinc-900">{new Date(tenantDetails.lease_end).toLocaleDateString()}</p>
+                        </div>
+                        <div className="p-4 rounded-xl bg-violet-50 border border-violet-100">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-violet-700 uppercase tracking-widest">Auto Reminders</span>
+                            <button 
+                              onClick={handleToggleReminders}
+                              className={`w-10 h-5 rounded-full transition-colors relative ${tenantDetails.auto_rent_reminders ? 'bg-violet-600' : 'bg-zinc-300'}`}
+                            >
+                              <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${tenantDetails.auto_rent_reminders ? 'left-6' : 'left-1'}`} />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             )}
@@ -602,12 +681,12 @@ export const Tenants: React.FC = () => {
                     <tbody className="divide-y divide-violet-50">
                       {tenantDetails.transactions?.map(tx => (
                         <tr key={tx.id} className="hover:bg-violet-50/20 transition-colors">
-                          <td className="py-5 text-sm text-zinc-900">{new Date(tx.date).toLocaleDateString()}</td>
+                          <td className="py-5 text-sm text-zinc-900">{new Date(tx.transaction_date || tx.created_at).toLocaleDateString()}</td>
                           <td className="py-5 text-sm text-zinc-600">{tx.type}</td>
                           <td className="py-5 text-sm font-bold text-zinc-900">${tx.amount.toLocaleString()}</td>
                           <td className="py-5">
                             <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest ${
-                              tx.status === 'Paid' 
+                              tx.status === 'Completed' 
                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
                                 : 'bg-amber-50 text-amber-700 border border-amber-100'
                             }`}>
@@ -941,7 +1020,11 @@ export const Tenants: React.FC = () => {
             >
               <option value="All">All Statuses</option>
               <option value="Active">Active</option>
+              <option value="Prospective">Prospective</option>
               <option value="Past">Past</option>
+              <option value="Evicted">Evicted</option>
+              <option value="Terminated">Terminated</option>
+              <option value="Archived">Archived</option>
             </select>
           </div>
           <button 
@@ -1012,8 +1095,14 @@ export const Tenants: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-8 py-6">
-                    <p className="text-sm font-bold text-zinc-900">Unit {tenant.unit_number}</p>
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest">{tenant.property_name}</p>
+                    {tenant.unit_number ? (
+                      <>
+                        <p className="text-sm font-bold text-zinc-900">Unit {tenant.unit_number}</p>
+                        <p className="text-[10px] text-zinc-500 uppercase tracking-widest">{tenant.property_name}</p>
+                      </>
+                    ) : (
+                      <p className="text-xs font-bold text-zinc-400 italic">No assigned unit</p>
+                    )}
                   </td>
                   <td className="px-8 py-6">
                     <div className="space-y-1">
@@ -1030,13 +1119,15 @@ export const Tenants: React.FC = () => {
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium">
                       <Calendar size={12} className="text-zinc-300" />
-                      <span>{new Date(tenant.lease_end).toLocaleDateString()}</span>
+                      <span>{tenant.unit_id ? new Date(tenant.lease_end).toLocaleDateString() : 'N/A'}</span>
                     </div>
                   </td>
                   <td className="px-8 py-6">
                     <span className={`px-2.5 py-1 text-[9px] font-bold rounded-lg uppercase tracking-widest border ${
                       getTenantStatus(tenant) === 'Active'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                      getTenantStatus(tenant) === 'Prospective'
+                        ? 'bg-amber-50 text-amber-700 border-amber-100'
                         : 'bg-zinc-50 text-zinc-500 border-zinc-100'
                     }`}>
                       {getTenantStatus(tenant)}
@@ -1174,17 +1265,40 @@ export const Tenants: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Assign Unit</label>
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Assign Unit (Optional)</label>
                 <select 
-                  required
-                  value={tenantForm.unit_id || ''}
-                  onChange={e => setTenantForm({...tenantForm, unit_id: Number(e.target.value)})}
+                  value={tenantForm.unit_id || 0}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val.startsWith('new-unit-')) {
+                      setTenantForm({...tenantForm, unit_id: val as any});
+                    } else {
+                      setTenantForm({...tenantForm, unit_id: Number(val)});
+                    }
+                  }}
                   className="vintsy-input w-full appearance-none"
                 >
-                  <option value="">Select a vacant unit...</option>
-                  {units.map(u => (
-                    <option key={u.id} value={u.id}>{u.property_name} - Unit {u.unit_number} (${u.rent_amount}/mo)</option>
-                  ))}
+                  <option value={0}>Prospective (No unit assigned yet)</option>
+                  {properties.map(p => {
+                    const propAvailableUnits = units.filter(u => u.property_id === p.id);
+                    const propAllUnits = tenants.filter(t => t.property_id === p.id); // This is not quite right, but we want to show the property
+                    
+                    return (
+                      <optgroup key={`prop-group-${p.id}`} label={`${p.name} (${p.type})`}>
+                        {propAvailableUnits.length > 0 ? (
+                          propAvailableUnits.map(u => (
+                            <option key={`unit-${u.id}`} value={u.id}>
+                              Unit {u.unit_number || '1'} - Vacant (${u.rent_amount || 0}/mo)
+                            </option>
+                          ))
+                        ) : (
+                          <option value={`new-unit-${p.id}`}>
+                            + Create & Assign to New Unit
+                          </option>
+                        )}
+                      </optgroup>
+                    );
+                  })}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -1211,8 +1325,61 @@ export const Tenants: React.FC = () => {
               </div>
 
               <div className="pt-4 border-t border-violet-50">
+                <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Employment & Income</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Occupation</label>
+                    <input 
+                      type="text" 
+                      value={tenantForm.occupation}
+                      onChange={e => setTenantForm({...tenantForm, occupation: e.target.value})}
+                      className="vintsy-input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Employer</label>
+                    <input 
+                      type="text" 
+                      value={tenantForm.employer}
+                      onChange={e => setTenantForm({...tenantForm, employer: e.target.value})}
+                      className="vintsy-input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Monthly Income ($)</label>
+                    <input 
+                      type="number" 
+                      value={tenantForm.monthly_income}
+                      onChange={e => setTenantForm({...tenantForm, monthly_income: Number(e.target.value)})}
+                      className="vintsy-input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Guarantor Details</label>
+                    <input 
+                      type="text" 
+                      value={tenantForm.guarantor_details}
+                      onChange={e => setTenantForm({...tenantForm, guarantor_details: e.target.value})}
+                      className="vintsy-input w-full"
+                      placeholder="Name, Phone, ID"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-violet-50">
                 <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Personal Details & ID Verification</h4>
                 <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Tenant ID Number (Internal)</label>
+                    <input 
+                      type="text" 
+                      value={tenantForm.tenant_id_number}
+                      onChange={e => setTenantForm({...tenantForm, tenant_id_number: e.target.value})}
+                      className="vintsy-input w-full"
+                      placeholder="e.g. HM-0001"
+                    />
+                  </div>
                   <div>
                     <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Nationality</label>
                     <input 

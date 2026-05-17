@@ -4,6 +4,7 @@ import { Search, Send, Paperclip, MoreVertical, CheckCircle2, Circle, Bell, User
 import { api } from '../services/api';
 import { Message, Tenant, Owner } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 export const Communication: React.FC = () => {
   const { user } = useAuth();
@@ -25,10 +26,27 @@ export const Communication: React.FC = () => {
       setNotificationsEnabled(Notification.permission === 'granted');
     }
     
-    // Simple polling for new messages
-    const interval = setInterval(loadMessages, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    // Subscribe to new messages via Supabase Realtime
+    const messagesSubscription = supabase
+      .channel('public:messages')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'messages' },
+        (payload) => {
+          loadMessages();
+          if (notificationsEnabled && payload.eventType === 'INSERT' && payload.new.receiver_id === user?.id) {
+            new Notification('New Message', {
+              body: payload.new.content,
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(messagesSubscription);
+    };
+  }, [user?.id, notificationsEnabled]);
 
   const loadData = async () => {
     const [t, o] = await Promise.all([

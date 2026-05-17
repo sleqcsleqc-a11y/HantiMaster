@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, CheckSquare, Clock, Calendar, MoreVertical, CheckCircle2, Circle, LayoutGrid, List, DollarSign, Timer, Filter, X, AlertCircle, PieChart as PieChartIcon, BarChart3, Bell } from 'lucide-react';
+import { Plus, CheckSquare, Clock, Calendar, MoreVertical, CheckCircle2, Circle, LayoutGrid, List, DollarSign, Timer, Filter, X, AlertCircle, PieChart as PieChartIcon, BarChart3, Bell, Building2 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { api } from '../services/api';
@@ -20,6 +20,8 @@ export const Tasks: React.FC = () => {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
   const [view, setView] = useState<'board' | 'list' | 'report'>('board');
   const [isBrowser, setIsBrowser] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
@@ -30,6 +32,7 @@ export const Tasks: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [assigneeFilter, setAssigneeFilter] = useState('All');
+  const [propertyFilter, setPropertyFilter] = useState('All');
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [minCostFilter, setMinCostFilter] = useState<number | ''>('');
   const [maxCostFilter, setMaxCostFilter] = useState<number | ''>('');
@@ -43,17 +46,23 @@ export const Tasks: React.FC = () => {
     priority: 'Medium',
     status: 'Pending',
     cost: 0,
-    time_spent: 0
+    time_spent: 0,
+    property_id: undefined,
+    unit_id: undefined
   });
 
   const loadData = async () => {
     try {
-      const [tasksData, usersData] = await Promise.all([
+      const [tasksData, usersData, propertiesData, unitsData] = await Promise.all([
         api.getTasks(),
-        api.getUsers()
+        api.getUsers(),
+        api.getProperties(),
+        api.getUnits()
       ]);
       setTasks(tasksData);
       setUsers(usersData);
+      setProperties(propertiesData);
+      setUnits(unitsData);
     } catch (error) {
       console.error('Failed to load tasks data:', error);
     }
@@ -100,7 +109,9 @@ export const Tasks: React.FC = () => {
         priority: 'Medium',
         status: 'Pending',
         cost: 0,
-        time_spent: 0
+        time_spent: 0,
+        property_id: undefined,
+        unit_id: undefined
       });
       loadData();
     } catch (error) {
@@ -118,7 +129,9 @@ export const Tasks: React.FC = () => {
       priority: task.priority,
       status: task.status,
       cost: task.cost || 0,
-      time_spent: task.time_spent || 0
+      time_spent: task.time_spent || 0,
+      property_id: task.property_id,
+      unit_id: task.unit_id
     });
     setShowAddTask(true);
   };
@@ -215,6 +228,7 @@ export const Tasks: React.FC = () => {
       if (statusFilter !== 'All' && t.status !== statusFilter) return false;
       if (priorityFilter !== 'All' && t.priority !== priorityFilter) return false;
       if (assigneeFilter !== 'All' && t.assignee !== assigneeFilter) return false;
+      if (propertyFilter !== 'All' && t.property_id?.toString() !== propertyFilter) return false;
       if (overdueOnly) {
         const isOverdue = getDueDateStatus(t.due_date, t.status) === 'overdue';
         if (!isOverdue) return false;
@@ -237,7 +251,7 @@ export const Tasks: React.FC = () => {
     });
 
     return result;
-  }, [tasks, statusFilter, priorityFilter, assigneeFilter, sortField, sortDirection]);
+  }, [tasks, statusFilter, priorityFilter, assigneeFilter, propertyFilter, overdueOnly, minCostFilter, maxCostFilter, sortField, sortDirection]);
 
   const uniqueAssignees = useMemo(() => {
     const fromTasks = Array.from(new Set(tasks.map(t => t.assignee))).filter((a): a is string => !!a);
@@ -437,6 +451,7 @@ export const Tasks: React.FC = () => {
                 setStatusFilter('All');
                 setPriorityFilter('All');
                 setAssigneeFilter('All');
+                setPropertyFilter('All');
                 setOverdueOnly(false);
                 setMinCostFilter('');
                 setMaxCostFilter('');
@@ -486,6 +501,19 @@ export const Tasks: React.FC = () => {
                 <option value="All">All Assignees</option>
                 {uniqueAssignees.map(a => (
                   <option key={a} value={a}>{a}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Property</label>
+              <select 
+                value={propertyFilter}
+                onChange={(e) => setPropertyFilter(e.target.value)}
+                className="vintsy-input w-full appearance-none"
+              >
+                <option value="All">All Properties</option>
+                {properties.map(p => (
+                  <option key={p.id} value={p.id.toString()}>{p.name}</option>
                 ))}
               </select>
             </div>
@@ -578,6 +606,38 @@ export const Tasks: React.FC = () => {
                   onChange={e => setTaskForm({...taskForm, title: e.target.value})}
                   className="vintsy-input w-full"
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Related Property</label>
+                  <select 
+                    value={taskForm.property_id || ''}
+                    onChange={e => {
+                      const val = e.target.value ? Number(e.target.value) : undefined;
+                      setTaskForm({...taskForm, property_id: val, unit_id: undefined});
+                    }}
+                    className="vintsy-input w-full appearance-none"
+                  >
+                    <option value="">No Property</option>
+                    {properties.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Related Unit</label>
+                  <select 
+                    value={taskForm.unit_id || ''}
+                    disabled={!taskForm.property_id}
+                    onChange={e => setTaskForm({...taskForm, unit_id: e.target.value ? Number(e.target.value) : undefined})}
+                    className="vintsy-input w-full appearance-none disabled:opacity-50"
+                  >
+                    <option value="">No Unit</option>
+                    {units.filter(u => u.property_id === taskForm.property_id).map(u => (
+                      <option key={u.id} value={u.id}>{u.unit_number}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -862,6 +922,12 @@ export const Tasks: React.FC = () => {
                                 </button>
                               </div>
                               <h5 className="text-sm font-bold text-zinc-900 mb-4 leading-snug pr-6">{task.title}</h5>
+                              {task.property_name && (
+                                <p className="text-[10px] font-medium text-violet-600 mb-4 flex items-center gap-1">
+                                  <Building2 size={10} />
+                                  {task.property_name} {task.unit_number ? `• Unit ${task.unit_number}` : ''}
+                                </p>
+                              )}
                               <div className="flex items-center justify-between pt-4 border-t border-violet-50">
                                 <div className="flex items-center gap-2">
                                   <div className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center font-bold text-[10px]" title={task.assignee}>
@@ -953,12 +1019,21 @@ export const Tasks: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center font-bold text-[10px] border border-violet-200 shadow-sm" title={task.assignee}>
-                          {task.assignee?.charAt(0)}
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center font-bold text-[10px] border border-violet-200 shadow-sm" title={task.assignee}>
+                            {task.assignee?.charAt(0)}
+                          </div>
+                          <span className="text-xs font-medium text-zinc-600">{task.assignee}</span>
                         </div>
-                        <span className="text-xs font-medium text-zinc-600">{task.assignee}</span>
-                        {task.status !== 'Completed' && (
+                        {task.property_name && (
+                          <span className="text-[9px] font-bold text-violet-600 uppercase tracking-widest mt-1 flex items-center gap-1">
+                            <Building2 size={10} />
+                            {task.property_name} {task.unit_number ? `• Unit ${task.unit_number}` : ''}
+                          </span>
+                        )}
+                      </div>
+                      {task.status !== 'Completed' && (
                           <button 
                             onClick={() => handleSendReminder(task)}
                             className="p-1 text-zinc-400 hover:text-violet-600 transition-colors ml-auto opacity-0 group-hover:opacity-100"
@@ -967,7 +1042,6 @@ export const Tasks: React.FC = () => {
                             <Bell size={12} />
                           </button>
                         )}
-                      </div>
                     </td>
                     <td className="px-8 py-6">
                       <div className={`flex items-center gap-2 text-xs font-medium ${dueStatus === 'overdue' ? 'text-red-600 font-bold' : dueStatus === 'soon' ? 'text-orange-600 font-bold' : 'text-zinc-500'}`}>

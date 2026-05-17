@@ -1,17 +1,23 @@
 export interface Transaction {
   id: number;
-  unit_id: number;
-  tenant_id: number;
+  unit_id?: number;
+  tenant_id?: number;
+  property_id?: number;
   amount: number;
-  type: string;
-  status: string;
-  date: string;
+  type: 'Charge' | 'Payment' | 'Refund' | 'Adjustment';
+  category: 'Rent' | 'Security Deposit' | 'Utilities' | 'Late Fee' | 'Maintenance' | 'Other';
+  status: 'Pending' | 'Completed' | 'Failed' | 'Void';
+  transaction_date: string;
+  description?: string;
   tenant_name?: string;
   property_name?: string;
+  unit_number?: string;
+  created_at: string;
 }
 
 export interface Owner {
   id: number;
+  user_id?: string;
   first_name: string;
   last_name: string;
   email: string;
@@ -74,11 +80,15 @@ export interface Property {
   owner_phone?: string;
   tenant_name?: string;
   lease_end?: string;
-  status?: string;
+  status?: 'Vacant' | 'Occupied' | 'Reserved' | 'Under Maintenance' | 'Under Renovation' | 'Future Available' | 'Unavailable' | 'Archived';
+  available_from?: string;
   amenities?: string;
   is_furnished?: boolean;
+  bedrooms?: number;
+  bathrooms?: number;
   description?: string;
   documents?: PropertyDocument[];
+  units?: Unit[];
 }
 
 export interface PropertyImage {
@@ -121,25 +131,37 @@ export interface TenantActivity {
 
 export interface Tenant {
   id: number;
-  user_id?: string; // UUID from profiles table
+  user_id?: string; 
   unit_id: number;
   first_name: string;
   last_name: string;
   email: string;
   phone: string;
+  tenant_id_number?: string;
   lease_start: string;
   lease_end: string;
   notes?: string;
   auto_rent_reminders?: boolean;
   nationality?: string;
   dob?: string;
+  occupation?: string;
+  employer?: string;
+  monthly_income?: number;
   id_type?: string;
   id_number?: string;
   id_expiry_date?: string;
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
   emergency_contact_relation?: string;
+  status: 'Prospective' | 'Active' | 'Evicted' | 'Terminated' | 'Archived';
+  occupants_count?: number;
+  occupant_details?: string;
+  preferred_language?: 'English' | 'Somali' | 'Bilingual';
+  vehicle_info?: string;
+  rental_history?: string;
+  guarantor_details?: string;
   unit_number?: string;
+  property_id?: number;
   property_name?: string;
   property_address?: string;
   rent_amount?: number;
@@ -149,31 +171,43 @@ export interface Tenant {
   activities?: TenantActivity[];
 }
 
-export interface Owner {
-  id: number;
-  user_id?: string; // UUID from profiles table
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  address?: string;
-  nationality?: string;
-  dob?: string;
-  id_type?: string;
-  id_number?: string;
-  id_expiry?: string;
-  property_count?: number;
-  total_portfolio_value?: number;
-  properties?: Property[];
-  transactions?: Transaction[];
-  documents?: OwnerDocument[];
-  activities?: OwnerActivity[];
+export interface LeaseTerms {
+  id?: number;
+  tenant_id: number;
+  property_id: number;
+  unit_id: number;
+  start_date: string;
+  end_date: string;
+  duration_months: number;
+  rent_amount: number;
+  payment_frequency: 'Monthly' | 'Quarterly' | 'Yearly';
+  payment_day: number;
+  security_deposit: number;
+  late_fee: number;
+  grace_period: number;
+  notice_period: number;
+  payment_methods: string[];
+  utilities_tenant: string[];
+  utilities_landlord: string[];
+  pet_policy: string;
+  smoking_policy: string;
+  furnished: boolean;
+  inventory_list?: string;
+  is_commercial: boolean;
+  commercial_terms?: {
+    permitted_use: string;
+    operating_hours: string;
+    signage_rules: string;
+    parking_allocation: string;
+    insurance_requirements: string;
+  };
 }
 
 export interface MaintenanceRequest {
   id: number;
   unit_id: number;
   tenant_id: number;
+  vendor_id?: number;
   title: string;
   description: string;
   priority: 'Low' | 'Medium' | 'High' | 'Emergency';
@@ -208,6 +242,10 @@ export interface Task {
   status: 'Pending' | 'In Progress' | 'Completed';
   cost: number;
   time_spent: number;
+  property_id?: number;
+  unit_id?: number;
+  property_name?: string;
+  unit_number?: string;
 }
 
 export interface User {
@@ -344,4 +382,34 @@ export interface DocumentSignature {
   signed_at: string;
   ip_address?: string;
   user_agent?: string;
+}
+
+export interface Vendor {
+  id: number;
+  company_name: string;
+  contact_person: string;
+  email: string;
+  phone: string;
+  category: string;
+  address?: string;
+  status: 'Active' | 'Inactive' | 'Pending' | 'Blacklisted';
+  tax_id?: string;
+  insurance_url?: string;
+  insurance_expiry?: string;
+  certification_url?: string;
+  rating?: number;
+  created_at: string;
+}
+
+export interface WorkOrder {
+  id: number;
+  request_id: number;
+  vendor_id: number;
+  status: 'Draft' | 'Sent' | 'In Progress' | 'Completed' | 'Cancelled';
+  estimated_cost?: number;
+  actual_cost?: number;
+  scheduled_date?: string;
+  completion_date?: string;
+  vendor_notes?: string;
+  created_at: string;
 }

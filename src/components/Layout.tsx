@@ -40,6 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onPro
     { id: 'finance', icon: CircleDollarSign, label: 'Finance', module: 'FINANCE' },
     { id: 'communication', icon: MessageSquare, label: 'Communication', module: 'COMMUNICATION' },
     { id: 'tasks', icon: CheckSquare, label: 'Tasks', module: 'TASKS' },
+    { id: 'vendors', icon: Briefcase, label: 'Vendors', module: 'MAINTENANCE' },
     { id: 'payments', icon: CreditCard, label: 'Payments', module: 'FINANCE' },
     { id: 'lease', icon: FileText, label: 'Lease & Docs', module: 'TENANT_MANAGEMENT' },
     { id: 'governance', icon: ShieldAlert, label: 'Admin Control', module: 'ADMIN_GOVERNANCE' },
@@ -57,13 +58,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onPro
       return ['dashboard', 'finance', 'properties', 'owners'].includes(item.id);
     }
     if (user?.role_name === 'Maintenance Coordinator') {
-      return ['dashboard', 'maintenance', 'tasks', 'properties'].includes(item.id);
+      return ['dashboard', 'maintenance', 'vendors', 'tasks', 'properties'].includes(item.id);
     }
     if (user?.role_name === 'Repair Team') {
       return ['dashboard', 'tasks', 'maintenance'].includes(item.id);
     }
     if (user?.role_name === 'Tenant') {
       return ['dashboard', 'payments', 'maintenance', 'lease', 'communication'].includes(item.id);
+    }
+    if (user?.role_name === 'Vendor') {
+      return ['dashboard', 'maintenance', 'tasks', 'communication'].includes(item.id);
     }
     if (user?.role_name === 'Property Owner') {
       return ['dashboard', 'properties', 'finance', 'maintenance'].includes(item.id);
