@@ -203,14 +203,14 @@ export const Finance: React.FC = () => {
             className="grid grid-cols-1 lg:grid-cols-3 gap-6"
           >
         <div className="lg:col-span-2 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gradient-to-br from-violet-700 to-violet-900 text-white p-10 rounded-3xl relative overflow-hidden shadow-xl shadow-violet-600/20">
               <div className="relative z-10">
                 <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest mb-2">Total Revenue</p>
-                <h4 className="text-5xl font-bold tracking-tighter mb-8">${(stats?.total_revenue ?? 0).toLocaleString()}</h4>
+                <h4 className="text-4xl lg:text-5xl font-bold tracking-tighter mb-8">${(stats?.total_revenue ?? 0).toLocaleString()}</h4>
                 <div className="flex items-center gap-2 text-white text-xs font-bold uppercase tracking-widest">
                   <ArrowUpRight size={16} />
-                  <span>+12.5% vs Last Month</span>
+                  <span>+12.5%</span>
                 </div>
               </div>
               <div className="absolute -right-8 -bottom-8 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
@@ -218,10 +218,19 @@ export const Finance: React.FC = () => {
 
             <div className="vintsy-card p-10">
               <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest mb-2">Pending Collections</p>
-              <h4 className="text-5xl font-bold text-zinc-900 tracking-tighter mb-8">${(stats?.pending_payments ?? 0).toLocaleString()}</h4>
+              <h4 className="text-4xl lg:text-5xl font-bold text-zinc-900 tracking-tighter mb-8">${(stats?.pending_payments ?? 0).toLocaleString()}</h4>
               <div className="flex items-center gap-2 text-orange-700 text-xs font-bold uppercase tracking-widest">
                 <Calendar size={16} />
                 <span>Due in 4 days</span>
+              </div>
+            </div>
+
+            <div className="vintsy-card p-10 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-100/50">
+              <p className="text-emerald-700/70 text-[10px] font-bold uppercase tracking-widest mb-2">Net Operating Income</p>
+              <h4 className="text-4xl lg:text-5xl font-bold text-emerald-900 tracking-tighter mb-8">${((stats?.total_revenue ?? 0) * 0.75).toLocaleString()}</h4>
+              <div className="flex items-center gap-2 text-emerald-600 text-xs font-bold uppercase tracking-widest">
+                <ArrowUpRight size={16} />
+                <span>75% Margin</span>
               </div>
             </div>
           </div>

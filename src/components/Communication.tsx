@@ -19,6 +19,9 @@ export const Communication: React.FC = () => {
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
   const [newMessageRecipient, setNewMessageRecipient] = useState('');
   const [newMessageContent, setNewMessageContent] = useState('');
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadData();
@@ -103,18 +106,39 @@ export const Communication: React.FC = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !activeChat || !user) return;
+    if ((!message.trim() && !attachment) || !activeChat || !user || isUploading) return;
+
+    setIsUploading(true);
+    let attachment_url = undefined;
+    let attachment_name = undefined;
+
+    if (attachment) {
+      try {
+        const result = await api.uploadAsset(attachment, user.id);
+        attachment_url = result.url;
+        attachment_name = attachment.name;
+      } catch (err) {
+        console.error('Failed to upload attachment:', err);
+        alert('Failed to upload attachment. Please try again.');
+        setIsUploading(false);
+        return;
+      }
+    }
 
     await api.sendMessage({
       sender_id: user.id,
-      sender_type: 'User',
+      sender_type: 'User', // Tenant also acts as User in this context? Wait, the API relies on sender_type
       receiver_id: activeChat.id,
       receiver_type: activeChat.type,
-      content: message,
+      content: message || '',
+      attachment_url,
+      attachment_name,
       read: true
     });
     
     setMessage('');
+    setAttachment(null);
+    setIsUploading(false);
     loadMessages();
   };
 
@@ -374,7 +398,18 @@ export const Communication: React.FC = () => {
                             ? 'bg-violet-600 text-white rounded-tr-sm' 
                             : 'bg-white text-zinc-900 border border-violet-100 rounded-tl-sm'
                         }`}>
-                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                          {msg.content && <p className="text-sm whitespace-pre-wrap">{msg.content}</p>}
+                          {msg.attachment_url && (
+                            <a 
+                              href={msg.attachment_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className={`flex items-center gap-2 p-2 mt-2 rounded-lg text-xs font-medium border ${isMe ? 'bg-white/10 border-white/20 hover:bg-white/20' : 'bg-zinc-50 border-violet-100/50 hover:bg-zinc-100'} transition-colors`}
+                            >
+                              <Paperclip size={14} />
+                              <span className="truncate max-w-[200px]">{msg.attachment_name || 'Attachment'}</span>
+                            </a>
+                          )}
                         </div>
                         <span className="text-[10px] text-zinc-400 font-medium mt-2 px-1">
                           {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -391,9 +426,32 @@ export const Communication: React.FC = () => {
                 </div>
               </div>
 
-              <form onSubmit={handleSendMessage} className="p-4 border-t border-violet-50 bg-white/50 backdrop-blur-md">
+              <form onSubmit={handleSendMessage} className="p-4 border-t border-violet-50 bg-white/50 backdrop-blur-md flex flex-col">
+                {attachment && (
+                  <div className="flex items-center gap-3 p-2 mb-3 bg-violet-50 text-violet-700 rounded-xl border border-violet-100 w-fit">
+                    <Paperclip size={14} />
+                    <span className="text-xs font-bold truncate max-w-[200px]">{attachment.name}</span>
+                    <button 
+                      type="button" 
+                      onClick={() => setAttachment(null)}
+                      className="p-1 hover:bg-violet-200 rounded-lg transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
                 <div className="flex items-center gap-3">
-                  <button type="button" className="p-2.5 text-zinc-400 hover:text-violet-600 transition-colors bg-white border border-violet-100 rounded-xl shadow-sm hover:shadow-md">
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={e => e.target.files && setAttachment(e.target.files[0])} 
+                    className="hidden" 
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-2.5 text-zinc-400 hover:text-violet-600 transition-colors bg-white border border-violet-100 rounded-xl shadow-sm hover:shadow-md"
+                  >
                     <Paperclip size={18} />
                   </button>
                   <input 
@@ -401,14 +459,15 @@ export const Communication: React.FC = () => {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="Type your message..." 
+                    disabled={isUploading}
                     className="flex-1 px-4 py-2.5 bg-white border border-violet-100 rounded-xl text-sm text-zinc-900 focus:border-violet-600 focus:ring-4 focus:ring-violet-600/5 outline-none transition-all placeholder:text-zinc-400 shadow-sm"
                   />
                   <button 
                     type="submit"
-                    disabled={!message.trim()}
+                    disabled={(!message.trim() && !attachment) || isUploading}
                     className="p-2.5 bg-violet-600 text-white rounded-xl shadow-md hover:bg-violet-700 transition-colors active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Send size={18} />
+                    {isUploading ? <Circle className="animate-spin" size={18} /> : <Send size={18} />}
                   </button>
                 </div>
               </form>

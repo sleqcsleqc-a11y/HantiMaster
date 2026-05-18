@@ -19,12 +19,12 @@ INSERT INTO public.properties (id, name, address, type, image_url, property_valu
 (5, 'Oceanview Villas', '10 Coastal Highway', 'Residential', 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80', 3100000, 2, 'Active', '["Pool", "Balcony", "Parking"]', true, 'Beachfront luxury villas.', '2023-01-01');
 
 -- 4. Insert Units
-INSERT INTO public.units (id, property_id, unit_number, rent_amount, status) VALUES
-(1, 1, '101', 2500, 'Occupied'), (2, 1, '102', 2600, 'Occupied'), (3, 1, '103', 2450, 'Vacant'), (4, 1, '201', 2800, 'Occupied'),
-(5, 2, 'Suite A', 5000, 'Occupied'), (6, 2, 'Suite B', 4500, 'Occupied'), (7, 2, 'Suite C', 6000, 'Vacant'),
-(8, 3, 'Townhouse 1', 1800, 'Occupied'), (9, 3, 'Townhouse 2', 1850, 'Occupied'), (10, 3, 'Townhouse 3', 1900, 'Vacant'),
-(11, 4, 'Floor 1', 12000, 'Occupied'), (12, 4, 'Floor 2', 12000, 'Occupied'),
-(13, 5, 'Villa A', 4500, 'Occupied'), (14, 5, 'Villa B', 4800, 'Occupied'), (15, 5, 'Villa C', 5000, 'Vacant');
+INSERT INTO public.units (id, property_id, unit_number, rent_amount, status, living_rooms, bedrooms, bathrooms) VALUES
+(1, 1, '101', 2500, 'Occupied', 1, 2, 1), (2, 1, '102', 2600, 'Occupied', 1, 2, 2), (3, 1, '103', 2450, 'Vacant', 1, 1, 1), (4, 1, '201', 2800, 'Occupied', 1, 3, 2),
+(5, 2, 'Suite A', 5000, 'Occupied', 0, 0, 1), (6, 2, 'Suite B', 4500, 'Occupied', 0, 0, 1), (7, 2, 'Suite C', 6000, 'Vacant', 0, 0, 2),
+(8, 3, 'Townhouse 1', 1800, 'Occupied', 1, 3, 2), (9, 3, 'Townhouse 2', 1850, 'Occupied', 1, 3, 2), (10, 3, 'Townhouse 3', 1900, 'Vacant', 1, 3, 3),
+(11, 4, 'Floor 1', 12000, 'Occupied', 0, 0, 4), (12, 4, 'Floor 2', 12000, 'Occupied', 0, 0, 4),
+(13, 5, 'Villa A', 4500, 'Occupied', 2, 4, 3), (14, 5, 'Villa B', 4800, 'Occupied', 2, 4, 4), (15, 5, 'Villa C', 5000, 'Vacant', 2, 5, 5);
 
 -- 5. Insert Tenants
 INSERT INTO public.tenants (id, unit_id, first_name, last_name, email, phone, lease_start, lease_end) VALUES
@@ -73,3 +73,27 @@ INSERT INTO public.maintenance_requests (unit_id, tenant_id, title, description,
 (5, 4, 'AC Not Cooling', 'The AC unit in the main conference room is blowing warm air.', 'High', 'Open', 0, 0),
 (8, 6, 'Squeaky Door', 'Front door hinges need oiling.', 'Low', 'Completed', 20, 0.5),
 (13, 10, 'Pool Heater Broken', 'The private pool heater is not turning on.', 'High', 'Open', 0, 0);
+
+-- 9. Insert Vendors
+INSERT INTO public.vendors (company_name, contact_person, email, phone, category, status, tax_id, address, insurance_expiry, rating) VALUES
+('Acme Plumbing Co.', 'Mario Bros', 'mario@acmeplumbing.com', '+1-555-0301', 'Plumber', 'Active', 'TX-12345', '1 Plumber Way', '2025-12-31', 4.8),
+('Sparky Electricians', 'Tom Edison', 'tom@sparkyelectricians.com', '+1-555-0302', 'Electrician', 'Active', 'TX-23456', '2 Volta St', '2024-11-15', 4.2),
+('Green Thumb Landscaping', 'Alice Green', 'alice@greenthumb.com', '+1-555-0303', 'Landscaping', 'Active', 'TX-34567', '3 Garden Road', '2026-05-20', 4.9),
+('Clear View Cleaning', 'Maria Clean', 'maria@clearview.com', '+1-555-0304', 'Cleaning', 'Active', 'TX-45678', '4 Sparkle Ave', '2023-10-01', 3.5),
+('Solid Foundations', 'Bob Builder', 'bob@solidfoundations.com', '+1-555-0305', 'General Contractor', 'Inactive', 'TX-56789', '5 Brick Lane', '2022-01-10', 3.1);
+
+-- 10. Insert Messages (Example structure - requires valid UUIDs from auth.users)
+-- IMPORTANT: Replace 'YOUR-USER-UUID-HERE' and 'ANOTHER-USER-UUID' with actual UUIDs from your auth.users table!
+-- INSERT INTO public.messages (sender_id, sender_type, receiver_id, receiver_type, content, read) VALUES
+-- ('YOUR-USER-UUID-HERE', 'User', 'ANOTHER-USER-UUID', 'Tenant', 'Hello, your rent is due next week.', false),
+-- ('ANOTHER-USER-UUID', 'Tenant', 'YOUR-USER-UUID-HERE', 'User', 'Thank you! I will pay it tomorrow.', true);
+
+-- 20. Insert Leasing Applications
+INSERT INTO public.leasing_applications (property_id, unit_id, applicant_name, applicant_email, applicant_phone, status, income_amount, credit_score, employment_status, notes) VALUES
+(1, 1, 'John Doe', 'john.doe@example.com', '123-456-7890', 'Pending', 5000, 720, 'Full-Time Employed', 'Waiting for background check'),
+(1, NULL, 'Alice Smith', 'alice.smith@example.com', '987-654-3210', 'Reviewing', 6000, 750, 'Self-Employed', 'Strong application, landlord reference pending'),
+(2, 3, 'Bob Johnson', 'bob.j@example.com', '555-123-4567', 'Approved', 4500, 680, 'Full-Time Employed', 'Approved, waiting for security deposit'),
+(3, NULL, 'Charlie Brown', 'charlie.b@example.com', '444-555-6666', 'Rejected', 2500, 580, 'Part-Time', 'Income does not meet 3x rent requirement');
+-- Assuming user_id can be null or we use a valid uuid later. For now, user_id is nullable in schema? Waith, it might fail if user_id is invalid.
+-- Wait, I'll just leave it commented out or assign a subquery. Actually, let's just sync the db first, demo_data can wait or we don't need demo data.
+

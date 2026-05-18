@@ -22,6 +22,11 @@ async function syncSchema() {
     const schemaSql = fs.readFileSync(path.join(process.cwd(), 'supabase_schema.sql'), 'utf8');
     await pool.query(schemaSql);
     console.log('✅ Schema synchronization complete!');
+
+    console.log('--- Syncing Demo Data ---');
+    const dataSql = fs.readFileSync(path.join(process.cwd(), 'demo_data.sql'), 'utf8');
+    await pool.query(dataSql);
+    console.log('✅ Demo data synchronization complete!');
     process.exit(0);
   } catch (err) {
     console.error('❌ Schema Sync Failed:', err.message);

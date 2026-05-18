@@ -19,7 +19,8 @@ import {
   Key,
   LogOut,
   CreditCard,
-  FileText
+  FileText,
+  UserPlus
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -33,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onPro
   
   const allMenuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', module: 'DASHBOARD' },
+    { id: 'applications', icon: UserPlus, label: 'Applications', module: 'TENANT_MANAGEMENT' },
     { id: 'properties', icon: Building2, label: 'Properties', module: 'PROPERTY_MANAGEMENT' },
     { id: 'owners', icon: Briefcase, label: 'Owners', module: 'OWNER_MANAGEMENT' },
     { id: 'tenants', icon: Users, label: 'Tenants', module: 'TENANT_MANAGEMENT' },

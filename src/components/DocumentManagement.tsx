@@ -36,6 +36,7 @@ export const DocumentManagement: React.FC = () => {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [documents, setDocuments] = useState<LegalDocument[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
   const [unmatchedDocs, setUnmatchedDocs] = useState<any[]>([]);
   const [vaultDocs, setVaultDocs] = useState<any[]>([]);
@@ -51,6 +52,7 @@ export const DocumentManagement: React.FC = () => {
   const [isWorkflowOpen, setIsWorkflowOpen] = useState(false);
   const [editingDocId, setEditingDocId] = useState<number | undefined>();
   const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | undefined>();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleVaultUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Placeholder implementation
@@ -74,23 +76,55 @@ export const DocumentManagement: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     setErrorDetails(null);
+    let tableError: any = null;
+
     try {
-      // Seed templates if needed
-      try {
-        await api.seedTemplates();
-      } catch (seedError) {
-        console.warn('Template seeding skipped or failed:', seedError);
-        // If seeding fails, we might still want to try loading docs if table exists
-      }
-      
-      const [docsData, templatesData, vaultData] = await Promise.all([
+      // 1. Initial fetch of everything
+      const [docsResult, templatesResult, vaultResult, tenantsResult] = await Promise.allSettled([
         api.getLegalDocuments(),
         api.getDocumentTemplates(),
-        api.getVaultDocuments().catch(() => [])
+        api.getVaultDocuments(),
+        api.getTenants()
       ]);
+
+      const docsData = docsResult.status === 'fulfilled' ? docsResult.value : [];
+      let templatesData = templatesResult.status === 'fulfilled' ? templatesResult.value : [];
+      const vaultData = vaultResult.status === 'fulfilled' ? vaultResult.value : [];
+      const tenantsData = tenantsResult.status === 'fulfilled' ? tenantsResult.value : [];
+
+      // Check for table missing errors (42P01) or other critical errors
+      if (docsResult.status === 'rejected') {
+        const err = docsResult.reason;
+        if (err?.code === '42P01' || err?.message?.includes('legal_documents')) tableError = err;
+      }
+      if (templatesResult.status === 'rejected') {
+        const err = templatesResult.reason;
+        if (err?.code === '42P01' || err?.message?.includes('document_templates')) tableError = err;
+      }
+
+      // 2. If no templates found and no critical error, attempt to seed them
+      if (!tableError && templatesData.length === 0) {
+        console.log('No templates found, attempting to seed...');
+        try {
+          await api.seedTemplates();
+          // Re-fetch templates after seeding
+          templatesData = await api.getDocumentTemplates();
+        } catch (seedError) {
+          console.warn('Template seeding failed:', seedError);
+        }
+      }
+      
       setDocuments(docsData);
       setTemplates(templatesData);
       setUnmatchedDocs(vaultData);
+      setTenants(tenantsData);
+
+      if (tableError) throw tableError;
+      
+      console.log('Load Data complete:', { 
+        docsCount: docsData.length, 
+        templatesCount: templatesData.length 
+      });
     } catch (error) {
       console.error('Failed to load documents:', error);
       const message = error instanceof Error ? error.message : typeof error === 'object' ? JSON.stringify(error) : String(error);
@@ -183,6 +217,26 @@ CREATE TABLE IF NOT EXISTS public.vault_documents (
 
 ALTER TABLE public.vault_documents ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Authenticated users can manage vault" ON public.vault_documents FOR ALL USING (auth.role() = 'authenticated');
+
+-- FINANCE FIXES (Run these if you get column missing errors)
+DO $$ 
+BEGIN 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tenants' AND column_name = 'current_balance') THEN
+    ALTER TABLE public.tenants ADD COLUMN current_balance numeric DEFAULT 0;
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tenants' AND column_name = 'security_deposit_held') THEN
+    ALTER TABLE public.tenants ADD COLUMN security_deposit_held numeric DEFAULT 0;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'transactions' AND column_name = 'category') THEN
+    ALTER TABLE public.transactions ADD COLUMN category text DEFAULT 'Rent';
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'transactions' AND column_name = 'transaction_date') THEN
+    ALTER TABLE public.transactions ADD COLUMN transaction_date date DEFAULT current_date;
+  END IF;
+END $$;
 
 CREATE POLICY "Authenticated users can view templates" ON public.document_templates FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Admins can manage templates" ON public.document_templates FOR ALL USING (true);
@@ -321,6 +375,11 @@ Heshiiskan waxaa lagu maamuli doonaa sharciyada Jamhuuriyadda Federaalka Soomaal
     return matchesSearch && matchesCategory;
   });
 
+  const tenantLookup = tenants.reduce((acc, t) => {
+    acc[t.id] = `${t.first_name} ${t.last_name}`;
+    return acc;
+  }, {} as Record<number, string>);
+
   const categories = ['All', 'Lease', 'Notice', 'Financial', 'Property Management'];
 
   const handleCreateFromTemplate = (template: DocumentTemplate) => {
@@ -330,6 +389,40 @@ Heshiiskan waxaa lagu maamuli doonaa sharciyada Jamhuuriyadda Federaalka Soomaal
       setSelectedTemplate(template);
       setEditingDocId(undefined);
       setIsEditorOpen(true);
+    }
+  };
+
+  const deleteDocument = async (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
+    if (isDeleting) {
+      console.log('Delete already in progress, skipping');
+      return;
+    }
+    
+    console.log('deleteDocument triggered for ID:', id);
+    if (window.confirm('Are you sure you want to delete this draft lease?')) {
+      setIsDeleting(true);
+      try {
+        console.log('Attempting to delete doc via API:', id);
+        const result = await api.deleteLegalDocument(id);
+        console.log('API Delete result:', result);
+        
+        // Always update UI after call if no error thrown
+        setDocuments(prev => prev.filter(d => d.id !== id));
+        addToast('Draft lease deleted', 'success');
+        
+        // Small delay before reload to allow Supabase to reflect changes
+        setTimeout(() => {
+          loadData();
+        }, 1000);
+      } catch (e) {
+        console.error('Delete failed in component:', e);
+        addToast('Failed to delete draft: ' + (e instanceof Error ? e.message : String(e)), 'error');
+      } finally {
+        setIsDeleting(false);
+      }
+    } else {
+      console.log('Delete cancelled by user');
     }
   };
 
@@ -586,8 +679,31 @@ Heshiiskan waxaa lagu maamuli doonaa sharciyada Jamhuuriyadda Federaalka Soomaal
                          Manage Doc
                        </button>
                        <div className="flex items-center gap-3">
-                         <button className="p-2 text-zinc-400 hover:text-zinc-600 transition-colors"><Download size={14} /></button>
-                         <button className="p-2 text-zinc-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                         <button 
+                           onClick={() => {
+                             console.log('Doc Status:', doc.status);
+                             console.log('File URL:', doc.file_url);
+                             if (doc.file_url) {
+                               window.open(doc.file_url, '_blank');
+                             } else {
+                               addToast('This document is a draft and not yet available for download. Click "Manage Doc" to edit it.', 'info');
+                             }
+                           }}
+                           className="p-2 text-zinc-400 hover:text-zinc-600 transition-colors"
+                         >
+                           <Download size={14} />
+                         </button>
+                         {doc.status.trim() === 'Draft' && (
+                           <button 
+                             onClick={(e) => {
+                               console.log('Deleting doc:', doc.id);
+                               deleteDocument(e, doc.id);
+                             }}
+                             className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
+                           >
+                             <Trash2 size={14} />
+                           </button>
+                         )}
                        </div>
                     </div>
                   </motion.div>
@@ -614,7 +730,9 @@ Heshiiskan waxaa lagu maamuli doonaa sharciyada Jamhuuriyadda Federaalka Soomaal
                                <FileText size={18} />
                              </div>
                              <div>
-                               <p className="text-sm font-bold text-zinc-900">{doc.title}</p>
+                               <p className="text-sm font-bold text-zinc-900">
+                                {doc.title} {doc.tenant_id && tenantLookup[doc.tenant_id] ? ` - ${tenantLookup[doc.tenant_id]}` : ''}
+                               </p>
                                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">v{doc.version}.0</p>
                              </div>
                            </div>
@@ -639,12 +757,34 @@ Heshiiskan waxaa lagu maamuli doonaa sharciyada Jamhuuriyadda Federaalka Soomaal
                           {new Date(doc.updated_at).toLocaleDateString()}
                         </td>
                         <td className="px-8 py-6 text-right">
-                          <button 
-                            onClick={() => handleEditDocument(doc.id)}
-                            className="p-2 text-zinc-400 hover:text-violet-600 transition-colors"
-                          >
-                            <MoreHorizontal size={18} />
-                          </button>
+                          <div className="flex justify-end items-center gap-2">
+                            <button 
+                             onClick={() => {
+                               if (doc.file_url) {
+                                 window.open(doc.file_url, '_blank');
+                               } else {
+                                 addToast('This document is a draft and not yet available for download. Click "Manage Doc" to edit it.', 'info');
+                               }
+                             }}
+                               className="p-2 text-zinc-400 hover:text-zinc-600 transition-colors"
+                            >
+                               <Download size={14} />
+                            </button>
+                            {doc.status.trim() === 'Draft' && (
+                                <button
+                                  onClick={(e) => deleteDocument(e, doc.id)}
+                                  className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
+                                >
+                                  <Trash2 size={14} className={isDeleting ? 'animate-pulse text-zinc-200' : ''} />
+                                </button>
+                            )}
+                            <button 
+                              onClick={() => handleEditDocument(doc.id)}
+                              className="p-2 text-zinc-400 hover:text-violet-600 transition-colors"
+                            >
+                              <MoreHorizontal size={18} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

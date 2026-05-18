@@ -104,6 +104,9 @@ export interface Unit {
   unit_number: string;
   rent_amount: number;
   status: 'Occupied' | 'Vacant';
+  living_rooms: number;
+  bedrooms: number;
+  bathrooms: number;
   property_name?: string;
   tenant_id?: number;
   tenant_name?: string;
@@ -229,6 +232,8 @@ export interface Message {
   receiver_id: string;
   receiver_type: string;
   content: string;
+  attachment_url?: string;
+  attachment_name?: string;
   timestamp: string;
   read: boolean;
 }
@@ -384,6 +389,24 @@ export interface DocumentSignature {
   user_agent?: string;
 }
 
+export interface LeasingApplication {
+  id: number;
+  property_id: number;
+  unit_id?: number;
+  applicant_name: string;
+  applicant_email: string;
+  applicant_phone?: string;
+  status: 'Pending' | 'Reviewing' | 'Approved' | 'Rejected' | 'Waitlisted';
+  income_amount?: number;
+  credit_score?: number;
+  employment_status?: string;
+  notes?: string;
+  documents?: any[];
+  created_at: string;
+  properties?: { name: string; address: string };
+  units?: { unit_number: string };
+}
+
 export interface Vendor {
   id: number;
   company_name: string;
@@ -399,6 +422,16 @@ export interface Vendor {
   certification_url?: string;
   rating?: number;
   created_at: string;
+}
+
+export interface VendorReview {
+  id: number;
+  vendor_id: number;
+  user_id: string;
+  rating: number;
+  review_text: string;
+  created_at: string;
+  reviewer_name?: string; // Appended by front-end / join
 }
 
 export interface WorkOrder {

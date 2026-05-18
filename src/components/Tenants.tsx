@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Mail, Phone, Calendar, Search, Filter, ChevronRight, Plus, X, ArrowUpDown, Building2, Wrench, DollarSign, FileText, Printer, User, LogOut, MessageSquare, Send } from 'lucide-react';
+import { Mail, Phone, Calendar, Search, Filter, ChevronRight, Plus, X, ArrowUpDown, Building2, Wrench, DollarSign, FileText, Printer, User, LogOut, MessageSquare, Send, Sparkles } from 'lucide-react';
 import { api } from '../services/api';
 import { Tenant, Unit } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,6 +27,7 @@ export const Tenants: React.FC = () => {
   const [documentForm, setDocumentForm] = useState({ name: '', type: 'ID' });
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [isAnalyzingDocument, setIsAnalyzingDocument] = useState(false);
   const [messageText, setMessageText] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
   
@@ -311,6 +312,36 @@ export const Tenants: React.FC = () => {
     api.getTenant(selectedTenantId).then(setTenantDetails);
     loadData(); // Refresh list to update status
     addToast('Tenant moved out successfully', 'success');
+  };
+
+  const handleDocumentFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setDocumentFile(file || null);
+    if (!file) return;
+
+    // AI Analysis
+    setIsAnalyzingDocument(true);
+    try {
+      const response = await fetch('/api/ai/suggest-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setDocumentForm(prev => ({
+            name: prev.name || data.name || prev.name,
+            type: data.type || prev.type
+          }));
+          addToast('AI suggested document details', 'success');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to get AI suggestion', err);
+    } finally {
+      setIsAnalyzingDocument(false);
+    }
   };
 
   const handleUploadDocument = async (e: React.FormEvent) => {
@@ -1163,7 +1194,15 @@ export const Tenants: React.FC = () => {
             </div>
             <form onSubmit={handleUploadDocument} className="p-6 space-y-4">
               <div>
-                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Document Name</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Document Name</label>
+                  {isAnalyzingDocument && (
+                    <span className="flex items-center gap-1 text-[9px] font-bold text-violet-600 uppercase tracking-widest animate-pulse">
+                      <Sparkles size={10} />
+                      AI Analyzing...
+                    </span>
+                  )}
+                </div>
                 <input 
                   type="text" 
                   required
@@ -1191,7 +1230,7 @@ export const Tenants: React.FC = () => {
                 <input 
                   type="file" 
                   required
-                  onChange={e => setDocumentFile(e.target.files?.[0] || null)}
+                  onChange={handleDocumentFileSelect}
                   className="vintsy-input w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
                 />
               </div>

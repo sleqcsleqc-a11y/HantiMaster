@@ -312,6 +312,15 @@ BEGIN
     alter table public.property_images add constraint fk_property_images_media_assets foreign key (asset_id) references public.media_assets(id);
   END IF;
 
+  -- Ensure tenants table has financial columns
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tenants' AND column_name = 'current_balance') THEN
+    ALTER TABLE public.tenants ADD COLUMN current_balance numeric DEFAULT 0;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tenants' AND column_name = 'security_deposit_held') THEN
+    ALTER TABLE public.tenants ADD COLUMN security_deposit_held numeric DEFAULT 0;
+  END IF;
+
   -- Ensure tasks table has property_id and unit_id
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tasks' AND column_name = 'property_id') THEN
     ALTER TABLE public.tasks ADD COLUMN property_id bigint REFERENCES public.properties(id) ON DELETE CASCADE;
@@ -319,6 +328,34 @@ BEGIN
   
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tasks' AND column_name = 'unit_id') THEN
     ALTER TABLE public.tasks ADD COLUMN unit_id bigint REFERENCES public.units(id) ON DELETE SET NULL;
+  END IF;
+
+  -- Ensure units table has the new room metrics
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'units' AND column_name = 'living_rooms') THEN
+    ALTER TABLE public.units ADD COLUMN living_rooms integer DEFAULT 0;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'units' AND column_name = 'bedrooms') THEN
+    ALTER TABLE public.units ADD COLUMN bedrooms integer DEFAULT 0;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'units' AND column_name = 'bathrooms') THEN
+    ALTER TABLE public.units ADD COLUMN bathrooms integer DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'messages' AND column_name = 'attachment_url') THEN
+    ALTER TABLE public.messages ADD COLUMN attachment_url text;
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'messages' AND column_name = 'attachment_name') THEN
+    ALTER TABLE public.messages ADD COLUMN attachment_name text;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tenants' AND column_name = 'user_id') THEN
+    ALTER TABLE public.tenants ADD COLUMN user_id uuid references public.profiles(id);
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'owners' AND column_name = 'user_id') THEN
+    ALTER TABLE public.owners ADD COLUMN user_id uuid references public.profiles(id);
   END IF;
 END $$;
 
@@ -481,8 +518,18 @@ BEGIN
   END IF;
 END $$;
 
+create table if not exists public.vendor_reviews (
+  id bigint generated always as identity primary key,
+  vendor_id bigint references public.vendors(id) on delete cascade,
+  user_id uuid references public.profiles(id),
+  rating integer,
+  review_text text,
+  created_at timestamptz default now()
+);
+
 -- Enable RLS for new tables
 alter table public.vendors enable row level security;
+alter table public.vendor_reviews enable row level security;
 alter table public.work_orders enable row level security;
 alter table public.rent_generation_logs enable row level security;
 
@@ -494,6 +541,15 @@ create policy "Authenticated users can read vendors" on public.vendors
 drop policy if exists "Admins and Managers can manage vendors" on public.vendors;
 create policy "Admins and Managers can manage vendors" on public.vendors
   for all using (public.is_admin());
+
+-- Policies for Vendor Reviews
+drop policy if exists "Authenticated users can read vendor reviews" on public.vendor_reviews;
+create policy "Authenticated users can read vendor reviews" on public.vendor_reviews
+  for select using (auth.role() = 'authenticated');
+
+drop policy if exists "Authenticated users can manage vendor reviews" on public.vendor_reviews;
+create policy "Authenticated users can manage vendor reviews" on public.vendor_reviews
+  for all using (auth.role() = 'authenticated');
 
 -- Policies for Work Orders
 drop policy if exists "Authenticated users can read work orders" on public.work_orders;
@@ -983,6 +1039,35 @@ ON CONFLICT DO NOTHING;
 
 -- Promote the user to System Administrator for development
 update public.profiles 
-set role_id = (select id from public.roles where name = 'System Administrator')
-where email = 'sleqcsleqc@gmail.com';
+set role_id = (select id from public.roles where name = 'System Administrator'),
+    property_scope = 'Global'
+where email in ('sleqcsleqc@gmail.com', 'admin@hantimaster.com');
+
+-- 20. Leasing Applications Table
+
+CREATE TABLE IF NOT EXISTS public.leasing_applications (
+    id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    property_id BIGINT REFERENCES public.properties(id) ON DELETE CASCADE,
+    unit_id BIGINT REFERENCES public.units(id) ON DELETE SET NULL,
+    applicant_name VARCHAR(255) NOT NULL,
+    applicant_email VARCHAR(255) NOT NULL,
+    applicant_phone VARCHAR(50),
+    status VARCHAR(50) DEFAULT 'Pending' CHECK (status IN ('Pending', 'Reviewing', 'Approved', 'Rejected', 'Waitlisted')),
+    income_amount NUMERIC,
+    credit_score INTEGER,
+    employment_status VARCHAR(100),
+    notes TEXT,
+    documents JSONB DEFAULT '[]'::jsonb, -- Array of document URLs
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+ALTER TABLE public.leasing_applications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow authenticated full access to leasing_applications" ON public.leasing_applications;
+CREATE POLICY "Allow authenticated full access to leasing_applications"
+    ON public.leasing_applications FOR ALL
+    TO authenticated
+    USING (true)
+    WITH CHECK (true);
+
 

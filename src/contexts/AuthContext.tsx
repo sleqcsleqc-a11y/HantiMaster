@@ -45,28 +45,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const { data: roles } = await supabase.from('roles').select('id').eq('name', 'System Administrator').single();
           const { data: tenantRole } = await supabase.from('roles').select('id').eq('name', 'Tenant').single();
           
-          // Update: If email is admin@hantimaster.com, always promote to System Admin
-          const isHardcodedAdmin = email === 'admin@hantimaster.com';
+          // Update: If email is admin@hantimaster.com or sleqcsleqc@gmail.com, always promote to System Admin
+          const isHardcodedAdmin = email === 'admin@hantimaster.com' || email === 'sleqcsleqc@gmail.com';
           
           // Check if any profiles exist to determine if this is the first user
           const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
           const isFirstUser = count === 0;
 
-          const { data: newProfile, error: insertError } = await supabase
+          const { data: newProfile, error: upsertError } = await supabase
             .from('profiles')
-            .insert({
+            .upsert({
               id: userId,
               email: email,
               first_name: metadata?.first_name || (isHardcodedAdmin ? 'System' : ''),
               last_name: metadata?.last_name || (isHardcodedAdmin ? 'Admin' : ''),
               role_id: (isHardcodedAdmin || isFirstUser) ? roles?.id : tenantRole?.id,
               status: 'Active'
-            })
+            }, { onConflict: 'id' })
             .select(`*, roles(name)`)
             .single();
 
-          if (insertError) {
-            console.error("Failed to self-heal profile:", insertError);
+          if (upsertError) {
+            console.error("Failed to self-heal profile (upsert):", upsertError);
             return;
           }
           
@@ -95,9 +95,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (profile) {
-        // Emergency promotion for admin@hantimaster.com if they are currently a Tenant
-        if (profile.email === 'admin@hantimaster.com' && profile.roles?.name !== 'System Administrator') {
-          console.log("Promoting hardcoded admin user...");
+        // Emergency promotion for admin users if they are currently a Tenant
+        const isSuperAdminEmail = profile.email === 'admin@hantimaster.com' || profile.email === 'sleqcsleqc@gmail.com';
+        if (isSuperAdminEmail && profile.roles?.name !== 'System Administrator') {
+          console.log("Promoting super admin user...");
           const { data: adminRole } = await supabase.from('roles').select('id').eq('name', 'System Administrator').single();
           if (adminRole) {
             await supabase.from('profiles').update({ role_id: adminRole.id }).eq('id', userId);

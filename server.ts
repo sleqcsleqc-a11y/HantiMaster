@@ -1,4 +1,8 @@
+import { GoogleGenAI } from "@google/genai";
 import express from "express";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
 import path from "path";
 import cors from "cors";
 import { createServer as createViteServer } from "vite";
@@ -185,6 +189,33 @@ async function startServer() {
         error: error.message,
         hint: "Ensure the Service Role Key is correct and has bypass RLS permissions."
       });
+    }
+  });
+
+  // Document Type/Name AI Suggestion
+  app.post("/api/ai/suggest-document", async (req, res) => {
+    try {
+      const { filename } = req.body;
+      if (!filename) {
+        return res.status(400).json({ error: "Filename is required" });
+      }
+
+      const prompt = `Based on the following filename: "${filename}", suggest a proper, human-readable document name and classify it into one of these types: "ID", "Lease", "Income", "Other". 
+      Respond with ONLY a JSON object in this format: {"name": "suggested name", "type": "suggested type"}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+
+      const text = response.text || "{}";
+      const cleanedText = text.replace(/```json/g, "").replace(/```/g, "").trim();
+      const result = JSON.parse(cleanedText);
+
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error("AI Suggestion Error:", error);
+      res.status(500).json({ success: false, error: error.message });
     }
   });
 

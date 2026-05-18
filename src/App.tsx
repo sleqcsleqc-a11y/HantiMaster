@@ -18,6 +18,7 @@ import { TenantMaintenance } from './components/Tenant/TenantMaintenance';
 import { TenantLease } from './components/Tenant/TenantLease';
 import { DocumentManagement } from './components/DocumentManagement';
 import { Vendors } from './components/Vendors';
+import { Applications } from './components/Applications';
 import { VendorDashboard } from './components/Vendor/VendorDashboard';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
@@ -327,6 +328,8 @@ const AppContent: React.FC = () => {
         return <Tasks />;
       case 'vendors':
         return <Vendors />;
+      case 'applications':
+        return <Applications />;
       case 'lease':
         return <DocumentManagement />;
       default:

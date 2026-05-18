@@ -52,6 +52,10 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
   const [sortField, setSortField] = useState<'unit_number' | 'rent_amount' | 'status'>('unit_number');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const unitsPerPage = 10;
+
   // Unit Details/Edit State
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
@@ -61,7 +65,14 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
 
   // Form states
   const [editForm, setEditForm] = useState<Partial<Property>>({});
-  const [unitForm, setUnitForm] = useState({ unit_number: '', rent_amount: 0, status: 'Vacant' as const });
+  const [unitForm, setUnitForm] = useState({ 
+    unit_number: '', 
+    rent_amount: 0, 
+    status: 'Vacant' as const,
+    living_rooms: 0,
+    bedrooms: 0,
+    bathrooms: 0
+  });
   const [imageForm, setImageForm] = useState<{image_url: string, asset_id?: string}>({ image_url: '' });
   const [documentForm, setDocumentForm] = useState({ name: '', url: '', type: 'Contract' });
 
@@ -72,6 +83,10 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
     api.getOwners().then(setOwners);
     api.getTenants().then(setTenants);
   }, [propertyId]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, filterTenant, sortField, sortDirection]);
 
   const loadData = async () => {
     setLoading(true);
@@ -106,6 +121,12 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
       }
       return sortDirection === 'asc' ? comparison : -comparison;
     });
+
+  const totalPages = Math.ceil(filteredAndSortedUnits.length / unitsPerPage);
+  const currentUnits = filteredAndSortedUnits.slice(
+    (currentPage - 1) * unitsPerPage,
+    currentPage * unitsPerPage
+  );
 
   const handleUnitClick = async (unit: Unit) => {
     setSelectedUnit(unit);
@@ -143,7 +164,10 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
       await api.updateUnit(selectedUnit.id, {
         unit_number: unitEditForm.unit_number,
         rent_amount: unitEditForm.rent_amount,
-        status: unitEditForm.status
+        status: unitEditForm.status,
+        living_rooms: unitEditForm.living_rooms,
+        bedrooms: unitEditForm.bedrooms,
+        bathrooms: unitEditForm.bathrooms
       });
 
       // Update Tenant if exists and names changed
@@ -208,7 +232,14 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
     try {
       await api.addPropertyUnit(propertyId, unitForm);
       setShowAddUnit(false);
-      setUnitForm({ unit_number: '', rent_amount: 0, status: 'Vacant' });
+      setUnitForm({ 
+        unit_number: '', 
+        rent_amount: 0, 
+        status: 'Vacant',
+        living_rooms: 0,
+        bedrooms: 0,
+        bathrooms: 0
+      });
       loadData();
     } catch (error) {
       console.error('Failed to add unit:', error);
@@ -746,7 +777,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-violet-50">
-                  {filteredAndSortedUnits.map((unit) => (
+                  {currentUnits.map((unit) => (
                     <tr 
                       key={unit.id} 
                       onClick={() => handleUnitClick(unit)}
@@ -777,6 +808,30 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                 </tbody>
               </table>
             </div>
+
+            {totalPages > 1 && (
+              <div className="p-4 border-t border-violet-50 flex items-center justify-between">
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
+                  Showing {(currentPage - 1) * unitsPerPage + 1} - {Math.min(currentPage * unitsPerPage, filteredAndSortedUnits.length)} of {filteredAndSortedUnits.length}
+                </p>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 border border-zinc-200 rounded-xl text-zinc-500 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ArrowLeft size={14} />
+                  </button>
+                  <button 
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 border border-zinc-200 rounded-xl text-zinc-500 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -887,6 +942,39 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                       value={unitForm.rent_amount}
                       onChange={(e) => setUnitForm({ ...unitForm, rent_amount: Number(e.target.value) })}
                       className="vintsy-input w-full"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Living Rooms</label>
+                    <input 
+                      type="number" 
+                      value={unitForm.living_rooms}
+                      onChange={(e) => setUnitForm({ ...unitForm, living_rooms: Number(e.target.value) })}
+                      className="vintsy-input w-full"
+                      min="0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Bedrooms</label>
+                    <input 
+                      type="number" 
+                      value={unitForm.bedrooms}
+                      onChange={(e) => setUnitForm({ ...unitForm, bedrooms: Number(e.target.value) })}
+                      className="vintsy-input w-full"
+                      min="0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Bathrooms</label>
+                    <input 
+                      type="number" 
+                      value={unitForm.bathrooms}
+                      onChange={(e) => setUnitForm({ ...unitForm, bathrooms: Number(e.target.value) })}
+                      className="vintsy-input w-full"
+                      min="0"
                     />
                   </div>
                 </div>
@@ -1117,6 +1205,39 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Living Rooms</label>
+                      <input 
+                        type="number" 
+                        value={unitEditForm.living_rooms || 0}
+                        onChange={e => setUnitEditForm({...unitEditForm, living_rooms: Number(e.target.value)})}
+                        className="vintsy-input w-full"
+                        min="0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Bedrooms</label>
+                      <input 
+                        type="number" 
+                        value={unitEditForm.bedrooms || 0}
+                        onChange={e => setUnitEditForm({...unitEditForm, bedrooms: Number(e.target.value)})}
+                        className="vintsy-input w-full"
+                        min="0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Bathrooms</label>
+                      <input 
+                        type="number" 
+                        value={unitEditForm.bathrooms || 0}
+                        onChange={e => setUnitEditForm({...unitEditForm, bathrooms: Number(e.target.value)})}
+                        className="vintsy-input w-full"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-4 pt-4 border-t border-violet-50">
                     <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-500">Tenant Information</h4>
                     <div className="grid grid-cols-2 gap-4">
@@ -1173,6 +1294,21 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({ propertyId, on
                     <div>
                       <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Monthly Rent</p>
                       <p className="text-lg font-bold text-zinc-900">${selectedUnit.rent_amount.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 py-4 px-4 bg-zinc-50 rounded-xl border border-zinc-100">
+                    <div className="text-center">
+                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Living</p>
+                      <p className="text-sm font-bold text-zinc-900">{selectedUnit.living_rooms || 0}</p>
+                    </div>
+                    <div className="text-center border-x border-zinc-200">
+                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Bedrooms</p>
+                      <p className="text-sm font-bold text-zinc-900">{selectedUnit.bedrooms || 0}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Baths</p>
+                      <p className="text-sm font-bold text-zinc-900">{selectedUnit.bathrooms || 0}</p>
                     </div>
                   </div>
 

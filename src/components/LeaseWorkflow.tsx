@@ -22,7 +22,7 @@ import {
 import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { Tenant, Property, LeaseTerms, DocumentTemplate } from '../types';
+import { Tenant, Property, LeaseTerms, DocumentTemplate, Unit } from '../types';
 
 interface LeaseWorkflowProps {
   onClose: () => void;
@@ -36,6 +36,7 @@ export const LeaseWorkflow: React.FC<LeaseWorkflowProps> = ({ onClose, onComplet
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(false);
+  const [success, setSuccess] = useState(false);
   
   // Data State
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -45,18 +46,26 @@ export const LeaseWorkflow: React.FC<LeaseWorkflowProps> = ({ onClose, onComplet
   // Selection State
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-  const [selectedUnit, setSelectedUnit] = useState<any>(null);
+  const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [tenantSearch, setTenantSearch] = useState('');
   const [propertySearch, setPropertySearch] = useState('');
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   
   // Auto-select property if tenant has unit_id
+  const autoSelectedRef = React.useRef<Record<number, boolean>>({});
+
   useEffect(() => {
     if (selectedTenant && selectedTenant.unit_id && properties.length > 0) {
+      // Only auto-select once per tenant to avoid overriding manual user changes on data refresh
+      if (autoSelectedRef.current[selectedTenant.id]) return;
+      
       const propWithUnit = properties.find(p => (p.units || []).some((u: any) => u.id === selectedTenant.unit_id));
       if (propWithUnit) {
+        console.log('Workflow: Auto-selecting property/unit for tenant:', selectedTenant.id);
         setSelectedProperty(propWithUnit);
         const unit = (propWithUnit.units || []).find((u: any) => u.id === selectedTenant.unit_id);
         setSelectedUnit(unit);
+        autoSelectedRef.current[selectedTenant.id] = true;
       }
     }
   }, [selectedTenant, properties]);
@@ -89,84 +98,212 @@ export const LeaseWorkflow: React.FC<LeaseWorkflowProps> = ({ onClose, onComplet
   }, []);
 
   const loadInitialData = async () => {
+    console.log('Workflow: Starting initial data load...');
     try {
-      const [tData, pData, tempLines] = await Promise.all([
+      const results = await Promise.allSettled([
         api.getTenants(),
         api.getOperationalProperties(),
         api.getDocumentTemplates()
       ]);
-      setTenants(tData);
-      setProperties(pData);
-      setTemplates(tempLines);
-    } catch (error) {
-      addToast('Failed to load workflow data', 'error');
+      
+      if (results[0].status === 'fulfilled') {
+        console.log('Workflow: Tenants loaded:', results[0].value.length);
+        setTenants(results[0].value);
+      } else {
+        console.error('Workflow: Failed to load tenants:', results[0].reason);
+      }
+
+      if (results[1].status === 'fulfilled') {
+        console.log('Workflow: Properties loaded:', results[1].value.length);
+        setProperties(results[1].value);
+      } else {
+        console.error('Workflow: Failed to load properties:', results[1].reason);
+      }
+
+      if (results[2].status === 'fulfilled') {
+        console.log('Workflow: Templates loaded:', results[2].value.length);
+        setTemplates(results[2].value);
+      } else {
+        console.error('Workflow: Failed to load templates:', results[2].reason);
+      }
+
+      if (results.some(r => r.status === 'rejected')) {
+        const errors = results.filter(r => r.status === 'rejected').map(r => (r as PromiseRejectedResult).reason);
+        const errorStrings = errors.map(e => e.message || String(e)).join(' ');
+        
+        if (errorStrings.includes('PGRST205') || errorStrings.includes('42P01') || errorStrings.includes('tenants') || errorStrings.includes('properties')) {
+          addToast('Database tables missing. Please run the schema migration in your Supabase SQL editor.', 'error');
+        } else {
+          addToast('Data load failure. Please check your connection.', 'error');
+        }
+        console.error('Workflow: Multi-call errors detected:', errors);
+      }
+    } catch (error: any) {
+      const message = error.message || String(error);
+      if (message.includes('PGRST205') || message.includes('42P01')) {
+        addToast('Database tables missing. Please initialize your database schema.', 'error');
+      } else {
+        addToast('Failed to load workflow data. Please check connection.', 'error');
+      }
+      console.error('Workflow: Critical failure in loadInitialData:', error);
     }
   };
 
   const handleNextStep = async () => {
+    console.log('Workflow: handleNextStep triggered at step:', step);
+    
     if (step === 2) {
-      // Step 2 to 3: Eligibility Check
-      if (!selectedTenant || !selectedProperty) return;
+      if (!selectedTenant || !selectedProperty) {
+        addToast('Selection missing. Please ensure both tenant and property are selected.', 'error');
+        return;
+      }
+      
+      const propertyUnits = selectedProperty.units || [];
+      
       setValidating(true);
       try {
+        console.log('Workflow: Validating Step 2 -> 3 eligibility...');
+        
+        // Improved resolution: check state, then try to fetch if empty
+        let activeUnitId = selectedUnit?.id;
+        if (!activeUnitId && propertyUnits.length > 0) {
+          activeUnitId = propertyUnits[0].id;
+        }
+
+        // If still no unit in state, attempt one last fetch before failing
+        if (!activeUnitId) {
+          const directUnits = await api.getUnitsByProperty(selectedProperty.id);
+          if (directUnits && directUnits.length > 0) {
+            activeUnitId = directUnits[0].id;
+            setSelectedUnit(directUnits[0]);
+          }
+        }
+        
         const result = await api.validateLeaseEligibility(
           selectedProperty.id, 
           selectedTenant.id, 
           terms.start_date || '',
-          selectedUnit?.id
+          activeUnitId
         );
+        
+        console.log('Workflow: Eligibility result:', result);
         setValidationResult(result);
         
-        // Always advance to step 3 to show the result (eligible or failure message)
         if (result.eligible) {
-          // Auto-fill defaults from property/unit
+          // Default terms initialization
+          const defaultRent = selectedUnit?.rent_amount || (selectedProperty.property_value ? Math.round(selectedProperty.property_value / 100) : 1000);
           setTerms(prev => ({
             ...prev,
-            rent_amount: selectedUnit?.rent_amount || (selectedProperty.property_value ? (selectedProperty.property_value / 100) : 1000),
+            rent_amount: defaultRent,
             furnished: selectedProperty.is_furnished || false,
-            security_deposit: selectedUnit?.rent_amount || prev.rent_amount || 1000,
-            late_fee: Math.round((selectedUnit?.rent_amount || prev.rent_amount || 1000) * 0.1)
+            security_deposit: defaultRent,
+            late_fee: Math.round(defaultRent * 0.1)
           }));
+          
+          if (!selectedUnit && propertyUnits.length > 0) {
+            setSelectedUnit(propertyUnits[0]);
+          }
         }
+        
         setStep(3);
       } catch (error) {
-        addToast('Validation failed', 'error');
+        console.error('Workflow Eligibility Check Error:', error);
+        addToast('Verification process failed. Please check your connection.', 'error');
       } finally {
         setValidating(false);
       }
-    } else if (step === 3) {
-      setStep(4);
-    } else if (step === 4) {
-      setStep(5);
+    } else if (step === 5) {
+      console.log('Workflow: Step 5 Proceed, calling handleFinish');
+      await handleFinish();
     } else {
       setStep(prev => prev + 1);
     }
   };
 
   const handleFinish = async () => {
-    if (!user || !selectedTenant || !selectedProperty || !terms.start_date || !terms.end_date) return;
-    
-    // Use selectedUnit if set, otherwise fallback to first unit
-    const unitToLease = selectedUnit || (selectedProperty.units && selectedProperty.units.length > 0 
-      ? selectedProperty.units[0] 
-      : null);
+    if (loading) {
+      console.log('Workflow: Task already in progress, ignoring duplicate submit');
+      return;
+    }
 
-    const finalTerms: LeaseTerms = {
-      ...(terms as LeaseTerms),
-      tenant_id: selectedTenant.id,
-      property_id: selectedProperty.id,
-      unit_id: unitToLease?.id || 0,
-    };
+    console.log('Workflow: Beginning handleFinish orchestration');
+    setLoading(true); 
     
-    setLoading(true);
+    // Safety timeout: 45 seconds before we give up on the UI state
+    const timer = setTimeout(() => {
+      if (loading) {
+        console.warn('Workflow: Finalize timeout reached - force resetting');
+        setLoading(false);
+      }
+    }, 45000);
+
     try {
+      console.log('Workflow Diagnostics (Critical):', {
+        step,
+        user: user?.id,
+        tenant: selectedTenant?.id,
+        property: selectedProperty?.id,
+        unit: selectedUnit?.id,
+        terms: { start: terms.start_date, end: terms.end_date, rent: terms.rent_amount }
+      });
+
+      if (!user?.id) throw new Error('Security Error: User context lost. Please refresh.');
+      if (!selectedTenant?.id) throw new Error('State Error: Tenant identifier missing.');
+      if (!selectedProperty?.id) throw new Error('State Error: Property identifier missing.');
+
+      let unitToLease = selectedUnit;
+      
+      // Multi-layer unit resolution
+      if (!unitToLease) {
+        console.log('Workflow: selectedUnit null, attempting recovery from property state');
+        if (selectedProperty.units && selectedProperty.units.length > 0) {
+          unitToLease = selectedProperty.units[0];
+        }
+      }
+
+      if (!unitToLease) {
+        console.log('Workflow: Still no unit, attempting database re-fetch');
+        try {
+          const freshUnits = await api.getUnitsByProperty(selectedProperty.id);
+          if (freshUnits && freshUnits.length > 0) {
+            unitToLease = freshUnits[0];
+          }
+        } catch (e) {
+          console.error('Workflow: Database unit fetch failed during finalization:', e);
+        }
+      }
+
+      if (!unitToLease) {
+        console.log('Workflow: Procedural bypass - no unit found, allowing backend to handle emergency creation');
+      }
+
+      const finalTerms: LeaseTerms = {
+        ...(terms as LeaseTerms),
+        tenant_id: selectedTenant.id,
+        property_id: selectedProperty.id,
+        unit_id: unitToLease?.id,
+      };
+      
+      console.log('Workflow: Submitting to createTenancyWorkflow API...');
       await api.createTenancyWorkflow(finalTerms, user.id);
-      addToast('Tenancy workflow initiated successfully', 'success');
-      onComplete();
-    } catch (error) {
-      console.error(error);
-      addToast('Failed to finalize tenancy', 'error');
+      
+      console.log('Workflow: Orchestration successful');
+      setSuccess(true);
+      setStep(6);
+      
+      addToast('Tenancy workflow completed successfully.', 'success');
+      
+      // Small cooldown before allowed close
+      setTimeout(() => {
+        // Option to stay on Step 6 or auto-close
+      }, 5000);
+
+    } catch (error: any) {
+      console.error('Workflow: Finalization failed:', error);
+      const msg = error.message || String(error);
+      addToast(`Finalization Error: ${msg}`, 'error');
     } finally {
+      clearTimeout(timer);
       setLoading(false);
     }
   };
@@ -176,7 +313,8 @@ export const LeaseWorkflow: React.FC<LeaseWorkflowProps> = ({ onClose, onComplet
     { id: 2, name: 'Property', icon: Home },
     { id: 3, name: 'Eligibility', icon: ShieldCheck },
     { id: 4, name: 'Terms', icon: Settings },
-    { id: 5, name: 'Preview', icon: FileText }
+    { id: 5, name: 'Preview', icon: FileText },
+    { id: 6, name: 'Finalized', icon: CheckCircle2 }
   ];
 
   return (
@@ -195,7 +333,15 @@ export const LeaseWorkflow: React.FC<LeaseWorkflowProps> = ({ onClose, onComplet
             </div>
             <div>
               <h2 className="text-xl font-black text-zinc-900 tracking-tight">HantiMaster Lease Workflow</h2>
-              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em]">Operational Tenancy Orchestration</p>
+              <div className="flex items-center gap-3">
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em]">Operational Tenancy Orchestration</p>
+                <button 
+                  onClick={() => setDiagnosticsOpen(!diagnosticsOpen)}
+                  className="text-[8px] font-black uppercase text-zinc-300 hover:text-zinc-500 transition-colors"
+                >
+                  [Diagnostic Mode]
+                </button>
+              </div>
             </div>
           </div>
           <button 
@@ -205,6 +351,18 @@ export const LeaseWorkflow: React.FC<LeaseWorkflowProps> = ({ onClose, onComplet
             ✕
           </button>
         </div>
+
+        {diagnosticsOpen && (
+          <div className="px-12 py-4 bg-zinc-900 text-[10px] font-mono text-zinc-400 flex gap-6 overflow-x-auto border-b border-white/5">
+            <p><span className="text-violet-400">Step:</span> {step}</p>
+            <p><span className="text-violet-400">User:</span> {user?.id?.substring(0, 8) || 'NONE'}</p>
+            <p><span className="text-violet-400">Tenant:</span> {selectedTenant?.id || 'NONE'}</p>
+            <p><span className="text-violet-400">Property:</span> {selectedProperty?.id || 'NONE'}</p>
+            <p><span className="text-violet-400">Unit:</span> {selectedUnit?.id || 'NONE'}</p>
+            <p><span className="text-violet-400">Loading:</span> {loading ? 'YES' : 'NO'}</p>
+            <p><span className="text-violet-400">Validating:</span> {validating ? 'YES' : 'NO'}</p>
+          </div>
+        )}
 
         {/* Progress Stepper */}
         <div className="px-12 py-8 bg-zinc-50/50 flex justify-between items-center relative overflow-hidden">
@@ -620,7 +778,7 @@ export const LeaseWorkflow: React.FC<LeaseWorkflowProps> = ({ onClose, onComplet
                 animate={{ opacity: 1, y: 0 }}
                 className="grid grid-cols-1 xl:grid-cols-2 gap-12"
               >
-                 <div className="space-y-8">
+                <div className="space-y-8">
                     <h3 className="text-2xl font-black text-zinc-900 tracking-tight">Final Agreement Preview</h3>
                     <div className="p-8 bg-zinc-900 rounded-[2.5rem] text-white space-y-6">
                        <div className="flex items-center justify-between pb-6 border-b border-white/10">
@@ -645,20 +803,28 @@ export const LeaseWorkflow: React.FC<LeaseWorkflowProps> = ({ onClose, onComplet
                                 </div>
                                 <div>
                                    <p className="text-[8px] text-white/40 font-bold uppercase">Rent</p>
-                                   <p className="text-xs font-bold">${terms.rent_amount}</p>
+                                   <p className="text-xs font-bold">${terms.rent_amount?.toLocaleString()}</p>
                                 </div>
                                 <div>
                                    <p className="text-[8px] text-white/40 font-bold uppercase">Deposit</p>
-                                   <p className="text-xs font-bold">${terms.security_deposit}</p>
+                                   <p className="text-xs font-bold">${terms.security_deposit?.toLocaleString()}</p>
+                                </div>
+                                <div>
+                                   <p className="text-[8px] text-white/40 font-bold uppercase">Start Date</p>
+                                   <p className="text-xs font-bold">{terms.start_date}</p>
+                                </div>
+                                <div>
+                                   <p className="text-[8px] text-white/40 font-bold uppercase">Duration</p>
+                                   <p className="text-xs font-bold">{terms.duration_months} Months</p>
                                 </div>
                              </div>
                           </div>
 
                           <div className="space-y-2">
-                             <p className="text-xs text-white/80 font-medium leading-relaxed italic">
-                                "This Residential Tenancy Agreement is constructed under the jurisdiction of the Federal Republic of Somalia and complies with HantiMaster's operational standards..."
+                             <p className="text-xs text-white/80 font-medium leading-relaxed italic border-l-2 border-violet-500 pl-4 py-1">
+                                "This {terms.is_commercial ? 'Commercial' : 'Residential'} Tenancy Agreement is constructed under the jurisdiction of the Federal Republic of Somalia and complies with HantiMaster's operational standards..."
                              </p>
-                             <p className="text-xs text-white/40 font-medium leading-relaxed italic">
+                             <p className="text-xs text-white/40 font-medium leading-relaxed italic border-l-2 border-white/10 pl-4 py-1">
                                 "Heshiiskan waxaa lagu maamuli doonaa sharciyada Jamhuuriyadda Federaalka Soomaaliya..."
                              </p>
                           </div>
@@ -667,54 +833,117 @@ export const LeaseWorkflow: React.FC<LeaseWorkflowProps> = ({ onClose, onComplet
 
                     <div className="vintsy-card p-8 space-y-4">
                        <h4 className="text-xs font-black text-zinc-900 uppercase tracking-widest">Related Documents to be Generated</h4>
-                       <div className="space-y-2">
+                       <div className="grid grid-cols-2 gap-2">
                           {['Move-in Checklist', 'Inventory Checklist', 'Key Handover Record', 'Security Deposit Receipt'].map(doc => (
-                            <div key={doc} className="flex items-center gap-3 p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                            <div key={doc} className="flex items-center gap-3 p-3 bg-zinc-50 rounded-2xl border border-zinc-100">
                                <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                               <span className="text-xs font-bold text-zinc-900">{doc}</span>
+                               <span className="text-[10px] font-bold text-zinc-900">{doc}</span>
                             </div>
                           ))}
                        </div>
                     </div>
+                  </div>
+
+                  <div className="vintsy-card p-12 bg-white flex flex-col justify-center items-center text-center space-y-8">
+                    <div className={`w-24 h-24 rounded-[2.5rem] flex items-center justify-center ${loading ? 'bg-zinc-100 text-zinc-400' : 'bg-emerald-100 text-emerald-600 shadow-2xl shadow-emerald-500/20'}`}>
+                          {loading ? <div className="w-10 h-10 border-4 border-zinc-200 border-t-zinc-400 rounded-full animate-spin" /> : <CheckCircle2 size={48} />}
+                       </div>
+                       <div className="space-y-4">
+                          <h3 className="text-2xl font-black text-zinc-900 tracking-tight">
+                           {loading ? 'Finalizing Tenancy...' : 'Ready to Finalize?'}
+                          </h3>
+                          <p className="text-sm text-zinc-400 font-medium max-w-sm mx-auto">
+                             {loading ? 'Processing document generation and status updates...' : `Finalizing this workflow will update ${selectedProperty?.name} status to Occupied, generate the tenancy agreement, and create all move-in tasks.`}
+                          </p>
+                       </div>
+                       <div className="w-full flex flex-col items-center gap-6">
+                         <button 
+                            onClick={handleFinish}
+                            disabled={loading || success}
+                            className={`w-full max-w-sm py-5 rounded-[2rem] text-sm font-bold uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-4 group cursor-pointer ${
+                              loading ? 'bg-zinc-400 cursor-not-allowed opacity-50' : 
+                              success ? 'bg-emerald-500 text-white' :
+                              'bg-zinc-900 text-white hover:bg-zinc-800 active:scale-95'
+                            }`}
+                          >
+                             {loading ? (
+                               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : success ? (
+                               <CheckCircle2 size={20} />
+                            ) : (
+                               <>
+                                 Confirm & Finalize
+                                 <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                               </>
+                            )}
+                          </button>
+                         {loading && (
+                           <p className="text-[10px] font-bold text-violet-600 animate-pulse uppercase tracking-widest">
+                             Orchestrating Tenancy Records... Please Wait
+                           </p>
+                         )}
+                       </div>
+                    </div>
+              </motion.div>
+            )}
+
+            {step === 6 && (
+              <motion.div 
+                key="step6"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="max-w-2xl mx-auto py-12 text-center space-y-12"
+              >
+                 <div className="relative">
+                   <div className="w-32 h-32 bg-emerald-500 rounded-[3rem] shadow-2xl shadow-emerald-500/40 flex items-center justify-center mx-auto relative z-10">
+                      <CheckCircle2 size={64} className="text-white" />
+                   </div>
+                   <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full scale-150 animate-pulse" />
                  </div>
 
-                 <div className="vintsy-card p-12 bg-white flex flex-col justify-center items-center text-center space-y-8">
-                    <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-[2rem] flex items-center justify-center">
-                       <CheckCircle2 size={40} />
-                    </div>
-                    <div className="space-y-4">
-                       <h3 className="text-2xl font-black text-zinc-900 tracking-tight">Ready to Finalize?</h3>
-                       <p className="text-sm text-zinc-400 font-medium max-w-sm">
-                          Finalizing this workflow will update the property status, generate the tenancy agreement, and create all necessary operational tasks for the move-in process.
-                       </p>
-                    </div>
+                 <div className="space-y-4">
+                    <h3 className="text-3xl font-black text-zinc-900 tracking-tight uppercase tracking-tighter">Tenancy Activated</h3>
+                    <p className="text-zinc-500 font-medium leading-relaxed max-w-md mx-auto">
+                       The lease workflow for <strong>{selectedTenant?.first_name} {selectedTenant?.last_name}</strong> at <strong>{selectedProperty?.name}</strong> has been successfully finalized.
+                    </p>
+                 </div>
+
+                 <div className="grid grid-cols-3 gap-4">
+                    {[
+                      { label: 'Agreement', val: 'Generated', icon: FileText },
+                      { label: 'Ledger', val: 'Initialized', icon: DollarSign },
+                      { label: 'Move-in Tasks', val: 'Created', icon: Clock }
+                    ].map((item, i) => (
+                      <div key={i} className="vintsy-card p-6 border-zinc-100 space-y-3 bg-zinc-50/50">
+                         <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-zinc-400 shadow-sm mx-auto">
+                            <item.icon size={18} />
+                         </div>
+                         <div>
+                            <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">{item.label}</p>
+                            <p className="text-[10px] font-bold text-emerald-600">{item.val}</p>
+                         </div>
+                      </div>
+                    ))}
+                 </div>
+
+                 <div className="pt-6">
                     <button 
-                      onClick={handleFinish}
-                      disabled={loading}
-                      className="w-full max-w-sm py-5 bg-zinc-900 text-white rounded-[2rem] text-sm font-bold uppercase tracking-[0.2em] shadow-2xl hover:opacity-90 transition-all flex items-center justify-center gap-4"
+                      onClick={onComplete}
+                      className="px-12 py-5 bg-zinc-900 text-white rounded-[2rem] text-sm font-bold uppercase tracking-[0.2em] shadow-xl hover:bg-zinc-800 transition-all"
                     >
-                      {loading ? (
-                        <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          Finalize Tenancy
-                          <ChevronRight size={20} />
-                        </>
-                      )}
+                       Done & View Records
                     </button>
                  </div>
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
-
-        {/* Footer Navigation */}
+                {/* Footer Navigation */}
         <div className="p-8 border-t border-zinc-100 flex items-center justify-between">
           <button 
             onClick={() => setStep(prev => prev - 1)}
-            disabled={step === 1 || loading}
+            disabled={step === 1 || step >= 6 || loading}
             className={`px-8 py-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-3 border ${
-              step === 1 ? 'invisible' : 'bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400'
+              (step === 1 || step >= 6) ? 'invisible' : 'bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400'
             }`}
           >
             <ChevronLeft size={16} />
@@ -727,32 +956,42 @@ export const LeaseWorkflow: React.FC<LeaseWorkflowProps> = ({ onClose, onComplet
              ))}
           </div>
 
-          <button 
-            onClick={handleNextStep}
-            disabled={
-              (step === 1 && !selectedTenant) || 
-              (step === 2 && !selectedProperty) ||
-              (step === 3 && !validationResult?.eligible) ||
-              step === 5 ||
-              loading ||
-              validating
-            }
-            className={`px-10 py-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl ${
-              (step === 1 && !selectedTenant) || (step === 2 && !selectedProperty) || validating
-                ? 'bg-zinc-100 text-zinc-300' 
-                : 'bg-zinc-900 text-white hover:opacity-90'
-            }`}
-          >
-            {validating ? (
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <>
-                {step === 3 ? 'Continue to Terms' : 'Proceed to Next Step'}
-                <ChevronRight size={16} />
-              </>
-            )}
-          </button>
+          {step < 6 ? (
+            <button 
+              onClick={handleNextStep}
+              disabled={
+                loading ||
+                validating ||
+                (step === 1 && !selectedTenant) || 
+                (step === 2 && (!selectedProperty || (selectedProperty.units && selectedProperty.units.length > 0 && !selectedUnit))) ||
+                (step === 3 && !validationResult?.eligible)
+              }
+              className={`px-10 py-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl ${
+                (loading || validating || (step === 1 && !selectedTenant) || (step === 2 && (!selectedProperty || !selectedUnit)) || (step === 3 && !validationResult?.eligible))
+                  ? 'bg-zinc-100 text-zinc-300 cursor-not-allowed' 
+                  : 'bg-zinc-900 text-white hover:opacity-90 cursor-pointer active:scale-95 shadow-zinc-900/20'
+              }`}
+            >
+              {loading || validating ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  {step === 5 ? 'Confirm & Finalize' : step === 3 ? 'Continue to Terms' : 'Proceed to Next Step'}
+                  <ChevronRight size={16} />
+                </>
+              )}
+            </button>
+          ) : (
+            <button 
+              onClick={onComplete}
+              className="px-10 py-4 bg-emerald-500 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest flex items-center gap-3 hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20"
+            >
+              Finish Workflow
+              <CheckCircle2 size={16} />
+            </button>
+          )}
         </div>
+ </div>
       </motion.div>
     </div>
   );

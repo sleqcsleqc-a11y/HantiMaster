@@ -12,7 +12,9 @@ import {
   ChevronRight,
   X,
   Lock,
-  Briefcase
+  Briefcase,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { api } from '../services/api';
 import { MaintenanceRequest, Unit, Tenant, Vendor } from '../types';
@@ -42,6 +44,22 @@ export const Maintenance: React.FC = () => {
     unit_id: 0,
     tenant_id: 0
   });
+  const [view, setView] = useState<'board' | 'list'>('board');
+
+  const handleDrop = async (e: React.DragEvent, newStatus: string) => {
+    e.preventDefault();
+    const requestId = e.dataTransfer.getData('text/plain');
+    if (!requestId) return;
+    await handleUpdateStatus(Number(requestId), newStatus);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDragStart = (e: React.DragEvent, id: number) => {
+    e.dataTransfer.setData('text/plain', id.toString());
+  };
 
   const loadData = async () => {
     if (!user) return;
@@ -168,70 +186,149 @@ export const Maintenance: React.FC = () => {
           <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Service</h3>
           <p className="text-2xl font-bold text-zinc-900 tracking-tight">Maintenance Requests</p>
         </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="vintsy-button-primary flex items-center gap-2 text-[10px] uppercase tracking-widest"
-        >
-          <Plus size={16} />
-          New Request
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="flex bg-white/50 border border-violet-100 rounded-xl p-1 shadow-sm">
+            <button 
+              onClick={() => setView('board')}
+              className={`p-2 rounded-lg transition-colors flex items-center gap-2 px-3 ${view === 'board' ? 'bg-violet-100 text-violet-700' : 'text-zinc-400 hover:text-zinc-600'}`}
+            >
+              <LayoutGrid size={16} />
+              <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">Board</span>
+            </button>
+            <button 
+              onClick={() => setView('list')}
+              className={`p-2 rounded-lg transition-colors flex items-center gap-2 px-3 ${view === 'list' ? 'bg-violet-100 text-violet-700' : 'text-zinc-400 hover:text-zinc-600'}`}
+            >
+              <List size={16} />
+              <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">List</span>
+            </button>
+          </div>
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="vintsy-button-primary flex items-center gap-2 text-[10px] uppercase tracking-widest"
+          >
+            <Plus size={16} />
+            New Request
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {requests.map((request, index) => (
-          <motion.div
-            key={request.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className="vintsy-card p-8 flex items-center gap-8 group"
-          >
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border shadow-md overflow-hidden ${priorityColors[request.priority as keyof typeof priorityColors]}`}>
-              {request.image_url ? (
-                <img src={request.image_url || null} alt="Request Media" className="w-full h-full object-cover" />
-              ) : (
-                <Wrench size={24} />
-              )}
-            </div>
-            
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h4 className="text-lg font-bold text-zinc-900 tracking-tight group-hover:text-violet-700 transition-colors">{request.title}</h4>
-                <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${priorityColors[request.priority as keyof typeof priorityColors]}`}>
-                  {request.priority}
-                </span>
+      {view === 'list' ? (
+        <div className="grid grid-cols-1 gap-4">
+          {requests.map((request, index) => (
+            <motion.div
+              key={request.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              className="vintsy-card p-8 flex items-center gap-8 group"
+            >
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border shadow-md overflow-hidden shrink-0 ${priorityColors[request.priority as keyof typeof priorityColors]}`}>
+                {request.image_url ? (
+                  <img src={request.image_url} alt="Request Media" className="w-full h-full object-cover" />
+                ) : (
+                  <Wrench size={24} />
+                )}
               </div>
-              <p className="text-sm text-zinc-500 mb-4 max-w-2xl font-medium">{request.description}</p>
-              <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                <span className="flex items-center gap-2">
-                  <Clock size={12} className="text-violet-700" />
-                  {new Date(request.created_at).toLocaleDateString()}
-                </span>
-                <span className="flex items-center gap-2">
-                  <Home size={12} className="text-violet-700" />
-                  Unit {request.unit_number} • {request.first_name} {request.last_name}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-8">
-              <div className="text-right">
-                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">Status</span>
-                <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
-                  <CheckCircle2 size={16} />
-                  {request.status}
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-2">
+                  <h4 className="text-lg font-bold text-zinc-900 tracking-tight group-hover:text-violet-700 transition-colors truncate">{request.title}</h4>
+                  <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border shrink-0 ${priorityColors[request.priority as keyof typeof priorityColors]}`}>
+                    {request.priority}
+                  </span>
+                </div>
+                <p className="text-sm text-zinc-500 mb-4 max-w-2xl font-medium truncate">{request.description}</p>
+                <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                  <span className="flex items-center gap-2 shrink-0">
+                    <Clock size={12} className="text-violet-700" />
+                    {new Date(request.created_at).toLocaleDateString()}
+                  </span>
+                  <span className="flex items-center gap-2 truncate">
+                    <Home size={12} className="text-violet-700 shrink-0" />
+                    Unit {request.unit_number} • {request.first_name} {request.last_name}
+                  </span>
                 </div>
               </div>
-              <button 
-                onClick={() => setSelectedRequest(request)}
-                className="w-12 h-12 rounded-xl border border-violet-100 flex items-center justify-center text-zinc-300 hover:text-violet-700 hover:border-violet-300 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95"
-              >
-                <ChevronRight size={20} />
-              </button>
+
+              <div className="flex items-center gap-8 shrink-0">
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">Status</span>
+                  <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
+                    <CheckCircle2 size={16} />
+                    {request.status}
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setSelectedRequest(request)}
+                  className="w-12 h-12 rounded-xl border border-violet-100 flex items-center justify-center text-zinc-300 hover:text-violet-700 hover:border-violet-300 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 overflow-x-auto pb-8">
+          {['Open', 'In Progress', 'Completed', 'Closed'].map(statusColumn => (
+            <div 
+              key={statusColumn} 
+              className="flex flex-col gap-4 min-w-[300px]"
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, statusColumn)}
+            >
+              <div className="flex items-center justify-between mb-2 px-2">
+                <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{statusColumn}</h4>
+                <span className="text-[10px] bg-zinc-100 text-zinc-500 px-2.5 py-1 rounded-full font-bold">
+                  {requests.filter(r => r.status === statusColumn).length}
+                </span>
+              </div>
+              <div className="flex-1 bg-zinc-50/50 rounded-2xl p-4 border border-zinc-100 min-h-[500px]">
+                <AnimatePresence>
+                  {requests.filter(r => r.status === statusColumn).map(request => (
+                    <motion.div
+                      layout
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      whileHover={{ scale: 1.02 }}
+                      key={request.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e as unknown as React.DragEvent, request.id)}
+                      onClick={() => setSelectedRequest(request)}
+                      className="bg-white p-5 rounded-xl shadow-sm border border-zinc-100 mb-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest border ${priorityColors[request.priority as keyof typeof priorityColors]}`}>
+                          {request.priority}
+                        </span>
+                        <div className="w-6 h-6 rounded-lg bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:text-violet-600 transition-colors">
+                           <ChevronRight size={14} />
+                        </div>
+                      </div>
+                      <h5 className="text-sm font-bold text-zinc-900 mb-1 leading-tight">{request.title}</h5>
+                      <p className="text-[10px] text-zinc-500 line-clamp-2 mb-4">{request.description}</p>
+                      
+                      <div className="pt-3 border-t border-zinc-50 flex items-center justify-between mt-auto">
+                        <span className="flex items-center gap-1.5 text-[9px] font-bold text-zinc-500 uppercase tracking-widest">
+                          <Home size={10} className="text-violet-600" />
+                          Unit {request.unit_number}
+                        </span>
+                        {request.image_url && (
+                          <div className="w-5 h-5 rounded overflow-hidden flex-shrink-0">
+                            <img src={request.image_url} alt="Attachment" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
             </div>
-          </motion.div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
